@@ -1,0 +1,156 @@
+Some explanations for the revised arguments of the Amiga Demo Launcher (ADL)
+beta version 1.0:
+
+
+General
+
+All arguments are optional. If no arguments are given, a file requester will
+open for a file selection and the entries maximum of 10 files will be used
+as default if there is no existing playback queue.
+If there is already a playback queue in memory, the next entry of the
+playback queue is tagged for not to be executed again when using the RANDOM
+argument, then executed. If called again, the ADL will execute the next
+sequential entry.
+
+
+Arguments
+
+
+HELP (new)
+
+Get a short description of all arguments.
+
+
+MAXENTRIES number (formerly ENTRIESMAX number)
+
+The argument MAXENTRIES is given with a number which ranges from 1 to 99.
+This argument can be used only for the first time the ADL is called. All
+further times, this argument will be ignored, because the maximum of entries
+of the playback queue is initialized once at the beginning and can't be
+changed after that.
+
+
+RESETLOADPOS (formerly RELOADLIST)
+
+The argument RESETLOADPOS is given,the entry pointer of the playback queue
+will be reset to zero. This could be used, when a custom playlist could not
+be transferred completely and entries are missing. The corrected playlist
+could be transferred again, starting at the top of the playback queue
+instead normally after the last entry.
+
+
+[PLAYLIST] filepath
+
+The argument PLAYLIST needs a full filepath where to find the playlist which
+should be parsed and its entries copied into the playback queue. The keyword
+PLAYLIST is optional and not a must.
+
+
+NEWENTRY (new)
+
+A new argument to give the user the chance to add a custom entry to the
+playback queue with the ADL independent from a playlist.
+
+
+QUIET (new)
+
+This argument is especially for the use of the ADL in a startup-sequenc
+like this:
+
+...
+AmigaDemoLauncher QUIET >NIL:  ;No output
+...
+
+The ADL now detects after the execution of the last demo and not with the
+next call of the ADL if it should be removed because there are no more demos
+left to execute. If a running demo is quit by a reset, this information via
+the returncode WARN(5) of the ADL gets lost.
+The argument prevents that the file requester opens if there are no more
+demos to be executed. The ADL automatically returns with the return value
+WARN(5) if there are no demos to execute.
+
+
+MIN/MINS number, SEC/SECS number
+
+With the argument MIN/MINS and SEC/SECS you set the duration of the demo
+to be shown and start the external timer. The connected timer at the serial
+port will do a hardware reset after the playtime is over. If the demos were
+transferred with own duration values via a playlist into the playback queue,
+this given argument has priority over the playback queue value.
+You can give this argument in minutes, in seconds or as combined values.
+The minimum playtime could be given like "MIN 1 SECS 0/MIN 1/MINS 0 SEC 1/
+SEC 1". The maximum playtime is 99 minutes and 59 seconds.
+
+
+PRERUNSCRPT filepath
+
+Now a prerun scriptfile can be called before the demo starts. The full file
+path where to find the script is needed. The keyword PRERUNSCRIPT must be
+given. This argument has priority over an argument out of the playback queue.
+
+
+SHOWQUEUE (new)
+
+Prints the content of the playback queue by entry number, demo name, execute
+state and informs about the free number of entries left.
+
+
+PLAYENTRY number (new)
+
+With this argument a certain demo out of the playback queue can be executed.
+The number ranges from 1 to the last entry number.
+
+
+RANDOM
+
+The argument RANDOM uses a random function to select an entry of the playback
+queue. Because of the fact that all executed demos will be tagged, no demo
+will be executed twice.
+
+
+ENDLESS
+
+The argument ENDLESS prevents that the playback queue and all resident
+routines of the ADL are removed from memory if there are no more demos to
+execute. The ADL will clear all tags and restart with the first entry of the
+playback queue.
+
+
+LOOP
+
+The argument LOOP prevents that the ADL returns to the shell after the demo
+is quit and will automatically select the next entry out of the playback
+queue. Normally this will be the sequential entry. Combined with the argument
+RANDOM this will be a random entry.
+Caution: Combined with the argument ENDLESS you will get an infinite loop
+which you can never quit.
+
+
+NOFADER
+
+The argument NOFADER prevents that the blanked display is faded out to black
+before the demo starts. After the demo is quit (not by a reset), it prevents
+that the blanked display is faded in from black to the background colour.
+
+
+SOFTRESET
+
+The argument SOFTRESET does an automatic software reset after the demo was
+quit regardless of any timer settings.
+
+
+REMOVE
+
+The ADL will be removed out of memory regardless of the fact that not all
+demos from the playback queue are executed.
+
+
+And finally, here's another example of using the ADL in a loop of a script
+like this:
+
+  FAILAT 6                ;Abort script execution if error number >= 6
+  LAB ADL_loop            ;Loop-label
+  AmigaDemoLauncher >NIL: ;No output
+  IF NOT WARN             ;If ADL return value <> WARN(5),
+    SKIP ADL_loop BACK    ;then loop
+  ENDIF

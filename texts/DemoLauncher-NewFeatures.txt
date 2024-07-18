@@ -1,0 +1,47 @@
+DemoSelector
+
+-Playlist parsing: Argument pre scriptfiles is upported now
+
+-Reset-Routine: If the right mouse button is hold during a reset, the Demo
+ Launcher will be removed out of memory regardless of the fact that not all
+ demos from the internal pathlist are executed
+
+-Maximum length of all filepaths is checked now
+
+-Reset-Routine: The timer is stopped everytime if the running demo is quit
+ with a keyboard hardware reset before the playtime ends
+
+-Reset-Routine: If the last demos is running and a keyboard hardware reset
+ is done before the playtime ends, the Demo Launcher will be removed out of
+ memory. Exception: The last demo was executed with RunDemo's option
+ ENDLESS. Then the Demo Launcher remains in memory.
+
+-Reset routine: During a reset the screen flashes blue for a short time to
+ show that the Demo Launcher is still active in memory
+
+
+RunDemo
+
+-New argument PREDEMOSCRIPT: Now pre scriptfiles can be called before the
+ demo starts
+
+-New argument REMOVE: The Demo Launcher will be removed out of memory
+ regardless of the fact that not all demos from the internal pathlist are
+ executed
+
+-The maximum length of all filepaths is checked now
+
+-Timer is stopped everytime if the running demo with an exit possibility
+ to return to the system (via the left/right mousebutton) is quit before
+ the playtime ends
+
+-If the last running demo has an exit possibilty to return to the system,
+ the Demo Launcher is removed out of memory if it was quit before the
+ playtime ends. Exception: The last demo was executed with the option
+ ENDLESS. Then the Demo Launcher remains in memory.
+
+-AGA 020 startmode: The routine to turn the 68030/040/060 MMUs off before
+ the demo starts is re-implemented and improved. Some nasty old AGA demos
+ like "Polka Bothers - Friday at eight" or "Andromeda - Nexus7" should
+ work now even on 68060 machines. In this mode, demos should generally run
+ at full speed not slowed down like before.

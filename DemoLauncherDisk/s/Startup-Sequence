@@ -1,0 +1,3 @@
+C:Type SYS:file_id.diz
+C:SetPatch QUIET
+SYS:AmigaDemoLauncher SOFTRESET

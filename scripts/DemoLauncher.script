@@ -1,0 +1,5 @@
+LAB execute_loop             ;Label für Schleife festlegen
+Daten:RunDemo NORESET >NIL:  ;Programm "RunDemo" aufrufen und Ausgabe auf NIL: umleiten
+IF NOT WARN                  ;Wenn Rückgabecode <> WARN (5),
+  SKIP execute_loop BACK     ;dann verzweige
+ENDIF
