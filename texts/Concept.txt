@@ -1,0 +1,51 @@
+Nur als bootbare Diskettenversion
+
+Intro, das nur gestartet wird, wenn kein Reset-Programm vorhanden ist.
+
+Check für Reset-Programm als separater Shell-Befehl "CheckADL" mit
+Rückgewert RETURN_OK/RETURN_FAIL, der dann in Script abgefragt wird und
+dementsprechend das Intro geladen wird oder nicht.
+
+Startup-Sequence:
+
+SetPatch QUIET
+CheckADL
+IF NOT FAIL
+  RSE-ADL_intro
+ENDIF
+RSE-ADL
+
+
+---- Intro ----
+
+View:		320x256
+Viewport:	320x256x16
+Sprites0-7:	256x26x16 Schwarz-Weissgrafik von Schauspielerin ohne Scan-Doubling
+
+Sinus-Laufschrift mit 32x26-Chars
+
+Copper steuert den Blitter an
+
+Bitplanes sind 64kB aligned
+
+
+
+Unterstützt Configs:
+
+
+vanilla A1200
+
+Chip-RAM:	2 MB
+Chipset:	AGA
+CPU:		68020
+OS:		3.0
+
+
+vanilla A4000
+
+Chip-RAM:	2 MB
+Chipset:	AGA
+CPU:		68030
+OS:		3.0
+
+Turbokarten: 68030/040/060 mit MMU und Fast-Memory
