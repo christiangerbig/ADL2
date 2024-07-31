@@ -102,7 +102,7 @@
 ; Fehlerhafte Abfrage, ob ein Software-Reset bei nicht geladener WB ausge-
 ; führt wird oder nicht war an den Status der geladenen/nicht geladenen WB
 ; gebunden -> Reset nach Transferieren einer Playliste aus einem CLI heraus,
-; ohne dass die WB geladen ist. Lösung: Eine neue Variable "ds_reset_active"
+; ohne dass die WB geladen ist. Lösung: Eine neue Variable "dc_reset_active"
 ; wird nun abgefragt und nur auf TRUE gesetzt, wenn im File-Requester der
 ; Button "Reboot" existiert
 ; Longword-Alignment bei Variablen durch Dummies garantiert
@@ -158,7 +158,7 @@
 ; Fällt der Test positiv aus, dann werden die ToolTypes der WHDLoad .info-
 ; Datei daraufhin überprüft, ob die Argumente PRELOAD, PRELOADSIZE oder
 ; QUITKEY angegeben wurden. Es wird dann ein Kommando-String erstellt, der
-; über die Funktion Execute() ausgeführt wird und das Demo über WHDLoad
+; über die Funktion SystemTagList() ausgeführt wird und das Demo über WHDLoad
 ; startet
 ; Neues Argument LMBEXIT n: n=2...10 Bei einem Demo mit mehreren Teilen wird
 ; vom Reset Device automatisch das Drücken der linken Maustaste n-mal nach
@@ -200,6 +200,7 @@
 ; - Prerunscript-Check völlig überarbeitet, in LOOP-Modus wird für jedes Demo
 ;   das gleiche Prerun-Script ausgeführt, wenn es über das Argument PRERUNSCRIPT
 ;   angegeben wurde
+; - Argument QUIET wieder herausgenommen
 
 
 	SECTION code_and_variables,CODE
@@ -272,19 +273,19 @@ adl_prerunscript_path_length	EQU 64
 adl_baud			EQU 2400
 
 
-; **** Demo-Selector ****
-ds_entries_number_default_max	EQU 10
-ds_entries_number_max		EQU 99
+; **** Demo-Charger ****
+dc_entries_number_default_max	EQU 10
+dc_entries_number_max		EQU 99
 
-ds_demo_parts_number_min        EQU 2
-ds_demo_parts_number_max        EQU 10
+dc_demo_parts_number_min        EQU 2
+dc_demo_parts_number_max        EQU 10
 
-ds_file_request_x_size		EQU 320
-ds_file_request_y_size		EQU 200
+dc_file_request_x_size		EQU 320
+dc_file_request_y_size		EQU 200
 
 
 ; **** Run-Demo ****
-rd_seconds_max			EQU 59
+rd_secondc_max			EQU 59
 rd_minutes_max			EQU 99
 
 rd_demo_parts_number_min        EQU 2
@@ -307,7 +308,7 @@ rd_window_top			EQU 0
 rd_window_x_size		EQU rd_screen_x_size
 rd_window_y_size		EQU rd_screen_y_size
 
-rd_switch_delay			EQU 50*3 ; 3s bei 50 Ticks/Sekunde
+rd_switch_delay			EQU PAL_FPS*3 ; 3s bei 50 Ticks/Sekunde
 
 
 ; **** WHDLoad ****
@@ -402,7 +403,9 @@ adl_output_handle		RS.L 1
 adl_dos_return_code		RS.L 1
 
 adl_read_arguments		RS.L 1
+adl_arg_help_enabled		RS.W 1
 
+	RS_ALIGN_LONGWORD
 adl_entries_buffer		RS.L 1
 adl_entries_number		RS.W 1
 adl_entries_number_max		RS.W 1
@@ -410,23 +413,24 @@ adl_entries_number_max		RS.W 1
 adl_reset_program_active	RS.W 1
 
 
-; **** Demo-Selector ****
-ds_arg_playlist_enabled		RS.W 1
+; **** Demo-Charger ****
+dc_arg_newentry_enabled		RS.W 1
+
+dc_arg_playlist_enabled		RS.W 1
 	RS_ALIGN_LONGWORD
-ds_playlist_file_name		RS.L 1
-ds_playlist_file_lock		RS.L 1
-ds_playlist_file_fib		RS.L 1
-ds_playlist_file_length		RS.L 1
-ds_playlist_file_buffer		RS.L 1
-ds_playlist_file_handle		RS.L 1
-ds_playlist_entries_number	RS.W 1
-ds_transmitted_entries_number 	RS.W 1
+dc_playlist_file_name		RS.L 1
+dc_playlist_file_lock		RS.L 1
+dc_playlist_file_fib		RS.L 1
+dc_playlist_file_length		RS.L 1
+dc_playlist_file_buffer		RS.L 1
+dc_playlist_file_handle		RS.L 1
+dc_playlist_entries_number	RS.W 1
+dc_transmitted_entries_number 	RS.W 1
 
-ds_file_request			RS.L 1
-ds_current_entry		RS.L 1
-ds_multiselect_entries_number	RS.W 1
-
-ds_load_active			RS.W 1
+	RS_ALIGN_LONGWORD
+dc_file_request			RS.L 1
+dc_current_entry		RS.L 1
+dc_multiselect_entries_number	RS.W 1
 
 
 ; **** Run-Demo ****
@@ -530,26 +534,24 @@ cmd_results_array		RS.B 0
 
 ; **** Amiga-Demo-Launcher ****
 cra_HELP			RS.L 1
-; **** Demo-Selector ****
+cra_REMOVE			RS.L 1
+; **** Demo-Charger ****
 cra_MAXENTRIES			RS.L 1
-cra_RESETLOADPOS		RS.L 1
-cra_playlist			RS.L 1
 cra_NEWENTRY			RS.L 1
-cra_QUIET			RS.L 1
-
+cra_playlist			RS.L 1
 ; **** Run-Demo ****
+cra_SHOWQUEUE			RS.L 1
+cra_PLAYENTRY			RS.L 1
+cra_RESETLOADPOS		RS.L 1
+cra_PRERUNSCRIPT		RS.L 1
 cra_MINS			RS.L 1
 cra_SECS			RS.L 1
 cra_LMBEXIT			RS.L 1
-cra_PRERUNSCRIPT		RS.L 1
-cra_SHOWQUEUE			RS.L 1
-cra_PLAYENTRY			RS.L 1
 cra_RANDOM			RS.L 1
 cra_ENDLESS			RS.L 1
 cra_LOOP			RS.L 1
 cra_FADER			RS.L 1
 cra_SOFTRESET			RS.L 1
-cra_REMOVE			RS.L 1
 
 cmd_results_array_size		RS.B 0
 
@@ -636,121 +638,98 @@ old_mmu_registers_size		RS.B 0
 	bsr	adl_check_cmd_line
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_read_arguments
+	tst.w	adl_arg_help_enabled(a3)
+	beq     adl_cleanup_intuition_library
 	bsr	adl_print_intro_message
+	tst.w	dc_arg_newentry_enabled(a3)
+	beq.s	dc_start
 	tst.w	adl_reset_program_active(a3)
-	bne.s	ds_start
-	tst.w	ds_load_active(a3)
-	bne	rd_start
+	beq	rd_start
 
-; **** Demo-Selector ****
-ds_start
-	moveq	#RETURN_WARN,d0
-	cmp.l	adl_dos_return_code(a3),d0
-	beq     adl_cleanup_read_arguments
- 	bsr	ds_alloc_entries_buffer
+; **** Demo-Charger ****
+dc_start
+ 	bsr	dc_alloc_entries_buffer
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_read_arguments
-	tst.w	ds_arg_playlist_enabled(a3)
-	bne.s	ds_open_file_request
+	tst.w	dc_arg_playlist_enabled(a3)
+	beq	dc_check_playlist
 
-; ** Es wurde eine Playlist-Datei angegeben **
-	bsr	ds_lock_playlist_file
+; ** Keine Playlist-Datei - Neue Einträge über File-Requester **
+	bsr	dc_open_asl_library
 	move.l	d0,adl_dos_return_code(a3)
-	bne	ds_cleanup_entries_buffer
-	bsr	ds_alloc_playlist_file_fib
+	bne	dc_cleanup_entries_buffer
+	bsr	dc_get_program_dir
 	move.l	d0,adl_dos_return_code(a3)
-	bne	ds_cleanup_locked_playlist_file
-	bsr	ds_get_playlist_file_length
+	bne.s	dc_cleanup_asl_library
+dc_open_file_request_loop
+	bsr	dc_display_remaining_files
+	bsr	dc_make_file_request
 	move.l	d0,adl_dos_return_code(a3)
-	bne	ds_cleanup_playlist_file_fib
-	bsr	ds_alloc_playlist_file_buffer
-	move.l	d0,adl_dos_return_code(a3)
-	bne	ds_cleanup_playlist_file_fib
-	bsr	ds_open_playlist_file
-	move.l	d0,adl_dos_return_code(a3)
-	bne	ds_cleanup_playlist_file_fib
-	bsr	ds_read_playlist_file
-	move.l	d0,adl_dos_return_code(a3)
-	bne	ds_cleanup_playlist_file
-	bsr	ds_parse_playlist_file
-	move.l	d0,adl_dos_return_code(a3)
-	moveq	#RETURN_WARN,d1
-	cmp.l	d1,d0
-	bgt	ds_cleanup_playlist_file
-	bra.s	ds_check_entries_number
+	bne.s	dc_cleanup_asl_library
 
-; ** Es wurde keine Playlist-Datei angegeben **
+	bsr	dc_display_file_request
+	move.l	d0,adl_dos_return_code(a3)
+	bne.s	dc_cleanup_file_request
+
+	bsr	dc_get_demofile_path
+	move.l	d0,adl_dos_return_code(a3)
+	bne.s	dc_cleanup_file_request
+	bsr	dc_free_file_request
+	bsr	dc_display_startmode_request
+        bsr	dc_check_entries_number_max
+	move.l	d0,adl_dos_return_code(a3)
+	beq.s	dc_open_file_request_loop
+	bra.s	dc_cleanup_asl_library
 	CNOP 0,4
-ds_open_file_request
-	bsr	ds_open_asl_library
+dc_cleanup_file_request
+	bsr	dc_free_file_request
+dc_cleanup_asl_library
+	bsr	dc_close_asl_library
+dc_cleanup_entries_buffer
+	bsr	dc_init_reset_program
 	move.l	d0,adl_dos_return_code(a3)
-	bne	ds_cleanup_entries_buffer
-	lea	ds_current_dir_name(pc),a5
-	bsr	ds_get_program_dir
-	move.l	d0,adl_dos_return_code(a3)
-	bne.s	ds_cleanup_asl_library
-ds_open_file_request_loop
-	bsr	ds_display_remaining_files
-	bsr	ds_make_file_request
-	move.l	d0,adl_dos_return_code(a3)
-	bne.s	ds_cleanup_asl_library
-	bsr	ds_display_file_request
-	move.l	d0,adl_dos_return_code(a3)
-	bne.s	ds_cleanup_file_request
-	bsr	ds_get_demofile_path
-	move.l	d0,adl_dos_return_code(a3)
-	bne.s	ds_cleanup_file_request
-	bsr	ds_free_file_request
-	bsr	ds_display_startmode_request
-	move.w	adl_entries_number_max(a3),d0
-	cmp.w	adl_entries_number(a3),d0
-	bne.s	ds_open_file_request_loop
-	bsr	ds_print_entries_max_message
-	move.l	d0,adl_dos_return_code(a3)
-	bra.s	ds_cleanup_asl_library
+	bne  	adl_cleanup_read_arguments
+	bsr	dc_free_entries_buffer
+	bra	adl_cleanup_read_arguments
 
+; ** Playlist-Datei angegeben **
 	CNOP 0,4
-ds_cleanup_file_request
-	bsr	ds_free_file_request
-ds_cleanup_asl_library
-	bsr	ds_close_asl_library
-ds_check_entries_number
-	tst.w	adl_entries_number(a3)
-	beq.s	ds_cleanup_playlist_file
-	cmp.l	#ERROR_OBJECT_NOT_FOUND,adl_dos_return_code(a3)
-	beq.s	ds_check_reset_program
-	moveq	#RETURN_WARN,d0
-	cmp.l	adl_dos_return_code(a3),d0
-	blt.s	ds_cleanup_playlist_file
-ds_check_reset_program
-	tst.w	adl_reset_program_active(a3)
-	beq.s	ds_update_entries_number
-	bsr	ds_init_reset_program
+dc_check_playlist
+	bsr	dc_lock_playlist_file
 	move.l	d0,adl_dos_return_code(a3)
-	bne.s	ds_cleanup_playlist_file
-ds_update_entries_number
-	RP_POINTER_ENTRIES_NUMBER
-	move.l	d0,a0
-	move.w	adl_entries_number(a3),(a0)
-ds_cleanup_playlist_file
-	tst.w	ds_arg_playlist_enabled(a3)
-	bne.s	ds_cleanup_entries_buffer
-	bsr	ds_close_playlist_file
-	bsr	ds_free_playlist_file_buffer
-ds_cleanup_playlist_file_fib
-	bsr	ds_free_playlist_file_fib
-ds_cleanup_locked_playlist_file
-	bsr	ds_unlock_playlist_file
-ds_cleanup_entries_buffer
-	bsr	ds_free_entries_buffer
-	moveq	#RETURN_WARN,d0
-	cmp.l	adl_dos_return_code(a3),d0
-	blt.s	adl_cleanup_read_arguments
-	tst.w	adl_entries_number(a3)
-	beq.s	adl_cleanup_read_arguments
-	tst.w	rd_arg_softreset_enabled(a3)
-	bne.s	adl_cleanup_read_arguments
-	CALLEXECQ ColdReboot
+	bne	dc_cleanup_entries_buffer
+	bsr	dc_alloc_playlist_file_fib
+	move.l	d0,adl_dos_return_code(a3)
+	bne	dc_cleanup_locked_playlist_file
+	bsr	dc_get_playlist_file_length
+	move.l	d0,adl_dos_return_code(a3)
+	bne	dc_cleanup_playlist_file_fib
+	bsr	dc_alloc_playlist_file_buffer
+	move.l	d0,adl_dos_return_code(a3)
+	bne	dc_cleanup_playlist_file_fib
+	bsr	dc_open_playlist_file
+	move.l	d0,adl_dos_return_code(a3)
+	bne	dc_cleanup_playlist_file_buffer
+	bsr	dc_read_playlist_file
+	move.l	d0,adl_dos_return_code(a3)
+	bne	dc_cleanup_playlist_file
+	bsr	dc_parse_playlist_file
+	move.l	d0,adl_dos_return_code(a3)
+        bne.s   dc_cleanup_playlist_file
+	bsr	dc_check_entries_number_min
+	move.l	d0,adl_dos_return_code(a3)
+dc_cleanup_playlist_file
+	bsr	dc_close_playlist_file
+dc_cleanup_playlist_file_buffer
+	bsr	dc_free_playlist_file_buffer
+dc_cleanup_playlist_file_fib
+	bsr	dc_free_playlist_file_fib
+dc_cleanup_locked_playlist_file
+	bsr	dc_unlock_playlist_file
+	bsr	dc_init_reset_program
+	move.l	d0,adl_dos_return_code(a3)
+        bra	dc_cleanup_entries_buffer
+
 
 ; **** Amiga Demo-Launcher ****
 	CNOP 0,4
@@ -783,14 +762,19 @@ adl_init_variables
 	moveq	#FALSE,d1
 	move.w	d1,adl_reset_program_active(a3)
 
+	move.w	d1,adl_arg_help_enabled(a3)
 
-; **** Demo-Selector ****
-	move.w  d0,ds_multiselect_entries_number(a3)
-	move.w	d1,ds_load_active(a3)
+	move.w	d0,adl_entries_number(a3)
 
-	move.w	d1,ds_arg_playlist_enabled(a3)
-	move.w	d0,ds_playlist_entries_number(a3)
-	move.w	d0,ds_transmitted_entries_number(a3)
+
+; **** Demo-Charger ****
+	move.w	d1,dc_arg_newentry_enabled(a3)
+
+	move.w  d0,dc_multiselect_entries_number(a3)
+
+	move.w	d1,dc_arg_playlist_enabled(a3)
+	move.w	d0,dc_playlist_entries_number(a3)
+	move.w	d0,dc_transmitted_entries_number(a3)
 
 
 ; **** Run-Demo ****
@@ -827,8 +811,8 @@ adl_init_variables
 	CNOP 0,4
 adl_init_structures
 	bsr	adl_init_cool_capture_request
-	bsr     ds_init_startmode_request
-	bsr	ds_init_file_request_tag_lists
+	bsr     dc_init_startmode_request
+	bsr	dc_init_file_request_tag_lists
 	bsr	rd_init_load_color_table
 	bsr	rd_init_custom_screen_tag_list
 	bsr	rd_init_custom_window_tag_list
@@ -852,35 +836,35 @@ adl_init_cool_capture_request
 
 
 	CNOP 0,4
-ds_init_startmode_request
-	lea	ds_startmode_request(pc),a0
+dc_init_startmode_request
+	lea	dc_startmode_request(pc),a0
 	move.l	d2,(a0)+		; Größe der Struktur
 	move.l	d0,(a0)+		; Keine Flags
-	lea	ds_startmode_request_title(pc),a1
+	lea	dc_startmode_request_title(pc),a1
 	move.l	a1,(a0)+		; Zeiger auf Titeltext
-	lea	ds_startmode_request_body(pc),a1
+	lea	dc_startmode_request_body(pc),a1
 	move.l	a1,(a0)+		; Zeiger auf Text in Requester
-	lea	ds_startmode_request_gadgets(pc),a1
+	lea	dc_startmode_request_gadgets(pc),a1
 	move.l	a1,(a0)			; Zeiger auf Gadgettexte
 	rts
 
 
 	CNOP 0,4
-ds_init_file_request_tag_lists
-	lea	ds_file_request_init_tag_list(pc),a0
+dc_init_file_request_tag_lists
+	lea	dc_file_request_init_tag_list(pc),a0
 ; ** Tags für Fensterbeeinflussung **
 	move.l	#ASLFR_Window,(a0)+
 	moveq	#0,d0
 	move.l	d0,(a0)+
 ; ** Texte für Textanzeige **
 	move.l	#ASLFR_TitleText,(a0)+
-	lea	ds_file_request_title(pc),a1
+	lea	dc_file_request_title(pc),a1
 	move.l	a1,(a0)+
 	move.l	#ASLFR_PositiveText,(a0)+
-	lea	ds_file_request_ok(pc),a1
+	lea	dc_file_request_ok(pc),a1
 	move.l	a1,(a0)+
 	move.l	#ASLFR_NegativeText,(a0)+
-	lea	ds_file_request_quit(pc),a1
+	lea	dc_file_request_quit(pc),a1
 	move.l	a1,(a0)+
 ; ** Grundparameter für File-Requester **
 	move.l	#ASLFR_InitialLeftEdge,(a0)+
@@ -888,11 +872,11 @@ ds_init_file_request_tag_lists
 	move.l	#ASLFR_InitialTopEdge,(a0)+
 	move.l	d0,(a0)+
 	move.l	#ASLFR_InitialWidth,(a0)+
-	move.l	#ds_file_request_x_size,(a0)+
+	move.l	#dc_file_request_x_size,(a0)+
 	move.l	#ASLFR_InitialHeight,(a0)+
-	move.l	#ds_file_request_y_size,(a0)+
+	move.l	#dc_file_request_y_size,(a0)+
 	move.l	#ASLFR_InitialPattern,(a0)+
-	lea	ds_file_request_pattern(pc),a1
+	lea	dc_file_request_pattern(pc),a1
 	move.l	a1,(a0)+
 ; ** Optionen **
 	move.l	#ASLFR_Flags1,(a0)+
@@ -901,9 +885,9 @@ ds_init_file_request_tag_lists
 	moveq	#TAG_DONE,d2
 	move.l	d2,(a0)
 
-	lea	ds_file_request_display_tag_list(pc),a0
+	lea	dc_file_request_display_tag_list(pc),a0
 	move.l	#ASLFR_InitialDrawer,(a0)+
-	lea	ds_current_dir_name(pc),a1
+	lea	dc_current_dir_name(pc),a1
 	move.l	a1,(a0)+
 	moveq	#TAG_DONE,d2
 	move.l	d2,(a0)
@@ -1144,23 +1128,23 @@ adl_open_intuition_library_ok
 adl_check_cool_capture
 	move.l	_SysBase(pc),a0
 	move.l	CoolCapture(a0),d0
-	beq.s   adl_check_cool_capture_ok
+	beq.s   adl_set_default_values
 	move.l	d0,a0
 	cmp.w	#"DL",2(a0)
-	beq.s	adl_set_entries_number_max
-	move.l	a3,a4			; Inhalt von a3 retten
+	beq.s	adl_update_variables
+	move.l	a3,-(a7)
 	sub.l	a0,a0			; Requester erscheint auf Workbench
 	lea	adl_cool_capture_request(pc),a1
 	move.l	a0,a2			; Keine IDCMP-Flags
 	move.l	a0,a3			; Keine Argumentenliste
 	CALLINT EasyRequestArgs
-	move.l	a4,a3			; Alter Inhalt von a3
+	move.l	(a7)+,a3
 	tst.l	d0			; Gadget "Proceed" angeklickt ?
-	bne.s	adl_check_cool_capture_ok ; Ja -> verzweige
+	bne.s	adl_set_default_values	; Ja -> verzweige
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
-adl_set_entries_number_max
+adl_update_variables
 	RP_POINTER_ENTRIES_NUMBER_MAX
 	move.l	d0,a0
 	move.w	(a0),adl_entries_number_max(a3)
@@ -1173,8 +1157,8 @@ adl_set_entries_number_max
 	moveq	#RETURN_OK,d0
 	rts
 	CNOP 0,4
-adl_check_cool_capture_ok
-	moveq	#ds_entries_number_default_max,d2
+adl_set_default_values
+	moveq	#dc_entries_number_default_max,d2
 	move.w	d2,adl_entries_number_max(a3)
 	lea	rp_entries_number_max(pc),a0
 	move.w	d2,(a0)
@@ -1196,13 +1180,26 @@ adl_check_cmd_line
 	moveq	#RETURN_FAIL,d0
 	rts
 
+; **** Amiga-Demo-Launcher-Argumente ****
 ; ** Argument HELP ***
 	CNOP 0,4
 adl_check_arg_help
-	tst.l	cra_HELP(a2)
-	beq.s	ds_check_arguments
+	move.l	cra_HELP(a2),d0
+	beq.s	adl_check_arg_remove
+	not.w	d0
+	move.w	d0,adl_arg_help_enabled(a3)
 	bsr.s	adl_print_cmd_usage
-	moveq	#RETURN_FAIL,d0
+	moveq	#RETURN_OK,d0
+	rts
+
+; ** Argument REMOVE **
+	CNOP 0,4
+adl_check_arg_remove
+	move.l	cra_REMOVE(a2),d0
+	beq.s	dc_check_arguments
+	not.w	d0
+	move.w	d0,rd_arg_remove_enabled(a3)
+	moveq	#RETURN_OK,d0
 	rts
 
 
@@ -1213,103 +1210,89 @@ adl_print_cmd_usage
 	bra	adl_print_text
 
 
-; **** Demo-Selector-Argumente ****
+; **** Demo-Charger-Argumente ****
 	CNOP 0,4
-ds_check_arguments
+dc_check_arguments
 	moveq	#TRUE,d3
-	tst.w	adl_reset_program_active(a3)
-	beq.s	ds_check_arg_resetloadpos
 
 ; ** Argument MAXENTRIES **
 	move.l	cra_MAXENTRIES(a2),d0
-	beq.s	ds_check_arg_resetloadpos
+	beq.s	dc_check_arg_newentry
 	move.l	d0,a0			;  Zeiger auf String
 	move.l	(a0),d0			;  Wert
-	bne.s	ds_check_arg_maxentries_ok
+	bne.s	dc_check_arg_maxentries_ok
 	bsr.s	adl_print_cmd_usage
 	MOVEF.L	ERROR_KEY_NEEDS_ARG,d0
 	rts
 	CNOP 0,4
-ds_check_arg_maxentries_ok
-	cmp.w	#ds_entries_number_max,d0
-	ble.s   ds_update_entries_number_max
+dc_check_arg_maxentries_ok
+	cmp.w	#dc_entries_number_max,d0
+	ble.s   dc_update_entries_number_max
 	bsr.s	adl_print_cmd_usage
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
-ds_update_entries_number_max
+dc_update_entries_number_max
 	move.w	d0,adl_entries_number_max(a3)
 	lea	rp_entries_number_max(pc),a0
 	move.w	d0,(a0)
 
+; ** Argument NEWENTRY **
+dc_check_arg_newentry
+	move.l	cra_NEWENTRY(a2),d0
+        not.w	d0
+	move.w	d0,dc_arg_newentry_enabled(a3)
+
+; ** Argument playlist **
+	CNOP 0,4
+dc_check_arg_playlist
+	move.l	cra_playlist(a2),dc_playlist_file_name(a3)
+	beq.s	rd_check_arguments
+	move.w	d3,dc_arg_playlist_enabled(a3)
+
+; **** Run-Demo-Argumente ****
+rd_check_arguments
+
+; ** Argument SHOWQUEUE **
+	move.l	cra_SHOWQUEUE(a2),d0
+	not.w	d0
+	move.w	d0,rd_arg_showqueue_enabled(a3)
+
+; ** Argument PLAYENTRY **
+	move.l	cra_PLAYENTRY(a2),d0
+	beq.s	dc_check_arg_resetloadpos
+	move.l	d0,a0		; Zeiger auf String
+	move.l	(a0),d0		; Entry-Nummer
+	bne.s	rd_check_arg_playentry_ok
+	bsr	adl_print_cmd_usage
+	MOVEF.L	ERROR_KEY_NEEDS_ARG,d0
+	rts
+	CNOP 0,4
+rd_check_arg_playentry_ok
+	cmp.w	adl_entries_number(a3),d0
+	ble.s   rd_check_arg_playentry_set
+	bsr	adl_print_cmd_usage
+	moveq	#RETURN_FAIL,d0
+	rts
+	CNOP 0,4
+rd_check_arg_playentry_set
+	move.w	d0,rd_arg_playentry_offset(a3)
+
 ; ** Argument RESETLOADPOS **
-ds_check_arg_resetloadpos
+dc_check_arg_resetloadpos
 	move.l	cra_RESETLOADPOS(a2),d0
-	beq.s	ds_check_arg_playlist
+	beq.s	rd_check_arg_prerunscript
 	not.w	d0
 	move.w	d0,rd_arg_resetloadpos_enabled(a3)
 	move.w	#1,rd_arg_playentry_offset(a3)
 	bra	rd_remove_tags
 
-; ** Argument playlist **
-	CNOP 0,4
-ds_check_arg_playlist
-	move.l	cra_playlist(a2),ds_playlist_file_name(a3)
-	beq.s	ds_check_arg_newentry
-	move.w	d3,ds_arg_playlist_enabled(a3)
-	move.w	d3,ds_load_active(a3)
-	bra.s	ds_check_arg_quiet
-
-; ** Argument NEWENTRY **
-	CNOP 0,4
-ds_check_arg_newentry
-	tst.l	cra_NEWENTRY(a2)
-	beq.s	ds_check_arg_quiet
-	move.w	d3,ds_load_active(a3)
-
-; ** Argument QUIET **
-ds_check_arg_quiet
-	tst.l   cra_QUIET(a2)
-	beq.s   ds_check_entries_number_max
-	tst.w	adl_reset_program_active(a3)
-	beq.s	ds_check_entries_number_max
-	moveq 	#RETURN_WARN,d0
-	rts
-
-
-	CNOP 0,4
-ds_check_entries_number_max
-	tst.w   ds_load_active(a3)
-	bne.s   rd_check_arguments
-	move.w  adl_entries_number(a3),d0
-	cmp.w   adl_entries_number_max(a3),d0
-	beq.s	ds_print_entries_max_message
-	moveq   #RETURN_OK,d0
-	rts
-
-
-	CNOP 0,4
-ds_print_entries_max_message
-	lea     ds_note_text(pc),a0
-	moveq   #ds_note_text_end-ds_note_text,d0
-	bsr     adl_print_text
-	moveq   #RETURN_WARN,d0
-	rts
-
-
-; **** Run-Demo-Arguments ****
-	CNOP 0,4
-rd_check_arguments
-	tst.w	adl_reset_program_active(a3)
-	bne	rd_check_arg_softreset
-
-; ** Argument REMOVE **
-	move.l	cra_REMOVE(a2),d0
+; ** Argument PRERUNSCRIPT **
+rd_check_arg_prerunscript
+	move.l	cra_PRERUNSCRIPT(a2),d0
 	beq.s	rd_check_arg_secs
-	not.w	d0
-	move.w	d0,rd_arg_remove_enabled(a3)
-	moveq	#RETURN_OK,d0
-	rts
+	move.l	d0,rd_prerunscript_path(a3)
+	move.w	d3,rd_arg_prerunscript_enabled(a3)
 
 ; ** Argument SECS **
 	CNOP 0,4
@@ -1318,7 +1301,13 @@ rd_check_arg_secs
 	beq.s	rd_check_arg_mins
 	move.l	d0,a0			; Zeiger auf String
 	move.l	(a0),d0			; Sekundenwert
-	moveq	#rd_seconds_max,d2
+	bne.s	rd_check_arg_secs_ok
+	bsr	adl_print_cmd_usage
+	MOVEF.L	ERROR_KEY_NEEDS_ARG,d0
+	rts
+	CNOP 0,4
+rd_check_arg_secs_ok
+	moveq	#rd_secondc_max,d2
 	cmp.l	d2,d0
 	ble.s   rd_check_arg_mins
 	bsr	adl_print_cmd_usage
@@ -1332,6 +1321,12 @@ rd_check_arg_mins
 	beq.s	rd_calculate_ms_sum
 	move.l	d1,a0			; Zeiger auf String
 	move.l	(a0),d1			; Minutenwert
+	bne.s	rd_check_arg_mins_ok
+	bsr	adl_print_cmd_usage
+	MOVEF.L	ERROR_KEY_NEEDS_ARG,d0
+	rts
+	CNOP 0,4
+rd_check_arg_mins_ok
 	moveq	#rd_minutes_max,d2
 	cmp.l	d2,d1
 	ble.s   rd_calculate_ms_sum
@@ -1349,7 +1344,7 @@ rd_calculate_ms_sum
 ; ** Argument LMBEXIT **
 rd_check_arg_lmbexit
 	move.l	cra_LMBEXIT(a2),d0
-	beq.s	rd_check_arg_prerunscript
+	beq.s   rd_check_arg_random
 	tst.w	rd_play_duration(a3)
 	bne.s   rd_check_arg_lmbexit_ok
 	bsr	adl_print_cmd_usage
@@ -1382,39 +1377,6 @@ rd_arg_lmbexit_set_play_duration
 	subq.w	#1,d0			; Wert anpassen, da intern 1...9 übergeben wird
 	add.w	d0,rd_play_duration(a3)
 
-; ** Argument PRERUNSCRIPT **
-rd_check_arg_prerunscript
-	move.l	cra_PRERUNSCRIPT(a2),d0
-	beq.s	rd_check_arg_showqueue
-	move.l	d0,rd_prerunscript_path(a3)
-	move.w	d3,rd_arg_prerunscript_enabled(a3)
-
-; ** Argument SHOWQUEUE **
-rd_check_arg_showqueue
-	move.l	cra_SHOWQUEUE(a2),d0
-	not.w	d0
-	move.w	d0,rd_arg_showqueue_enabled(a3)
-
-; ** Argument PLAYENTRY **
-	move.l	cra_PLAYENTRY(a2),d0
-	beq.s	rd_check_arg_random
-	move.l	d0,a0		; Zeiger auf String
-	move.l	(a0),d0		; Entry-Nummer
-	bne.s	rd_check_arg_playentry_ok
-	bsr	adl_print_cmd_usage
-	MOVEF.L	ERROR_KEY_NEEDS_ARG,d0
-	rts
-	CNOP 0,4
-rd_check_arg_playentry_ok
-	cmp.w	adl_entries_number(a3),d0
-	ble.s   rd_check_arg_playentry_set
-	bsr	adl_print_cmd_usage
-	moveq	#RETURN_FAIL,d0
-	rts
-	CNOP 0,4
-rd_check_arg_playentry_set
-	move.w	d0,rd_arg_playentry_offset(a3)
-
 ; ** Argument RANDOM **
 rd_check_arg_random
 	move.l	cra_RANDOM(a2),d0
@@ -1438,15 +1400,14 @@ rd_check_arg_random
 
 ; ** Argument SOFTRESET **
 rd_check_arg_softreset
-	tst.l	cra_SOFTRESET(a2)
-	beq.s	rd_check_arg_SOFTRESET_ok
+	move.l	cra_SOFTRESET(a2),d0
+	beq.s	rd_check_arguments_ok
 	tst.w	rd_arg_loop_enabled(a3)
-	beq.s	rd_check_arg_SOFTRESET_ok
-;	moveq	#RETURN_WARN,d0                 ; kann entfallen üüü
-;	cmp.l	adl_dos_return_code(a3),d0	; kann entfallen üüü
-;	beq.s	rd_check_reset_program_active	; kann entfallen üüü
-	clr.w	rd_arg_softreset_enabled(a3)
-rd_check_arg_SOFTRESET_ok
+	beq.s	rd_check_arguments_ok
+	not.w	d0
+	move.w	d0,rd_arg_softreset_enabled(a3)
+
+rd_check_arguments_ok
 	moveq	#RETURN_OK,d0
 	rts
 
@@ -1454,15 +1415,859 @@ rd_check_arg_SOFTRESET_ok
 	CNOP 0,4
 adl_print_intro_message
 	tst.w	adl_reset_program_active(a3)
-	bne.s	adl_do_print_intro_message
-	tst.w	rd_arg_softreset_enabled(a3)
-	bne.s	adl_do_print_intro_message
+	bne.s	adl_print_intro_message_ok
 	rts
 	CNOP 0,4
-adl_do_print_intro_message
+adl_print_intro_message_ok
 	lea	adl_intro_message(pc),a0
 	move.l	#adl_intro_message_end-adl_intro_message,d0
 	bra	adl_print_text
+
+
+; **** DemoSelector ****
+	CNOP 0,4
+dc_alloc_entries_buffer
+	tst.w	adl_reset_program_active(a3)
+	beq.s	dc_alloc_entries_buffer_ok
+	moveq	#0,d0
+	move.w	adl_entries_number_max(a3),d0
+	MULUF.L playback_queue_entry_size,d0,d1 ; Größe des Puffers berechnen
+	MOVEF.L MEMF_CLEAR|MEMF_PUBLIC|MEMF_ANY,d1
+	CALLEXEC AllocMem
+	move.l	d0,adl_entries_buffer(a3)
+	bne.s	dc_alloc_entries_buffer_ok
+	lea	dc_error_text1(pc),a0
+	moveq	#dc_error_text1_end-dc_error_text1,d0
+	bsr	adl_print_text
+	MOVEF.L	ERROR_NO_FREE_STORE,d0
+	rts
+	CNOP 0,4
+dc_alloc_entries_buffer_ok
+	moveq	#RETURN_OK,d0
+	rts
+
+
+	CNOP 0,4
+dc_open_asl_library
+	lea	asl_library_name(pc),a1
+	moveq	#OS_VERSION_MIN,d0
+	CALLEXEC OpenLibrary
+	lea	_ASLBase(pc),a0
+	move.l	d0,(a0)
+	bne.s	dc_open_asl_library_ok
+	lea	dc_error_text10(pc),a0
+	moveq	#dc_error_text10_end-dc_error_text10,d0
+	bsr	adl_print_text
+	moveq	#RETURN_FAIL,d0
+	rts
+	CNOP 0,4
+dc_open_asl_library_ok
+	moveq	#RETURN_OK,d0
+	rts
+
+
+	CNOP 0,4
+dc_get_program_dir
+	CALLDOS GetProgramDir
+	tst.l	d0
+	bne.s	dc_get_program_dir_name
+	lea	dc_error_text11(pc),a0
+	moveq	#dc_error_text11_end-dc_error_text11,d0
+	bsr	adl_print_text
+	moveq	#RETURN_FAIL,d0
+	rts
+	CNOP 0,4
+dc_get_program_dir_name
+	move.l	d0,d1			; Verzeichnis-Lock
+	lea	dc_current_dir_name(pc),a0
+	move.l	a0,d2			; Zeiger auf Puffer für Verzeichnisname
+	MOVEF.L	adl_demofile_path_length,d3
+	CALLLIBS NameFromLock
+	tst.l	d0
+	bne.s	dc_get_program_dir_name_ok
+	lea	dc_error_text12(pc),a0
+	moveq	#dc_error_text12_end-dc_error_text12,d0
+	bsr	adl_print_text
+	MOVEF.L	ERROR_DIR_NOT_FOUND,d0
+	rts
+	CNOP 0,4
+dc_get_program_dir_name_ok
+	moveq	#RETURN_OK,d0
+	rts
+
+
+	CNOP 0,4
+dc_display_remaining_files
+	lea	dc_remaining_files(pc),a0 ; Stringadresse
+	move.w	adl_entries_number_max(a3),d1 ; Maximale Anzahl der Einträge in Liste mit Dateipfaden
+	sub.w	adl_entries_number(a3),d1 ; Verbleibende Anzahl der zu ladenden Dateien ermitteln
+	cmp.w	#1,d1			; Nur noch ein File?
+	bne.s	dc_request_title_ok	; Nein -> verzweige
+	clr.b	dc_character_s-dc_remaining_files(a0) ; "s" von Demo"s" löschen
+dc_request_title_ok
+	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
+	bra	rp_dec_to_ascii
+
+
+	CNOP 0,4
+dc_make_file_request
+	moveq	#ASL_FileRequest,d0
+	lea	dc_file_request_init_tag_list(pc),a0
+	tst.w	rd_arg_softreset_enabled(a3)
+	bne.s	dc_do_alloc_asl_request
+	lea	dc_file_request_reboot(pc),a1
+	move.l	a1,(ti_SIZEOF*3)+ti_data(a0) ; Zeiger auf negativen Text
+dc_do_alloc_asl_request
+	CALLASL AllocAslRequest
+	move.l	d0,dc_file_request(a3)
+	bne.s	dc_make_file_request_ok
+	lea	dc_error_text13(pc),a0
+	moveq	#dc_error_text13_end-dc_error_text13,d0
+	bsr	adl_print_text
+	moveq	#RETURN_FAIL,d0
+	rts
+	CNOP 0,4
+dc_make_file_request_ok
+	moveq	#RETURN_OK,d0
+	rts
+
+
+	CNOP 0,4
+dc_display_file_request
+	move.l	dc_file_request(a3),a0
+	lea	dc_file_request_display_tag_list(pc),a1
+	CALLASL AslRequest
+	tst.l   d0
+	bne.s	dc_display_file_request_ok
+	moveq	#RETURN_FAIL,d0
+	rts
+	CNOP 0,4
+dc_display_file_request_ok
+	moveq	#RETURN_OK,d0
+	rts
+
+
+	CNOP 0,4
+dc_get_demofile_path
+	clr.w   dc_multiselect_entries_number(a3)
+	move.l	dc_file_request(a3),a2
+	move.l	fr_NumArgs(a2),d6
+	move.w	d6,d0			; Anzahl der ausgewählten Dateien
+	add.w   adl_entries_number(a3),d0
+	cmp.w   adl_entries_number_max(a3),d0
+	blt.s   dc_entries_number_okay
+	move.w  adl_entries_number_max(a3),d6
+	sub.w   adl_entries_number(a3),d6 ; noch verbleibende Einträge
+dc_entries_number_okay
+	move.w  d6,dc_multiselect_entries_number(a3)
+	moveq	#0,d5			; Erster Eintrag in ArgLists
+	move.l	fr_ArgList(a2),a6
+	subq.w	#1,d6			; wegen dbf
+dc_multiselect_loop
+	move.l	wa_Name(a6,d5.w*8),a0	; Zeiger auf Dateiname
+	move.l	fr_Drawer(a2),a1	; Zeiger auf Verzeichnisname
+	move.l	a2,-(a7)
+	bsr	dc_check_demofile_path
+	move.l	(a7)+,a2
+	tst.l	d0
+	beq.s	dc_next_multiselect_entry
+	rts
+	CNOP 0,4
+dc_next_multiselect_entry
+	addq.w	#1,d5			; nächster Eintrag in ArgLists
+	dbf	d6,dc_multiselect_loop
+	moveq	#RETURN_OK,d0
+	rts
+
+
+; ** Demo Dateipfad prüfen **
+; Input
+; a0 ... Zeiger auf Dateiname
+; a1 ... Zeiger auf Verzeichnisname
+; Result
+; d0 ... Rückgabewert: DOS Error Code
+	CNOP 0,4
+dc_check_demofile_path
+	tst.b	(a1)			; Verzeichnisname vorhanden ?
+ 	bne.s	dc_check_demofile_name	; Ja -> verzweige
+	lea	dc_error_text14(pc),a0
+	moveq	#dc_error_text14_end-dc_error_text14,d0
+	bsr	adl_print_text
+	MOVEF.L ERROR_DIR_NOT_FOUND,d0
+	rts
+	CNOP 0,4
+dc_check_demofile_name
+	tst.b	(a0)			; Dateiname vorhanden ?
+	bne.s	dc_get_playback_entry_offset ; Ja -> verzweige
+	lea	dc_error_text15(pc),a0
+	moveq	#dc_error_text15_end-dc_error_text15,d0
+	bsr	adl_print_text
+	MOVEF.L ERROR_OBJECT_NOT_FOUND,d0
+	rts
+	CNOP 0,4
+dc_get_playback_entry_offset
+	moveq   #0,d0
+	move.w	adl_entries_number(a3),d0
+	MULUF.L playback_queue_entry_size,d0,d1 ; Aktuelles Offset in Puffer ermitteln
+	move.l	adl_entries_buffer(a3),a2
+	add.l   d0,a2			; Zeiger auf Eintrag im Puffer
+	move.l	a2,dc_current_entry(a3)
+	move.l	a0,-(a7)
+	move.l	a2,a0			; Zeiger auf Eintrag im Puffer
+	bsr	dc_clear_playlist_entry
+	move.l	(a7)+,a0		; Zeiger auf Dateiname
+	moveq	#"/",d2
+	moveq	#":",d3
+dc_check_demo_dir_name
+	tst.b	(a1)			; Ende von Verzeichnisname (Nullbyte) ?
+	beq.s	dc_copy_demofile_name_loop ; Ja -> verzweige
+	cmp.b	(a1),d2			; Bei "/" auch Dateiname kopieren
+	bne.s	dc_copy_demo_dir_name	; Sonst Verzeichnisname kopieren
+	addq.w	#1,a1			; Nächstes Zeichen im Verzeichnisnamen
+	bra.s	dc_check_demo_dir_name
+	CNOP 0,4
+dc_copy_demo_dir_name
+	lea	dc_current_dir_name(pc),a4 ; Zeiger auf Puffer für aktuellen Verzeichnisnamen
+	moveq	#0,d0			; Zähler für Länge des Dateipfads zurücksetzen
+dc_copy_demo_dir_name_loop
+	addq.b	#1,d0
+	cmp.b	#adl_demofile_path_length-1,d0
+	blt.s	dc_copy_demo_dir_ok
+	move.l	dc_current_entry(a3),a0 ; Zeiger auf Eintrag im Puffer
+	bsr	dc_clear_playlist_entry
+	lea	dc_error_text16(pc),a0
+	moveq	#dc_error_text16_end-dc_error_text16,d0
+	bsr	adl_print_text
+	MOVEF.L ERROR_INVALID_COMPONENT_NAME,d0
+	rts
+	CNOP 0,4
+dc_copy_demo_dir_ok
+	move.b	(a1),(a2)+
+	move.b	(a1)+,(a4)+
+	tst.b	(a1)
+	bne.s	dc_copy_demo_dir_name_loop ; Schleife, so lange bis Endes des Verzeichnisnamens erreicht ist
+	clr.b	(a4)			; Nullbyte setzen
+	cmp.b	-1(a1),d3		; War letztes Zeichen ein ":" ?
+	beq.s	dc_copy_demofile_name_loop ; Ja -> Dateiname kopieren
+	cmp.b	-1(a1),d2		; War letztes Zeichen ein "/" ?
+	beq.s	dc_copy_demofile_name_loop ; Ja -> Dateiname kopieren
+	move.b	d2,(a2)+		; Sonst "/" einfügen
+dc_copy_demofile_name_loop
+	addq.b	#1,d0
+	cmp.b	#adl_demofile_path_length-1,d0
+	blt.s	dc_copy_demofile_name_ok
+	move.l	dc_current_entry(a3),a0 ; Zeiger auf Eintrag in Puffer
+	bsr	dc_clear_playlist_entry
+	lea	dc_error_text16(pc),a0
+	moveq	#dc_error_text16_end-dc_error_text16,d0
+	bsr	adl_print_text
+	MOVEF.L ERROR_INVALID_COMPONENT_NAME,d0
+	rts
+	CNOP 0,4
+dc_copy_demofile_name_ok
+	move.b	(a0)+,(a2)+
+	cmp.b	(a0),d2			; Nächstes Zeichen ein "/" ?
+	bne.s	dc_check_demofile_nullbyte ; Nein -> verzweige
+	lea	dc_error_text17(pc),a0
+	moveq	#dc_error_text17_end-dc_error_text17,d0
+	bsr	adl_print_text
+	MOVEF.L ERROR_OBJECT_NOT_FOUND,d0
+	rts
+	CNOP 0,4
+dc_check_demofile_nullbyte
+	tst.b	(a0)
+	bne.s	dc_copy_demofile_name_loop ; Schleife, so lange bis Endes des Verzeichnisnamens erreicht ist
+	clr.b	(a2)			; Nullbyte setzen
+	addq.w	#1,adl_entries_number(a3)
+	moveq	#RETURN_OK,d0
+	rts
+
+
+	CNOP 0,4
+dc_free_file_request
+	move.l	dc_file_request(a3),a0
+	CALLASLQ FreeAslRequest
+
+
+	CNOP 0,4
+dc_display_startmode_request
+	move.l	a3,-(a7)
+	sub.l	a0,a0			; Requester erscheint auf Workbench
+	lea	dc_startmode_request(pc),a1
+	move.l	a0,a2			; Keine IDCMP-Flags
+	move.l	a0,a3			; Keine Argumentenliste
+	CALLINT EasyRequestArgs
+	move.l	(a7)+,a3
+	addq.b  #1,d0                   ; Ergebnis korrigieren
+	MOVEF.L playback_queue_entry_size,d1 ; Größe des Eintrags
+	move.l	dc_current_entry(a3),a0
+	move.w	dc_multiselect_entries_number(a3),d7
+	subq.w	#1,d7			;wegen dbf
+dc_start_loop
+	move.b	d0,pqe_startmode(a0)	; Kennung eintragen
+	sub.l	d1,a0			; vorheriger Pfadname
+	dbf	d7,dc_start_loop
+	rts
+
+
+	CNOP 0,4
+dc_check_entries_number_max
+	move.w  adl_entries_number(a3),d0
+	cmp.w   adl_entries_number_max(a3),d0
+	bne.s	dc_check_entries_number_max_ok
+	bsr.s	dc_print_entries_max_message
+	moveq   #RETURN_WARN,d0
+	rts
+	CNOP 0,4
+dc_check_entries_number_max_ok
+	moveq   #RETURN_OK,d0
+	rts
+
+
+	CNOP 0,4
+dc_print_entries_max_message
+	lea     dc_note_text(pc),a0
+	moveq   #dc_note_text_end-dc_note_text,d0
+	bra     adl_print_text
+
+
+	CNOP 0,4
+dc_init_reset_program
+	tst.w	adl_entries_number(a3)
+	bne.s	adl_check_reset_program_active
+	rts
+	CNOP 0,4
+adl_check_reset_program_active
+	tst.w	adl_reset_program_active(a3)
+	beq	dc_update_entries_number
+	move.l	#rp_reset_program_end-rp_reset_program,d0 ; Programmgröße
+	move.w	d0,d7		
+	moveq	#0,d1
+	move.w	adl_entries_number_max(a3),d1
+	MULUF.L playback_queue_entry_size,d1,d2 ; Größe des Puffers ermitteln
+	add.l	d1,d0			; Gesamtlänge inkusive Puffergröße
+	lea	rp_reset_program_size(pc),a0
+	move.l	d0,(a0)
+	MOVEF.L	MEMF_PUBLIC+MEMF_CHIP+MEMF_CLEAR+MEMF_REVERSE,d1
+	CALLEXEC AllocMem
+	lea	rp_reset_program_memory(pc),a0
+	move.l	d0,(a0)
+	bne.s	dc_copy_reset_program
+	lea	dc_error_text18(pc),a0
+	moveq	#dc_error_text18_end-dc_error_text18,d0
+	bsr	adl_print_text
+	moveq	#ERROR_NO_FREE_STORE,d0
+	rts
+	CNOP 0,4
+dc_copy_reset_program
+	lea	rp_reset_program(pc),a0	; Quelle
+	move.l	d0,a1			; Ziel: Speicherbereich
+	move.l	d0,a2			; Reset-Programm im Speicher
+	move.l	d0,CoolCapture(a6)
+	subq.w	#1,d7			; wegen dbf
+dc_copy_reset_program_loop
+	move.b	(a0)+,(a1)+
+	dbf	d7,dc_copy_reset_program_loop
+	move.l	adl_entries_buffer(a3),a0 ; Quelle
+	move.w	adl_entries_number_max(a3),d7
+	MULUF.W playback_queue_entry_size,d7,d0 ; Puffergröße zum Kopieren ermitteln
+	subq.w	#1,d7			; wegen dbf
+dc_copy_entries_buffer_loop
+	move.b	(a0)+,(a1)+
+	dbf	d7,dc_copy_entries_buffer_loop
+	bsr	rp_calculate_checksum
+	CALLLIBS CacheClearU
+	jsr	rp_install_custom_exception_vectors-rp_reset_program(a2) ; Zeiger auf eigene Exception/Trap-Routinen initialisieren
+	lea	rp_read_VBR(pc),a5
+	CALLLIBS Supervisor
+	tst.l	d0			; VBR = $000000 ?
+	beq.s	dc_update_entries_number ; Ja -> verzweige
+	RP_POINTER_CUSTOM_TRAP_VECTORS
+	move.l	d0,a0 			; Quelle
+	move.w	#TRAP_0_VECTOR,a1	; Ziel: Ab Trap0-Vektor im chip memory
+	IFEQ adl_level_7_handler_enabled
+  		moveq	#8-1,d7		; Anzahl der Trap-Vektoren
+	ELSE
+		moveq	#7-1,d7		; Anzahl der Trap-Vektoren
+	ENDC
+dc_copy_custom_trap_vectors_loop
+	move.l	(a0)+,(a1)+
+	dbf	d7,dc_copy_custom_trap_vectors_loop
+	CALLLIBS CacheClearU
+dc_update_entries_number
+	RP_POINTER_ENTRIES_NUMBER
+	move.l	d0,a0
+	move.w	adl_entries_number(a3),(a0)
+	moveq	#RETURN_OK,d0
+	rts
+
+
+	CNOP 0,4
+dc_close_asl_library
+	move.l	_ASLBase(pc),a1
+	CALLEXECQ CloseLibrary
+
+
+	CNOP 0,4
+dc_lock_playlist_file
+	move.l	dc_playlist_file_name(a3),d1
+	MOVEF.L ACCESS_READ,d2
+	CALLDOS Lock		
+	move.l	d0,dc_playlist_file_lock(a3)
+	bne.s	dc_lock_playlist_file_ok
+	lea	dc_error_text2(pc),a0
+	moveq	#dc_error_text2_end-dc_error_text2,d0
+	bsr	adl_print_text
+	CALLLIBQ IoErr
+ 	CNOP 0,4
+dc_lock_playlist_file_ok
+	moveq	#RETURN_OK,d0
+	rts
+
+
+	CNOP 0,4
+dc_alloc_playlist_file_fib
+	MOVEF.L fib_SIZEOF,d0
+	MOVEF.L	MEMF_CLEAR|MEMF_PUBLIC|MEMF_ANY,d1
+	CALLEXEC AllocMem
+	move.l	d0,dc_playlist_file_fib(a3)
+	bne.s	dc_alloc_playlist_file_fib_ok
+	lea	dc_error_text3(pc),a0
+	moveq	#dc_error_text3_end-dc_error_text3,d0
+	bsr	adl_print_text
+	MOVEF.L	ERROR_NO_FREE_STORE,d0
+	rts
+	CNOP 0,4
+dc_alloc_playlist_file_fib_ok
+	moveq	#RETURN_OK,d0
+	rts
+
+
+	CNOP 0,4
+dc_get_playlist_file_length
+	move.l	dc_playlist_file_lock(a3),d1
+	move.l	dc_playlist_file_fib(a3),d2
+	move.l	d2,a2
+	CALLDOS Examine
+	tst.l	d0		
+	bne.s	dc_get_playlist_file_length_ok
+	lea	dc_error_text4(pc),a0
+	moveq	#dc_error_text4_end-dc_error_text4,d0
+	bsr	adl_print_text
+	moveq	#RETURN_FAIL,d0
+	rts
+	CNOP 0,4
+dc_get_playlist_file_length_ok
+	move.l	fib_Size(a2),dc_playlist_file_length(a3) ; Länge der Playlist in Bytes
+	moveq	#RETURN_OK,d0
+	rts
+
+
+	CNOP 0,4
+dc_alloc_playlist_file_buffer
+	move.l	dc_playlist_file_length(a3),d0
+	MOVEF.L	MEMF_CLEAR|MEMF_PUBLIC|MEMF_ANY,d1
+	CALLEXEC AllocMem
+	move.l	d0,dc_playlist_file_buffer(a3)
+	bne.s	dc_alloc_playlist_file_buffer_ok
+	lea	dc_error_text5(pc),a0
+	moveq	#dc_error_text5_end-dc_error_text5,d0
+	bsr	adl_print_text
+	MOVEF.L	ERROR_NO_FREE_STORE,d0
+	rts
+	CNOP 0,4
+dc_alloc_playlist_file_buffer_ok
+	moveq	#RETURN_OK,d0
+	rts
+
+
+	CNOP 0,4
+dc_open_playlist_file
+	move.l	dc_playlist_file_name(a3),d1
+	MOVEF.L	MODE_OLDFILE,d2
+	CALLDOS Open
+	move.l	d0,dc_playlist_file_handle(a3)
+	bne.s	dc_open_playlist_file_ok
+	lea	dc_error_text6(pc),a0
+	moveq	#dc_error_text6_end-dc_error_text6,d0
+	bsr	adl_print_text
+	CALLDOSQ IoErr
+	CNOP 0,4
+dc_open_playlist_file_ok
+	moveq	#RETURN_OK,d0
+	rts
+
+
+	CNOP 0,4
+dc_read_playlist_file
+	move.l	dc_playlist_file_handle(a3),d1
+	move.l	dc_playlist_file_length(a3),d3
+	move.l	dc_playlist_file_buffer(a3),d2
+	CALLDOS Read
+	tst.l	d0
+	bne.s	dc_read_playlist_file_ok
+	lea	dc_error_text7(pc),a0
+	moveq	#dc_error_text7_end-dc_error_text7,d0
+	bsr	adl_print_text
+	CALLDOSQ IoErr
+	CNOP 0,4
+dc_read_playlist_file_ok
+	moveq	#RETURN_OK,d0
+	rts
+
+
+	CNOP 0,4
+dc_parse_playlist_file
+	lea	dc_parsing_begin_text(pc),a0
+	moveq	#dc_parsing_begin_text_end-dc_parsing_begin_text,d0
+	bsr	adl_print_text
+        moveq   #0,d0
+	move.w	adl_entries_number(a3),d0
+	MULUF.L playback_queue_entry_size,d0,d1 ; Offset in Puffer ermitteln
+	move.l	adl_entries_buffer(a3),a0
+	add.l   d0,a0			; Zeiger auf Eintrag im Puffer
+	move.l	a0,d6
+	move.l	dc_playlist_file_buffer(a3),a2
+	move.l	dc_playlist_file_length(a3),d7
+dc_parse_playlist_file_loop1
+	subq.w	#1,d7			; Wegen dbf
+	bpl.s	dc_parse_playlist_file_proceed
+	bsr.s	dc_parse_playlist_file_result
+	moveq	#RETURN_OK,d0
+	rts
+	CNOP 0,4
+dc_parse_playlist_file_proceed
+	addq.w	#1,dc_playlist_entries_number(a3)
+	MOVEF.L	DOS_RDARGS,d1		; ReadArgs-Struktur erzeugen
+	moveq	#0,d2			; Keine Tags
+	CALLDOS AllocDosObject
+	tst.l	d0
+	bne.s	dc_parse_playlist_file_ok
+	lea	dc_error_text8(pc),a0
+	moveq	#dc_error_text8_end-dc_error_text8,d0
+	bsr	adl_print_text
+	moveq	#RETURN_FAIL,d0
+	rts
+	CNOP 0,4
+dc_parse_playlist_file_ok
+	moveq	#0,d4			; Zähler für Länge einer Befehlszeile zurücksetzen
+	move.l	d0,a4			; Zeiger auf RDArgs-Struktur
+	move.l	a2,CS_Buffer(a4)	; Zeiger auf Playlist-File-Puffer eintragen
+dc_parse_playlist_file_loop2
+	addq.w	#1,d4
+	cmp.b	#ASCII_LINE_FEED,(a2)+
+	beq.s	dc_parse_playlist_entry
+	dbf	d7,dc_parse_playlist_file_loop2
+	bsr.s	dc_parse_playlist_file_result
+	moveq	#RETURN_OK,d0
+	rts
+
+
+	CNOP 0,4
+dc_parse_playlist_file_result
+	move.w	dc_transmitted_entries_number(a3),d1 ; Dezimalzahl
+	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
+	lea	dc_transmitted_entries(pc),a0 ; Zeiger auf String
+	bsr	rp_dec_to_ascii
+	move.w	dc_playlist_entries_number(a3),d1 ; Dezimalzahl
+	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
+	lea	dc_playlist_entries(pc),a0 ; Zeiger auf String
+	bsr	rp_dec_to_ascii
+	move.w	adl_entries_number_max(a3),d1
+	sub.w	adl_entries_number(a3),d1 ; Verbleibende Anzahl der zu ladenden Dateien ermitteln
+	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
+	lea	dc_not_used_entries(pc),a0 ; Stringadresse
+	bsr	rp_dec_to_ascii
+	lea	dc_parsing_result_text(pc),a0
+	move.l	#dc_parsing_result_text_end-dc_parsing_result_text,d0
+	bra	adl_print_text
+
+
+; ** Befehlszeile in der Playlist-Datei nach Argumenten durchsuchen **
+; Input
+; d4 ... Länge der Befehlszeile
+; a4 ... Zeiger auf RDArgs-Struktur
+; Result
+; d0 ... Kein Rückgabewert
+	CNOP 0,4
+dc_parse_playlist_entry
+	move.l	d4,CS_Length(a4)
+	lea	dc_playlist_results_array(pc),a5
+	moveq	#0,d0
+	move.l	d0,pra_demofile(a5)	; Alle Ergebnis-Felder der Argumente löschen
+	move.l	d0,pra_STARTMODE_OCS_VANILLA(a5)
+	move.l	d0,pra_STARTMODE_AGA_VANILLA(a5)
+	move.l	d0,pra_STARTMODE_TURBO(a5)
+	move.l	d0,pra_SECS(a5)
+	move.l	d0,pra_MINS(a5)
+	move.l	d0,pra_LMBEXIT(a5)
+	move.l	d0,pra_prerunscript(a5)
+	lea	dc_playlist_template(pc),a0
+	move.l	a0,d1			; Zeiger auf Befelsschablone für Playlist-Argumente
+	move.l	a5,d2			; Zeiger auf Ergebnis-Felder für Playlist-Argumente
+	move.l	a4,d3			; Eigene RDArgs-Struktur
+	CALLDOS ReadArgs
+	tst.l	d0
+	bne.s	dc_parse_playlist_entry_ok
+	bsr	dc_parse_entry_syntax_error
+	bra	dc_free_DosObject
+	CNOP 0,4
+dc_parse_playlist_entry_ok
+	move.l	d6,a0			; Zeiger auf Eintrag im Puffer
+	bsr	dc_clear_playlist_entry
+
+; ** Playlist-Argument demofile **
+	move.l	pra_demofile(a5),d0
+	bne.s	dc_copy_demofile_path
+	bsr	dc_parse_playlist_entry_error
+	bra	dc_free_custom_arguments
+	CNOP 0,4
+dc_copy_demofile_path
+	move.l	d0,a0			; Zeiger auf Dateiname des Demos
+	move.l	d6,a1			; Zeiger auf Eintrag im Puffer
+	moveq	#0,d0			; Zähler für Länge des Dateipfads
+dc_copy_demofile_path_loop
+	addq.b	#1,d0
+	cmp.b	#adl_demofile_path_length-1,d0
+	blt.s	dc_copy_demofile_path_ok
+	bsr	dc_parse_playlist_entry_error
+	bra	dc_free_custom_arguments
+	CNOP 0,4
+dc_copy_demofile_path_ok
+	move.b	(a0)+,(a1)+
+	bne.s	dc_copy_demofile_path_loop ; Schleife, bis Nullbyte gefunden wurde
+
+	move.l	d6,a1			; Zeiger auf Eintrag im Puffer
+	clr.b	pqe_startmode(a1)
+; ** Playlist-Argument OCSVANILLA **
+	tst.l	pra_STARTMODE_OCS_VANILLA(a5)
+	beq.s	dc_check_arg_AGAVANILLA
+	move.b	#STARTMODE_OCS_VANILLA,pqe_startmode(a1)
+	bra.s	dc_check_entry_start_mode
+
+; ** Playlist-Argument AGAVANILLA **
+	CNOP 0,4
+dc_check_arg_agavanilla
+	tst.l	pra_STARTMODE_AGA_VANILLA(a5)
+	beq.s	dc_check_arg_turbo
+	move.b	#STARTMODE_AGA_VANILLA,pqe_startmode(a1)
+	bra.s	dc_check_entry_start_mode
+
+; ** Playlist-Argument TURBO **
+	CNOP 0,4
+dc_check_arg_turbo
+	tst.l	pra_STARTMODE_TURBO(a5)
+	beq.s	dc_check_entry_start_mode
+	move.b	#STARTMODE_TURBO,pqe_startmode(a1)
+
+dc_check_entry_start_mode
+	tst.b	pqe_startmode(a1)
+	bne.s   dc_check_arg_secs
+	bsr	dc_parse_playlist_entry_error
+	bra	dc_free_custom_arguments
+
+; ** Playlist-Argument SECS **
+	CNOP 0,4
+dc_check_arg_secs
+	move.l	pra_SECS(a5),d0
+	beq.s	dc_check_arg_mins
+	move.l	d0,a0			; Zeiger auf String
+	move.l	(a0),d0			; Sekundenwert
+	moveq	#rd_secondc_max,d2
+	cmp.l	d2,d0
+	ble.s   dc_check_arg_mins
+	bsr	dc_parse_playlist_entry_error
+	bra	dc_free_custom_arguments
+
+; ** Playlist-Argument MINS **
+	CNOP 0,4
+dc_check_arg_mins
+	move.l	pra_MINS(a5),d1
+	beq.s	dc_calculate_ms_sum
+	move.l	d1,a0			; Zeiger auf String
+	move.l	(a0),d1			; Minutenwert
+	moveq	#rd_minutes_max,d2
+	cmp.l	d2,d1
+	ble.s	dc_calculate_ms_sum
+	bsr	dc_parse_playlist_entry_error
+	bra	dc_free_custom_arguments
+
+	CNOP 0,4
+dc_calculate_ms_sum
+	MULUF.L 60,d1,d2		; *60 = Sekundenwert
+	add.l	d0,d1			; + Sekundenwert = Gesamtwert Sekunden
+	MULUF.L 10,d1,d0		; *10 = Zählerwert in 100 ms
+	move.w	d1,pqe_playtime(a1)
+	bne.s	dc_check_arg_LMBEXIT
+	bsr	dc_parse_playlist_entry_error
+	bra	dc_free_custom_arguments
+
+; ** Playlist-Argument LMBEXIT **
+	CNOP 0,4
+dc_check_arg_lmbexit
+	move.l	pra_LMBEXIT(a5),d0
+	beq.s	dc_check_arg_prerunscript
+;	tst.w	pqe_playtime(a1)	; Kann ggf. entfallen s.o üüü
+;	bne.s	dc_check_arg_lmbexit_ok ; Kann ggf. entfallen üüü
+;	bsr	dc_parse_playlist_entry_error ; Kann ggf. entfallen üüü
+;	bra	dc_free_custom_arguments ; Kann ggf. entfallen üüü
+;	CNOP 0,4			; Kann ggf. entfallen üüü
+;dc_check_arg_lmbexit_ok		; Kann ggf. entfallen üüü
+	move.l	d0,a0			; Zeiger auf String
+	move.l	(a0),d0			; Anzahl der Demoteile
+	bne.s	dc_check_demo_parts_number_min
+	bsr	dc_parse_playlist_entry_error
+	bra	dc_free_custom_arguments
+	CNOP 0,4
+dc_check_demo_parts_number_min
+	cmp.w	#dc_demo_parts_number_min,d0
+	bge.s	dc_check_demo_parts_number_max
+	bsr	dc_parse_playlist_entry_error
+	bra	dc_free_custom_arguments
+	CNOP 0,4
+dc_check_demo_parts_number_max
+	cmp.w	#dc_demo_parts_number_max,d0
+	ble.s	dc_arg_lmbexit_save_playtime
+	bsr	dc_parse_playlist_entry_error
+	bra.s	dc_free_custom_arguments
+	CNOP 0,4
+dc_arg_lmbexit_save_playtime
+	subq.w	#1,d0			; Wert anpassen, da intern 1...9 übergeben wird
+	add.w	d0,pqe_playtime(a1)
+
+; ** Playlist-Argument prerunscxript **
+dc_check_arg_prerunscript
+	move.l	pra_prerunscript(a5),d0
+	beq.s	dc_next_transmitted_entry
+	move.l	d0,a0			; Zeiger auf Dateiname des Scriptfiles
+	move.l	d6,a1			; Zeiger auf Eintrag im Puffer
+	ADDF.W	pqe_prerunscript_path,a1 ; Zeiger auf Prerunscript-Pfad in Puffer
+	moveq	#0,d0			; Zähler für Länges des Dateipfads
+dc_copy_prerunscript_path_loop
+	addq.b	#1,d0
+	cmp.b	#adl_prerunscript_path_length-1,d0
+	blt.s	dc_copy_prerunscript_ok
+	bsr	dc_parse_playlist_entry_error
+	bra.s	dc_free_custom_arguments
+	CNOP 0,4
+dc_copy_prerunscript_ok
+	move.b	(a0)+,(a1)+
+	bne.s	dc_copy_prerunscript_path_loop ; Schleife, bis Nullbyte gefunden wurd
+dc_next_transmitted_entry
+	addq.w	#1,dc_transmitted_entries_number(a3)
+	addq.w	#1,adl_entries_number(a3)
+	move.w	adl_entries_number_max(a3),d0
+	cmp.w	adl_entries_number(a3),d0
+	bne	dc_next_playlist_cmd_line
+	bsr	dc_parse_playlist_file_result
+	bra	dc_print_entries_max_message
+	CNOP 0,4
+dc_next_playlist_cmd_line
+	add.l	#playback_queue_entry_size,d6 ; Offset in Dateipfade-Puffer erhöhen = nächster Eintrag
+dc_free_custom_arguments
+	move.l	a4,d1			; Zeiger auf RDArgs-Struktur
+	CALLDOS FreeArgs
+dc_free_DosObject
+	moveq	#DOS_RDARGS,d1		; ReadArgs-Struktur freigeben
+	move.l	a4,d2			; Zeiger auf ReadArgs-Struktur
+	CALLLIBS FreeDosObject
+	bra	dc_parse_playlist_file_loop1
+
+
+; Fehlerhaften Eintrag ausgeben
+; Input
+; d6 ... Zeiger auf Eintrag im Puffer
+; Result
+; d0 ... Kein Rückgabewert
+	CNOP 0,4
+dc_parse_playlist_entry_error
+	move.l	d6,a0			; Zeiger auf Eintrag im Puffer
+	bsr.s	dc_clear_playlist_entry
+	bra.s 	dc_parse_entry_syntax_error
+
+
+; a0 ... Zeiger auf den Eintrag zum Löschen
+	CNOP 0,4
+dc_clear_playlist_entry
+	moveq	#0,d0
+	MOVEF.W	playback_queue_entry_size-1,d3 ; Länge des Eintrags
+dc_clear_playlist_entry_loop
+	move.b	d0,(a0)+
+	dbf	d3,dc_clear_playlist_entry_loop
+	rts
+
+
+	CNOP 0,4
+dc_parse_entry_syntax_error
+	move.w	dc_playlist_entries_number(a3),d1 ; Dezimalzahl
+	move.w	d7,d4			; Schleifenzähler retten
+	lea	dc_entries_string(pc),a0 ; Zeiger auf String
+	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
+	bsr	rp_dec_to_ascii
+	move.w	d4,d7			; Schleifenzähler wieder herstellen
+	lea	dc_error_text9(pc),a0
+	moveq	#dc_error_text9_end-dc_error_text9,d0
+	bra	adl_print_text
+
+
+	CNOP 0,4
+dc_check_entries_number_min
+	tst.w	adl_entries_number(a3)
+	bne.s   dc_check_entries_number_min_ok
+	moveq	#RETURN_FAIL,d0
+	rts
+	CNOP 0,4
+dc_check_entries_number_min_ok
+	moveq	#RETURN_OK,d0
+	rts
+
+
+	CNOP 0,4
+dc_close_playlist_file
+	move.l	dc_playlist_file_handle(a3),d1
+	CALLDOSQ Close
+
+
+	CNOP 0,4
+dc_free_playlist_file_buffer
+	move.l	dc_playlist_file_buffer(a3),a1
+	move.l	dc_playlist_file_length(a3),d0
+	CALLEXECQ FreeMem
+
+
+	CNOP 0,4
+dc_free_playlist_file_fib
+	move.l	dc_playlist_file_fib(a3),a1
+	MOVEF.L	fib_SIZEOF,d0
+	CALLEXECQ FreeMem
+
+
+	CNOP 0,4
+dc_unlock_playlist_file
+	move.l dc_playlist_file_lock(a3),d1
+	CALLDOSQ UnLock
+
+
+
+
+	CNOP 0,4
+dc_free_entries_buffer
+	tst.w	adl_reset_program_active(a3)
+	beq.s	dc_free_entries_buffer_skip
+	move.l	adl_entries_buffer(a3),a1
+	moveq	#0,d0
+	move.w	adl_entries_number_max(a3),d0
+	MULUF.L playback_queue_entry_size,d0,d1 ; Größe des Puffers ermitteln
+	CALLEXECQ FreeMem
+	CNOP 0,4
+dc_free_entries_buffer_skip
+	rts
+
+
+	CNOP 0,4
+adl_free_read_arguments
+	move.l	adl_read_arguments(a3),d1
+	CALLDOSQ FreeArgs
 
 
 	CNOP 0,4
@@ -1477,16 +2282,6 @@ adl_print_io_error_ok
 	lea	adl_error_header(pc),a0
 	move.l	a0,d2                   ; Header für Fehlermeldung
 	CALLDOSQ PrintFault
-
-
-	CNOP 0,4
-adl_free_read_arguments
-	move.l	adl_read_arguments(a3),d1
-	bne.s	adl_free_read_arguments_ok
-	rts
-	CNOP 0,4
-adl_free_read_arguments_ok
-	CALLDOSQ FreeArgs
 
 
 	CNOP 0,4
@@ -1519,805 +2314,6 @@ adl_print_text
 	move.l	a0,d2			; Zeiger auf Fehlertext
 	move.l	d0,d3			; Anzahl der Zeichen zum Schreiben
 	CALLDOSQ Write
-
-
-; **** DemoSelector ****
-	CNOP 0,4
-ds_alloc_entries_buffer
-	tst.w	adl_reset_program_active(a3)
-	beq.s	ds_alloc_entries_buffer_ok
-	moveq	#0,d0
-	move.w	adl_entries_number_max(a3),d0
-	MULUF.L playback_queue_entry_size,d0,d1 ; Größe des Puffers berechnen
-	MOVEF.L MEMF_CLEAR+MEMF_PUBLIC+MEMF_ANY,d1
-	CALLEXEC AllocMem
-	move.l	d0,adl_entries_buffer(a3)
-	bne.s	ds_alloc_entries_buffer_ok
-	lea	ds_error_text1(pc),a0
-	moveq	#ds_error_text1_end-ds_error_text1,d0
-	bsr	adl_print_text
-	MOVEF.L	ERROR_NO_FREE_STORE,d0
-	rts
-	CNOP 0,4
-ds_alloc_entries_buffer_ok
-	moveq	#RETURN_OK,d0
-	rts
-
-
-	CNOP 0,4
-ds_lock_playlist_file
-	move.l	ds_playlist_file_name(a3),d1
-	moveq	#ACCESS_READ,d2
-	CALLDOS Lock		
-	move.l	d0,ds_playlist_file_lock(a3)
-	bne.s	ds_lock_playlist_file_ok
-	lea	ds_error_text2(pc),a0
-	moveq	#ds_error_text2_end-ds_error_text2,d0
-	bsr	adl_print_text
-	CALLLIBQ IoErr
- 	CNOP 0,4
-ds_lock_playlist_file_ok
-	moveq	#RETURN_OK,d0
-	rts
-
-
-	CNOP 0,4
-ds_alloc_playlist_file_fib
-	MOVEF.L fib_SIZEOF,d0
-	MOVEF.L	MEMF_CLEAR+MEMF_PUBLIC+MEMF_ANY,d1
-	CALLEXEC AllocMem
-	move.l	d0,ds_playlist_file_fib(a3)
-	bne.s	ds_alloc_playlist_file_fib_ok
-	lea	ds_error_text3(pc),a0
-	moveq	#ds_error_text3_end-ds_error_text3,d0
-	bsr	adl_print_text
-	MOVEF.L	ERROR_NO_FREE_STORE,d0
-	rts
-	CNOP 0,4
-ds_alloc_playlist_file_fib_ok
-	moveq	#RETURN_OK,d0
-	rts
-
-
-	CNOP 0,4
-ds_get_playlist_file_length
-	move.l	ds_playlist_file_lock(a3),d1
-	move.l	ds_playlist_file_fib(a3),d2
-	move.l	d2,a2
-	CALLDOS Examine
-	tst.l	d0		
-	bne.s	ds_get_playlist_file_length_ok
-	lea	ds_error_text4(pc),a0
-	moveq	#ds_error_text4_end-ds_error_text4,d0
-	bsr	adl_print_text
-	moveq	#RETURN_FAIL,d0
-	rts
-	CNOP 0,4
-ds_get_playlist_file_length_ok
-	move.l	fib_Size(a2),ds_playlist_file_length(a3) ; Länge der Playlist in Bytes
-	moveq	#RETURN_OK,d0
-	rts
-
-
-	CNOP 0,4
-ds_alloc_playlist_file_buffer
-	move.l	ds_playlist_file_length(a3),d0
-	MOVEF.L	MEMF_CLEAR+MEMF_PUBLIC+MEMF_ANY,d1
-	CALLEXEC AllocMem
-	move.l	d0,ds_playlist_file_buffer(a3)
-	bne.s	ds_alloc_playlist_file_buffer_ok
-	lea	ds_error_text5(pc),a0
-	moveq	#ds_error_text5_end-ds_error_text5,d0
-	bsr	adl_print_text
-	MOVEF.L	ERROR_NO_FREE_STORE,d0
-	rts
-	CNOP 0,4
-ds_alloc_playlist_file_buffer_ok
-	moveq	#RETURN_OK,d0
-	rts
-
-
-	CNOP 0,4
-ds_open_playlist_file
-	move.l	ds_playlist_file_name(a3),d1
-	MOVEF.L	MODE_OLDFILE,d2
-	CALLDOS Open
-	move.l	d0,ds_playlist_file_handle(a3)
-	bne.s	ds_open_playlist_file_ok
-	lea	ds_error_text6(pc),a0
-	moveq	#ds_error_text6_end-ds_error_text6,d0
-	bsr	adl_print_text
-	CALLDOSQ IoErr
-	CNOP 0,4
-ds_open_playlist_file_ok
-	moveq	#RETURN_OK,d0
-	rts
-
-
-	CNOP 0,4
-ds_read_playlist_file
-	move.l	ds_playlist_file_handle(a3),d1
-	move.l	ds_playlist_file_length(a3),d3
-	move.l	ds_playlist_file_buffer(a3),d2
-	CALLDOS Read
-	tst.l	d0
-	bpl.s	ds_read_playlist_file_ok
-	lea	ds_error_text7(pc),a0
-	moveq	#ds_error_text7_end-ds_error_text7,d0
-	bsr	adl_print_text
-	CALLDOSQ IoErr
-	CNOP 0,4
-ds_read_playlist_file_ok
-	moveq	#RETURN_OK,d0
-	rts
-
-
-	CNOP 0,4
-ds_parse_playlist_file
-	lea	ds_parsing_begin_text(pc),a0
-	moveq	#ds_parsing_begin_text_end-ds_parsing_begin_text,d0
-	bsr	adl_print_text
-        moveq   #0,d0
-	move.w	adl_entries_number(a3),d0
-	MULUF.L playback_queue_entry_size,d0,d1 ; Offset in Puffer ermitteln
-	move.l	adl_entries_buffer(a3),a0
-	add.l   d0,a0			; Zeiger auf Eintrag im Puffer
-	move.l	a0,d6
-	move.l	ds_playlist_file_buffer(a3),a2
-	move.w	ds_playlist_file_length+WORD_SIZE(a3),d7
-ds_parse_playlist_file_loop1
-	subq.w	#1,d7			; Wegen dbf
-	bpl.s	ds_parse_playlist_file_proceed
-	bsr.s	ds_parse_playlist_file_result
-	moveq	#RETURN_OK,d0
-	rts
-	CNOP 0,4
-ds_parse_playlist_file_proceed
-	addq.w	#1,ds_playlist_entries_number(a3)
-	MOVEF.L	DOS_RDARGS,d1		; ReadArgs-Struktur erzeugen
-	moveq	#0,d2			; Keine Tags
-	CALLDOS AllocDosObject
-	tst.l	d0
-	bne.s	ds_parse_playlist_file_ok
-	lea	ds_error_text8(pc),a0
-	moveq	#ds_error_text8_end-ds_error_text8,d0
-	bsr	adl_print_text
-	moveq	#RETURN_FAIL,d0
-	rts
-	CNOP 0,4
-ds_parse_playlist_file_ok
-	moveq	#0,d4			; Zähler für Länge einer Befehlszeile zurücksetzen
-	move.l	d0,a4			; Zeiger auf RDArgs-Struktur
-	move.l	a2,CS_Buffer(a4)	; Zeiger auf Playlist-File-Puffer eintragen
-ds_parse_playlist_file_loop2
-	addq.w	#1,d4
-	cmp.b	#ASCII_LINE_FEED,(a2)+
-	beq.s	ds_parse_playlist_entry
-	dbf	d7,ds_parse_playlist_file_loop2
-	bsr.s	ds_parse_playlist_file_result
-	moveq	#RETURN_OK,d0
-	rts
-
-
-	CNOP 0,4
-ds_parse_playlist_file_result
-	move.w	ds_transmitted_entries_number(a3),d1 ; Dezimalzahl
-	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
-	lea	ds_transmitted_entries(pc),a0 ; Zeiger auf String
-	bsr	rp_dec_to_ascii
-	move.w	ds_playlist_entries_number(a3),d1 ; Dezimalzahl
-	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
-	lea	ds_playlist_entries(pc),a0 ; Zeiger auf String
-	bsr	rp_dec_to_ascii
-	move.w	adl_entries_number_max(a3),d1
-	sub.w	adl_entries_number(a3),d1 ; Verbleibende Anzahl der zu ladenden Dateien ermitteln
-	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
-	lea	ds_not_used_entries(pc),a0 ; Stringadresse
-	bsr	rp_dec_to_ascii
-	lea	ds_parsing_result_text(pc),a0
-	move.l	#ds_parsing_result_text_end-ds_parsing_result_text,d0
-	bra	adl_print_text
-
-
-; ** Befehlszeile in der Playlist-Datei nach Argumenten untersuchen **
-; Input
-; d4 ... Länge der Befehlszeile
-; a4 ... Zeiger auf RDArgs-Struktur
-; Result
-; d0 ... Kein Rückgabewert
-	CNOP 0,4
-ds_parse_playlist_entry
-	move.l	d4,CS_Length(a4)
-	lea	ds_playlist_results_array(pc),a5
-	moveq	#0,d0
-	move.l	d0,pra_demofile(a5)	; Alle Ergebnis-Felder der Argumente löschen
-	move.l	d0,pra_STARTMODE_OCS_VANILLA(a5)
-	move.l	d0,pra_STARTMODE_AGA_VANILLA(a5)
-	move.l	d0,pra_STARTMODE_TURBO(a5)
-	move.l	d0,pra_SECS(a5)
-	move.l	d0,pra_MINS(a5)
-	move.l	d0,pra_LMBEXIT(a5)
-	move.l	d0,pra_prerunscript(a5)
-	lea	ds_playlist_template(pc),a0
-	move.l	a0,d1			; Zeiger auf Befelsschablone für Playlist-Argumente
-	move.l	a5,d2			; Zeiger auf Ergebnis-Felder für Playlist-Argumente
-	move.l	a4,d3			; Eigene RDArgs-Struktur
-	CALLDOS ReadArgs
-	tst.l	d0
-	bne.s	ds_parse_playlist_entry_ok
-	bsr	ds_parse_entry_syntax_error
-	bra	ds_free_DosObject
-	CNOP 0,4
-ds_parse_playlist_entry_ok
-	move.l	d6,a0			; Zeiger auf Eintrag im Puffer
-	bsr	ds_clear_playlist_entry
-
-; ** Playlist-Argument demofile **
-	move.l	pra_demofile(a5),d0
-	bne.s	ds_copy_demofile_path
-	bsr	ds_parse_playlist_entry_error
-	bra	ds_free_custom_arguments
-	CNOP 0,4
-ds_copy_demofile_path
-	move.l	d0,a0			; Zeiger auf Dateiname des Demos
-	move.l	d6,a1			; Zeiger auf Eintrag im Puffer
-	moveq	#0,d0			; Zähler für Länge des Dateipfads
-ds_copy_demofile_path_loop
-	addq.b	#1,d0
-	cmp.b	#adl_demofile_path_length-1,d0
-	blt.s	ds_copy_demofile_path_ok
-	bsr	ds_parse_playlist_entry_error
-	bra	ds_free_custom_arguments
-	CNOP 0,4
-ds_copy_demofile_path_ok
-	move.b	(a0)+,(a1)+
-	bne.s	ds_copy_demofile_path_loop ; Schleife, bis Nullbyte gefunden wurde
-
-	move.l	d6,a1			; Zeiger auf Eintrag im Puffer
-	clr.b	pqe_startmode(a1)
-; ** Playlist-Argument OCSVANILLA **
-	tst.l	pra_STARTMODE_OCS_VANILLA(a5)
-	beq.s	ds_check_arg_AGAVANILLA
-	move.b	#STARTMODE_OCS_VANILLA,pqe_startmode(a1)
-	bra.s	ds_check_entry_start_mode
-
-; ** Playlist-Argument AGAVANILLA **
-	CNOP 0,4
-ds_check_arg_agavanilla
-	tst.l	pra_STARTMODE_AGA_VANILLA(a5)
-	beq.s	ds_check_arg_turbo
-	move.b	#STARTMODE_AGA_VANILLA,pqe_startmode(a1)
-	bra.s	ds_check_entry_start_mode
-
-; ** Playlist-Argument TURBO **
-	CNOP 0,4
-ds_check_arg_turbo
-	tst.l	pra_STARTMODE_TURBO(a5)
-	beq.s	ds_check_entry_start_mode
-	move.b	#STARTMODE_TURBO,pqe_startmode(a1)
-
-ds_check_entry_start_mode
-	tst.b	pqe_startmode(a1)
-	bne.s   ds_check_arg_secs
-	bsr	ds_parse_playlist_entry_error
-	bra	ds_free_custom_arguments
-
-; ** Playlist-Argument SECS **
-	CNOP 0,4
-ds_check_arg_secs
-	move.l	pra_SECS(a5),d0
-	beq.s	ds_check_arg_mins
-	move.l	d0,a0			; Zeiger auf String
-	move.l	(a0),d0			; Sekundenwert
-	moveq	#rd_seconds_max,d2
-	cmp.l	d2,d0
-	ble.s   ds_check_arg_mins
-	bsr	ds_parse_playlist_entry_error
-	bra	ds_free_custom_arguments
-
-; ** Playlist-Argument MINS **
-	CNOP 0,4
-ds_check_arg_mins
-	move.l	pra_MINS(a5),d1
-	beq.s	ds_calculate_ms_sum
-	move.l	d1,a0			; Zeiger auf String
-	move.l	(a0),d1			; Minutenwert
-	moveq	#rd_minutes_max,d2
-	cmp.l	d2,d1
-	ble.s	ds_calculate_ms_sum
-	bsr	ds_parse_playlist_entry_error
-	bra	ds_free_custom_arguments
-
-	CNOP 0,4
-ds_calculate_ms_sum
-	MULUF.L 60,d1,d2		; *60 = Sekundenwert
-	add.l	d0,d1			; + Sekundenwert = Gesamtwert Sekunden
-	MULUF.L 10,d1,d0		; *10 = Zählerwert in 100 ms
-	move.w	d1,pqe_playtime(a1)
-	bne.s	ds_check_arg_LMBEXIT
-	bsr	ds_parse_playlist_entry_error
-	bra	ds_free_custom_arguments
-
-; ** Playlist-Argument LMBEXIT **
-	CNOP 0,4
-ds_check_arg_lmbexit
-	move.l	pra_LMBEXIT(a5),d0
-	beq.s	ds_check_arg_prerunscript
-;	tst.w	pqe_playtime(a1)	; Kann ggf. entfallen s.o üüü
-;	bne.s	ds_check_arg_lmbexit_ok ; Kann ggf. entfallen üüü
-;	bsr	ds_parse_playlist_entry_error ; Kann ggf. entfallen üüü
-;	bra	ds_free_custom_arguments ; Kann ggf. entfallen üüü
-;	CNOP 0,4			; Kann ggf. entfallen üüü
-;ds_check_arg_lmbexit_ok		; Kann ggf. entfallen üüü
-	move.l	d0,a0			; Zeiger auf String
-	move.l	(a0),d0			; Anzahl der Demoteile
-	bne.s	ds_check_demo_parts_number_min
-	bsr	ds_parse_playlist_entry_error
-	bra	ds_free_custom_arguments
-	CNOP 0,4
-ds_check_demo_parts_number_min
-	cmp.w	#ds_demo_parts_number_min,d0
-	bge.s	ds_check_demo_parts_number_max
-	bsr	ds_parse_playlist_entry_error
-	bra	ds_free_custom_arguments
-	CNOP 0,4
-ds_check_demo_parts_number_max
-	cmp.w	#ds_demo_parts_number_max,d0
-	ble.s	ds_arg_lmbexit_save_playtime
-	bsr	ds_parse_playlist_entry_error
-	bra.s	ds_free_custom_arguments
-	CNOP 0,4
-ds_arg_lmbexit_save_playtime
-	subq.w	#1,d0			; Wert anpassen, da intern 1...9 übergeben wird
-	add.w	d0,pqe_playtime(a1)
-
-; ** Playlist-Argument prerunscxript **
-ds_check_arg_prerunscript
-	move.l	pra_prerunscript(a5),d0
-	beq.s	ds_next_transmitted_entry
-	move.l	d0,a0			; Zeiger auf Dateiname des Scriptfiles
-	move.l	d6,a1			; Zeiger auf Eintrag im Puffer
-	ADDF.W	pqe_prerunscript_path,a1 ; Zeiger auf Prerunscript-Pfad in Puffer
-	moveq	#0,d0			; Zähler für Länges des Dateipfads
-ds_copy_prerunscript_path_loop
-	addq.b	#1,d0
-	cmp.b	#adl_prerunscript_path_length-1,d0
-	blt.s	ds_copy_prerunscript_ok
-	bsr	ds_parse_playlist_entry_error
-	bra.s	ds_free_custom_arguments
-	CNOP 0,4
-ds_copy_prerunscript_ok
-	move.b	(a0)+,(a1)+
-	bne.s	ds_copy_prerunscript_path_loop ; Schleife, bis Nullbyte gefunden wurd
-ds_next_transmitted_entry
-	addq.w	#1,ds_transmitted_entries_number(a3)
-	addq.w	#1,adl_entries_number(a3)
-	move.w	adl_entries_number_max(a3),d0
-	cmp.w	adl_entries_number(a3),d0
-	bne	ds_next_playlist_cmd_line
-	bsr	ds_parse_playlist_file_result
-	bra	ds_print_entries_max_message
-	CNOP 0,4
-ds_next_playlist_cmd_line
-	add.l	#playback_queue_entry_size,d6 ; Offset in Dateipfade-Puffer erhöhen = nächster Eintrag
-ds_free_custom_arguments
-	move.l	a4,d1			; Zeiger auf RDArgs-Struktur
-	CALLDOS FreeArgs
-ds_free_DosObject
-	moveq	#DOS_RDARGS,d1		; ReadArgs-Struktur freigeben
-	move.l	a4,d2			; Zeiger auf ReadArgs-Struktur
-	CALLLIBS FreeDosObject
-	bra	ds_parse_playlist_file_loop1
-
-
-; Fehlerhaften Eintrag ausgeben
-; Input
-; d6 ... Zeiger auf Eintrag im Puffer
-; Result
-; d0 ... Kein Rückgabewert
-	CNOP 0,4
-ds_parse_playlist_entry_error
-	move.l	d6,a0			; Zeiger auf Eintrag im Puffer
-	bsr.s	ds_clear_playlist_entry
-	bra.s 	ds_parse_entry_syntax_error
-
-
-; a0 ... Zeiger auf den Eintrag zum Löschen
-	CNOP 0,4
-ds_clear_playlist_entry
-	moveq	#0,d0
-	MOVEF.W	playback_queue_entry_size-1,d3 ; Länge des Eintrags
-ds_clear_playlist_entry_loop
-	move.b	d0,(a0)+
-	dbf	d3,ds_clear_playlist_entry_loop
-	rts
-
-
-	CNOP 0,4
-ds_parse_entry_syntax_error
-	move.w	ds_playlist_entries_number(a3),d1 ; Dezimalzahl
-	move.w	d7,d4			; Schleifenzähler retten
-	lea	ds_entries_string(pc),a0 ; Zeiger auf String
-	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
-	bsr	rp_dec_to_ascii
-	move.w	d4,d7			; Schleifenzähler wieder herstellen
-	lea	ds_error_text9(pc),a0
-	moveq	#ds_error_text9_end-ds_error_text9,d0
-	bra	adl_print_text
-
-
-	CNOP 0,4
-ds_open_asl_library
-	lea	asl_library_name(pc),a1
-	moveq	#OS_VERSION_MIN,d0
-	CALLEXEC OpenLibrary
-	lea	_ASLBase(pc),a0
-	move.l	d0,(a0)
-	bne.s	ds_open_asl_library_ok
-	lea	ds_error_text10(pc),a0
-	moveq	#ds_error_text10_end-ds_error_text10,d0
-	bsr	adl_print_text
-	moveq	#RETURN_FAIL,d0
-	rts
-	CNOP 0,4
-ds_open_asl_library_ok
-	moveq	#RETURN_OK,d0
-	rts
-
-
-; Programm-Verzeichnis ermitteln
-; Input
-; a5 ... Zeiger auf Puffer für Verzeichnisnamen
-; Result
-; d0 ... Kein Rückgabewert
-	CNOP 0,4
-ds_get_program_dir
-	CALLDOS GetProgramDir
-	tst.l	d0
-	bne.s	ds_get_program_dir_name
-	lea	ds_error_text11(pc),a0
-	moveq	#ds_error_text11_end-ds_error_text11,d0
-	bsr	adl_print_text
-	moveq	#RETURN_FAIL,d0
-	rts
-	CNOP 0,4
-ds_get_program_dir_name
-	move.l	d0,d1			; Verzeichnis-Lock
-	move.l	a5,d2			; Zeiger auf Puffer für Verzeichnisname
-	MOVEF.L	adl_demofile_path_length,d3
-	CALLLIBS NameFromLock
-	tst.l	d0
-	bne.s	ds_get_program_dir_name_ok
-	lea	ds_error_text12(pc),a0
-	moveq	#ds_error_text12_end-ds_error_text12,d0
-	bsr	adl_print_text
-	MOVEF.L	ERROR_DIR_NOT_FOUND,d0
-	rts
-	CNOP 0,4
-ds_get_program_dir_name_ok
-	moveq	#RETURN_OK,d0
-	rts
-
-
-	CNOP 0,4
-ds_display_remaining_files
-	lea	ds_remaining_files(pc),a0 ; Stringadresse
-	move.w	adl_entries_number_max(a3),d1 ; Maximale Anzahl der Einträge in Liste mit Dateipfaden
-	sub.w	adl_entries_number(a3),d1 ; Verbleibende Anzahl der zu ladenden Dateien ermitteln
-	cmp.w	#1,d1			; Nur noch ein File?
-	bne.s	ds_request_title_ok	; Nein -> verzweige
-	clr.b	ds_character_s-ds_remaining_files(a0) ; "s" von Demo"s" löschen
-ds_request_title_ok
-	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
-	bra	rp_dec_to_ascii
-
-
-	CNOP 0,4
-ds_make_file_request
-	moveq	#ASL_FileRequest,d0
-	lea	ds_file_request_init_tag_list(pc),a0
-	tst.w	rd_arg_softreset_enabled(a3)
-	bne.s	ds_do_alloc_asl_request
-	lea	ds_file_request_reboot(pc),a1
-	move.l	a1,(ti_SIZEOF*3)+ti_data(a0) ; Zeiger auf negativen Text
-ds_do_alloc_asl_request
-	CALLASL AllocAslRequest
-	move.l	d0,ds_file_request(a3)
-	bne.s	ds_make_file_request_ok
-	lea	ds_error_text13(pc),a0
-	moveq	#ds_error_text13_end-ds_error_text13,d0
-	bsr	adl_print_text
-	moveq	#RETURN_FAIL,d0
-	rts
-	CNOP 0,4
-ds_make_file_request_ok
-	moveq	#RETURN_OK,d0
-	rts
-
-
-	CNOP 0,4
-ds_display_file_request
-	move.l	ds_file_request(a3),a0
-	lea	ds_file_request_display_tag_list(pc),a1
-	CALLASL AslRequest
-	tst.l   d0
-	bne.s	ds_display_file_request_ok
-	moveq	#RETURN_WARN,d0
-	rts
-	CNOP 0,4
-ds_display_file_request_ok
-	moveq	#RETURN_OK,d0
-	rts
-
-
-	CNOP 0,4
-ds_get_demofile_path
-	clr.w   ds_multiselect_entries_number(a3)
-	move.l	ds_file_request(a3),a2
-	move.l	fr_NumArgs(a2),d6
-	move.w	d6,d0			; Anzahl der ausgewählten Dateien
-	add.w   adl_entries_number(a3),d0
-	cmp.w   adl_entries_number_max(a3),d0
-	blt.s   ds_entries_number_okay
-	move.w  adl_entries_number_max(a3),d6
-	sub.w   adl_entries_number(a3),d6 ; noch verbleibende Einträge
-ds_entries_number_okay
-	move.w  d6,ds_multiselect_entries_number(a3)
-	moveq	#0,d5			; Erster Eintrag in ArgLists
-	move.l	fr_ArgList(a2),a6
-	subq.w	#1,d6			; wegen dbf
-ds_multiselect_loop
-	move.l	wa_Name(a6,d5.w*8),a0	; Zeiger auf Dateiname
-	move.l	fr_Drawer(a2),a1	; Zeiger auf Verzeichnisname
-	move.l	a2,-(a7)
-	bsr	ds_check_demofile_path
-	move.l	(a7)+,a2
-	tst.l	d0
-	beq.s	ds_next_multiselect_entry
-	rts
-	CNOP 0,4
-ds_next_multiselect_entry
-	addq.w	#1,d5			; nächster Eintrag in ArgLists
-	dbf	d6,ds_multiselect_loop
-	moveq	#RETURN_OK,d0
-	rts
-
-
-; ** Demo Dateipfad prüfen **
-; Input
-; a0 ... Zeiger auf Dateiname
-; a1 ... Zeiger auf Verzeichnisname
-; Result
-; d0 ... Rückgabewert: DOS Error Code
-	CNOP 0,4
-ds_check_demofile_path
-	tst.b	(a1)			; Verzeichnisname vorhanden ?
- 	bne.s	ds_check_demofile_name	; Ja -> verzweige
-	lea	ds_error_text14(pc),a0
-	moveq	#ds_error_text14_end-ds_error_text14,d0
-	bsr	adl_print_text
-	MOVEF.L ERROR_DIR_NOT_FOUND,d0
-	rts
-	CNOP 0,4
-ds_check_demofile_name
-	tst.b	(a0)			; Dateiname vorhanden ?
-	bne.s	ds_get_playback_entry_offset ; Ja -> verzweige
-	lea	ds_error_text15(pc),a0
-	moveq	#ds_error_text15_end-ds_error_text15,d0
-	bsr	adl_print_text
-	MOVEF.L ERROR_OBJECT_NOT_FOUND,d0
-	rts
-	CNOP 0,4
-ds_get_playback_entry_offset
-	moveq   #0,d0
-	move.w	adl_entries_number(a3),d0
-	MULUF.L playback_queue_entry_size,d0,d1 ; Aktuelles Offset in Puffer ermitteln
-	move.l	adl_entries_buffer(a3),a2
-	add.l   d0,a2			; Zeiger auf Eintrag im Puffer
-	move.l	a2,ds_current_entry(a3)
-	move.l	a0,-(a7)
-	move.l	a2,a0			; Zeiger auf Eintrag im Puffer
-	bsr	ds_clear_playlist_entry
-	move.l	(a7)+,a0		; Zeiger auf Dateiname
-	moveq	#"/",d2
-	moveq	#":",d3
-ds_check_demo_dir_name
-	tst.b	(a1)			; Ende von Verzeichnisname (Nullbyte) ?
-	beq.s	ds_copy_demofile_name_loop ; Ja -> verzweige
-	cmp.b	(a1),d2			; Bei "/" auch Dateiname kopieren
-	bne.s	ds_copy_demo_dir_name	; Sonst Verzeichnisname kopieren
-	addq.w	#1,a1			; Nächstes Zeichen im Verzeichnisnamen
-	bra.s	ds_check_demo_dir_name
-	CNOP 0,4
-ds_copy_demo_dir_name
-	move.l	a5,a4			; Zeiger auf Puffer für aktuellen Verzeichnisnamen
-	moveq	#0,d0			; Zähler für Länge des Dateipfads zurücksetzen
-ds_copy_demo_dir_name_loop
-	addq.b	#1,d0
-	cmp.b	#adl_demofile_path_length-1,d0
-	blt.s	ds_copy_demo_dir_ok
-	move.l	ds_current_entry(a3),a0 ; Zeiger auf Eintrag im Puffer
-	bsr	ds_clear_playlist_entry
-	lea	ds_error_text16(pc),a0
-	moveq	#ds_error_text16_end-ds_error_text16,d0
-	bsr	adl_print_text
-	MOVEF.L ERROR_INVALID_COMPONENT_NAME,d0
-	rts
-	CNOP 0,4
-ds_copy_demo_dir_ok
-	move.b	(a1),(a2)+
-	move.b	(a1)+,(a4)+
-	tst.b	(a1)
-	bne.s	ds_copy_demo_dir_name_loop ; Schleife, so lange bis Endes des Verzeichnisnamens erreicht ist
-	clr.b	(a4)			; Nullbyte setzen
-	cmp.b	-1(a1),d3		; War letztes Zeichen ein ":" ?
-	beq.s	ds_copy_demofile_name_loop ; Ja -> Dateiname kopieren
-	cmp.b	-1(a1),d2		; War letztes Zeichen ein "/" ?
-	beq.s	ds_copy_demofile_name_loop ; Ja -> Dateiname kopieren
-	move.b	d2,(a2)+		; Sonst "/" einfügen
-ds_copy_demofile_name_loop
-	addq.b	#1,d0
-	cmp.b	#adl_demofile_path_length-1,d0
-	blt.s	ds_copy_demofile_name_ok
-	move.l	ds_current_entry(a3),a0 ; Zeiger auf Eintrag in Puffer
-	bsr	ds_clear_playlist_entry
-	lea	ds_error_text16(pc),a0
-	moveq	#ds_error_text16_end-ds_error_text16,d0
-	bsr	adl_print_text
-	MOVEF.L ERROR_INVALID_COMPONENT_NAME,d0
-	rts
-	CNOP 0,4
-ds_copy_demofile_name_ok
-	move.b	(a0)+,(a2)+
-	cmp.b	(a0),d2			; Nächstes Zeichen ein "/" ?
-	bne.s	ds_check_demofile_nullbyte ; Nein -> verzweige
-	lea	ds_error_text17(pc),a0
-	moveq	#ds_error_text17_end-ds_error_text17,d0
-	bsr	adl_print_text
-	MOVEF.L ERROR_OBJECT_NOT_FOUND,d0
-	rts
-	CNOP 0,4
-ds_check_demofile_nullbyte
-	tst.b	(a0)
-	bne.s	ds_copy_demofile_name_loop ; Schleife, so lange bis Endes des Verzeichnisnamens erreicht ist
-	clr.b	(a2)			; Nullbyte setzen
-	addq.w	#1,adl_entries_number(a3)
-	moveq	#RETURN_OK,d0
-	rts
-
-
-	CNOP 0,4
-ds_free_file_request
-	move.l	ds_file_request(a3),a0
-	CALLASLQ FreeAslRequest
-
-
-	CNOP 0,4
-ds_display_startmode_request
-	move.l	a3,a4			; Inhalt von a3 retten
-	sub.l	a0,a0			; Requester erscheint auf Workbench
-	lea	ds_startmode_request(pc),a1
-	move.l	a0,a2			; Keine IDCMP-Flags
-	move.l	a0,a3			; Keine Argumentenliste
-	CALLINT EasyRequestArgs
-	move.l	a4,a3			; Alter Inhalt von a3
-	move.l	ds_current_entry(a3),a0
-	addq.b  #1,d0                   ; Ergebnis korrigieren
-	MOVEF.L playback_queue_entry_size,d1 ; Größe des Eintrags
-	move.w	ds_multiselect_entries_number(a3),d7
-	subq.w	#1,d7			;wegen dbf
-ds_start_loop
-	move.b	d0,pqe_startmode(a0)	; Kennung eintragen
-	sub.l	d1,a0			; vorheriger Pfadname
-	dbf	d7,ds_start_loop
-	rts
-
-
-	CNOP 0,4
-ds_init_reset_program
-	move.l	#rp_reset_program_end-rp_reset_program,d0 ; Programmgröße
-	move.w	d0,d7		
-	moveq	#0,d1
-	move.w	adl_entries_number_max(a3),d1
-	MULUF.L playback_queue_entry_size,d1,d2 ; Größe des Puffers ermitteln
-	add.l	d1,d0			; Gesamtlänge inkusive Puffergröße
-	lea	rp_reset_program_size(pc),a0
-	move.l	d0,(a0)
-	MOVEF.L	MEMF_PUBLIC+MEMF_CHIP+MEMF_CLEAR+MEMF_REVERSE,d1
-	CALLEXEC AllocMem
-	lea	rp_reset_program_memory(pc),a0
-	move.l	d0,(a0)
-	bne.s	ds_copy_reset_program
-	lea	ds_error_text18(pc),a0
-	moveq	#ds_error_text18_end-ds_error_text18,d0
-	bsr	adl_print_text
-	moveq	#ERROR_NO_FREE_STORE,d0
-	rts
-	CNOP 0,4
-ds_copy_reset_program
-	lea	rp_reset_program(pc),a0	; Quelle
-	move.l	d0,a1			; Ziel: Speicherbereich
-	move.l	d0,a2			; Reset-Programm im Speicher
-	move.l	d0,CoolCapture(a6)
-	subq.w	#1,d7			; wegen dbf
-ds_copy_reset_program_loop
-	move.b	(a0)+,(a1)+
-	dbf	d7,ds_copy_reset_program_loop
-	move.l	adl_entries_buffer(a3),a0 ; Quelle
-	move.w	adl_entries_number_max(a3),d7
-	MULUF.W playback_queue_entry_size,d7,d0 ; Puffergröße zum Kopieren ermitteln
-	subq.w	#1,d7			; wegen dbf
-ds_copy_entries_buffer_loop
-	move.b	(a0)+,(a1)+
-	dbf	d7,ds_copy_entries_buffer_loop
-	bsr	rp_calculate_checksum
-	CALLLIBS CacheClearU
-	jsr	rp_install_custom_exception_vectors-rp_reset_program(a2) ; Zeiger auf eigene Exception/Trap-Routinen initialisieren
-	lea	rp_read_VBR(pc),a5
-	CALLLIBS Supervisor
-	tst.l	d0			; VBR = $000000 ?
-	beq.s	ds_install_custom_exceptions_ok ; Ja -> verzweige
-	RP_POINTER_CUSTOM_TRAP_VECTORS
-	move.l	d0,a0 			; Quelle
-	move.w	#TRAP_0_VECTOR,a1	; Ziel: Ab Trap0-Vektor im chip memory
-	IFEQ adl_level_7_handler_enabled
-  		moveq	#8-1,d7		; Anzahl der Trap-Vektoren
-	ELSE
-		moveq	#7-1,d7		; Anzahl der Trap-Vektoren
-	ENDC
-ds_copy_custom_trap_vectors_loop
-	move.l	(a0)+,(a1)+
-	dbf	d7,ds_copy_custom_trap_vectors_loop
-	CALLLIBS CacheClearU
-ds_install_custom_exceptions_ok
-	moveq	#RETURN_OK,d0
-	rts
-
-
-	CNOP 0,4
-ds_close_asl_library
-	move.l	_ASLBase(pc),a1
-	CALLEXECQ CloseLibrary
-
-
-	CNOP 0,4
-ds_close_playlist_file
-	move.l	ds_playlist_file_handle(a3),d1
-	CALLDOSQ Close
-
-
-	CNOP 0,4
-ds_free_playlist_file_buffer
-	move.l	ds_playlist_file_buffer(a3),a1
-	move.l	ds_playlist_file_length(a3),d0
-	CALLEXECQ FreeMem
-
-
-	CNOP 0,4
-ds_free_playlist_file_fib
-	move.l	ds_playlist_file_fib(a3),a1
-	MOVEF.L	fib_SIZEOF,d0
-	CALLEXECQ FreeMem
-
-
-	CNOP 0,4
-ds_unlock_playlist_file
-	move.l ds_playlist_file_lock(a3),d1
-	CALLDOSQ UnLock
-
-
-	CNOP 0,4
-ds_free_entries_buffer
-	tst.w	adl_reset_program_active(a3)
-	beq.s	ds_free_entries_buffer_skip
-	move.l	adl_entries_buffer(a3),a1
-	moveq	#0,d0
-	move.w	adl_entries_number_max(a3),d0
-	MULUF.L playback_queue_entry_size,d0,d1 ; Größe des Puffers ermitteln
-	CALLEXECQ FreeMem
-	CNOP 0,4
-ds_free_entries_buffer_skip
-	rts
 
 
 ; **** Run-Demo ****
@@ -2409,7 +2405,6 @@ rd_play_loop
 	bsr	sf_copy_os_screen_colors
 	bsr	sf_fade_out_os_screen
 
-; ----------------------------------
 	bsr	rd_open_custom_screen
 	move.l	d0,adl_dos_return_code(a3)
 	bne.s	rd_cleanup_os_screen_colors
@@ -2421,8 +2416,6 @@ rd_play_loop
 	bsr	rd_check_monitor_switch
 	move.l	d0,adl_dos_return_code(a3)
 	bne.s   rd_cleanup_display
-	
-; --------------------------------------
 
 	bsr	rd_init_output_string_start
 	bsr	rd_set_timer_play_duration
@@ -2441,14 +2434,12 @@ rd_play_loop
 	bsr	rd_stop_timer
 	move.l	d0,adl_dos_return_code(a3)
 
-; -------------------------------------------
 rd_cleanup_display
 	bsr	rd_restore_sprite_resolution
 rd_cleanup_custom_window
 	bsr	rd_close_custom_window
 rd_cleanup_custom_screen
 	bsr	rd_close_custom_screen
-; ---------------------------------------------
 
 rd_cleanup_os_screen_colors
 	bsr	sf_fade_in_os_screen
@@ -2832,7 +2823,8 @@ rd_open_demofile
 	lea	rd_error_text10(pc),a0
 	moveq	#rd_error_text10_end-rd_error_text10,d0
 	bsr	adl_print_text
-	CALLDOSQ IoErr
+	moveq	#RETURN_FAIL,d0
+	rts
 	CNOP 0,4
 rd_open_demofile_ok
 	moveq	#RETURN_OK,d0
@@ -2928,11 +2920,10 @@ rd_copy_prerunscript_path_loop
 	dbeq	d7,rd_copy_prerunscript_path_loop ;Schleife solange, bis Nullbxte gefunden wurde
 	lea	rd_prerunscript_cmd_line(pc),a0
 	move.l	a0,d1			; Zeiger auf Kommandozeile
-	moveq	#0,d2			; Kein Input
-	moveq	#0,d3			; Kein Output
-	CALLDOS Execute
+	moveq	#0,d2			; Keine Tags
+	CALLDOS	SystemTagList
 	tst.l	d0
-	bne.s	rd_execute_prerunscript_ok
+	beq.s	rd_execute_prerunscript_ok
 	lea	rd_error_text13(pc),a0
 	moveq	#rd_error_text13_end-rd_error_text13,d0
 	bsr	adl_print_text
@@ -2952,7 +2943,7 @@ rd_turn_off_fast_memory
 	rts
 	CNOP 0,4
 rd_turn_off_fast_memory_ok1
-	MOVEF.L	MEMF_FAST+MEMF_LARGEST,d1
+	MOVEF.L	MEMF_FAST|MEMF_LARGEST,d1
 	move.l	d1,d2
 	CALLEXEC AvailMem
 	move.l	d0,rd_available_fast_memory_size(a3)
@@ -3859,16 +3850,20 @@ rd_clear_caches
 rd_execute_whdload_slave
 	lea	whdl_slave_cmd_line(pc),a0
 	move.l	a0,d1			; Zeiger auf Kommandozeile
-	moveq	#0,d2			; Kein Input
-	moveq	#0,d3			; Kein Output
-	CALLDOS Execute
+	moveq	#0,d2			; Keine Tags
+	CALLDOS SystemTagList
 	tst.l	d0
-	bne.s	rd_execute_whdload_slave_ok
+	beq.s	rd_check_arg_softreset_enabled
 	lea	rd_error_text27(pc),a0
 	moveq	#rd_error_text27_end-rd_error_text27,d0
 	bsr	adl_print_text
 	moveq	#RETURN_ERROR,d0
 	rts
+	CNOP 0,4
+rd_check_arg_softreset_enabled
+	tst.w	rd_arg_softreset_enabled(a3)
+	bne.s	rd_execute_whdload_slave_ok
+	CALLEXECQ ColdReboot
 	CNOP 0,4
 rd_execute_whdload_slave_ok
 	moveq	#RETURN_OK,d0
@@ -5280,23 +5275,23 @@ adl_cmd_results
 	DS.B cmd_results_array_size
 
 
-; **** Demo-Selector ****
+; **** Demo-Charger ****
 	CNOP 0,4
-ds_playlist_results_array
+dc_playlist_results_array
 	DS.B playlist_results_array_size
 
 
 	CNOP 0,4
-ds_startmode_request
+dc_startmode_request
 	DS.B EasyStruct_SIZEOF
 
 
 	CNOP 0,4
-ds_file_request_init_tag_list
+dc_file_request_init_tag_list
 	DS.B ti_SIZEOF*11
 
 	CNOP 0,4
-ds_file_request_display_tag_list
+dc_file_request_display_tag_list
 	DS.B ti_SIZEOF*2
 
 
@@ -5390,26 +5385,26 @@ adl_cool_capture_request_gadgets
 
 
 adl_cmd_template
+; ** Amiga-Demo-Launcher **
 	DC.B "HELP/S,"
-; ** Demo-Selector **
+	DC.B "REMOVE/S,"
+; ** Demo-Charger **
 	DC.B "MAXENTRIES/K/N,"
-	DC.B "RESETLOADPOS/S,"
-	DC.B "PLAYLIST,"
 	DC.B "NEWENTRY/S,"
-	DC.B "QUIET/S,"
+	DC.B "PLAYLIST,"
 ; ** Run-Demo **
+	DC.B "SHOWQUEUE/S,"
+	DC.B "PLAYENTRY/K/N,"
+	DC.B "RESETLOADPOS/S,"
+	DC.B "PRERUNSCRIPT/K,"
 	DC.B "MIN=MINS/K/N,"
 	DC.B "SEC=SECS/K/N,"
 	DC.B "LMBEXIT/K/N,"
-	DC.B "PRERUNSCRIPT/K,"
-	DC.B "SHOWQUEUE/S,"
-	DC.B "PLAYENTRY/K/N,"
 	DC.B "RANDOM/S,"
 	DC.B "ENDLESS/S,"
 	DC.B "LOOP/S,"
 	DC.B "FADER/S,"
-	DC.B "SOFTRESET/S,"
-	DC.B "REMOVE/S",0
+	DC.B "SOFTRESET/S",0
 	EVEN
 
 
@@ -5429,30 +5424,32 @@ adl_intro_message_end
 
 adl_cmd_usage_text
 	DC.B ASCII_LINE_FEED,"Amiga Demo Launcher arguments description:",ASCII_LINE_FEED,ASCII_LINE_FEED
+; ** Amiga-Demo-Launcher **
 	DC.B "HELP                   This short arguments description",ASCII_LINE_FEED
+	DC.B "REMOVE                 Remove Amiga Demo Launcher out of memory",ASCII_LINE_FEED
+; ** Demo-Charger **
 	DC.B "MAXENTRIES ",155,"3",109,"number ",155,"0",109,"     Set maximum entries number of playback queue",ASCII_LINE_FEED
-	DC.B "RESETLOADPOS           Reset entry offset of playback queue to zero",ASCII_LINE_FEED
-	DC.B "[PLAYLIST] ",155,"3",109,"file path ",155,"0",109,"  Load and transfer external playlist script file",ASCII_LINE_FEED
 	DC.B "NEWENTRY               Create new entry in playback queue",ASCII_LINE_FEED
-	DC.B "QUIET                  No file requester if no demos left to play",ASCII_LINE_FEED
+	DC.B "[PLAYLIST] ",155,"3",109,"file path ",155,"0",109,"  Load and transfer external playlist script file",ASCII_LINE_FEED
+; ** Run-Demo **
+	DC.B "SHOWQUEUE              Show content of playback queue",ASCII_LINE_FEED
+	DC.B "PLAYENTRY ",155,"3",109,"number ",155,"0",109,"      Play certain entry of playback queue",ASCII_LINE_FEED
+	DC.B "RESETLOADPOS           Reset entry offset of playback queue to zero",ASCII_LINE_FEED
+	DC.B "PRERUNSCRIPT ",155,"3",109,"file path ",155,"0",109,"Execute prerrun script file before demo is played",ASCII_LINE_FEED
 	DC.B "MIN/MINS ",155,"3",109,"number ",155,"0",109,"       Playtime in minutes (reset device needed)",ASCII_LINE_FEED
 	DC.B "SEC/SECS ",155,"3",109,"number ",155,"0",109,"       Playtime in seconds (reset device needed)",ASCII_LINE_FEED
 	DC.B "LMBEXIT ",155,"3",109,"number ",155,"0",109,"        Play demo multiparts by LMB exit (reset device needed)",ASCII_LINE_FEED
-	DC.B "PRERUNSCRIPT ",155,"3",109,"file path ",155,"0",109,"Execute prerrun script file before demo is played",ASCII_LINE_FEED
-	DC.B "SHOWQUEUE              Show content of playback queue",ASCII_LINE_FEED
-	DC.B "PLAYENTRY ",155,"3",109,"number ",155,"0",109,"      Play certain entry of playback queue",ASCII_LINE_FEED
 	DC.B "RANDOM                 Play random entry of playback queue",ASCII_LINE_FEED
 	DC.B "ENDLESS                Play entries of playback queue endlessly",ASCII_LINE_FEED
 	DC.B "LOOP                   Play demos until no more entries left to play",ASCII_LINE_FEED
 	DC.B "FADER                  Fade screen to black before demo is played",ASCII_LINE_FEED
-	DC.B "SOFTRESET              Automatic reset after quitting demo",ASCII_LINE_FEED
-	DC.B "REMOVE                 Remove Amiga Demo Launcher out of memory",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B "SOFTRESET              Automatic reset after quitting demo",ASCII_LINE_FEED,ASCII_LINE_FEED
 adl_cmd_usage_text_end
 	EVEN
 
 
-; **** Demo-Selector ****
-ds_playlist_template
+; **** Demo-Charger ****
+dc_playlist_template
 	DC.B "demofile,"
 	DC.B "OCSVANILLA/S,"		; Start-Modi
 	DC.B "AGAVANILLA/S,"
@@ -5464,42 +5461,42 @@ ds_playlist_template
 	EVEN
 
 
-ds_parsing_begin_text
+dc_parsing_begin_text
 	DC.B "Parsing and transferring playlist to playback queue...",ASCII_LINE_FEED,0
-ds_parsing_begin_text_end
+dc_parsing_begin_text_end
 	EVEN
-ds_parsing_result_text
+dc_parsing_result_text
 	DC.B "... done",ASCII_LINE_FEED
 	DC.B "Result: "
-ds_transmitted_entries
+dc_transmitted_entries
 	DC.B "  "
 	DC.B "of "
-ds_playlist_entries
+dc_playlist_entries
 	DC.B "  "
 	DC.B "entries successfully transferred to playback queue",ASCII_LINE_FEED
 	DC.B "Playback queue has "
-ds_not_used_entries
+dc_not_used_entries
 	DC.B "  "
 	DC.B "unused entries left for a transfer",ASCII_LINE_FEED
-ds_parsing_result_text_end
+dc_parsing_result_text_end
 	EVEN
 
 
-ds_current_dir_name
+dc_current_dir_name
 	DS.B adl_demofile_path_length
 
 
-ds_file_request_title
+dc_file_request_title
 	DC.B "Choose up to "
-ds_remaining_files
+dc_remaining_files
 	DC.B "   "
 	DC.B "demo"
-ds_character_s
+dc_character_s
 	DC.B "s",0
 	EVEN
 
 
-ds_file_request_pattern
+dc_file_request_pattern
 	DC.B "~(#?.bin|"
 	DC.B "#?.dat|"
 	DC.B "#?.diz|"
@@ -5511,24 +5508,24 @@ ds_file_request_pattern
 	DC.B "#?.vars|"
 	DC.B "_dl.#?)",0
 	EVEN
-ds_file_request_ok
+dc_file_request_ok
 	DC.B "Use",0
 	EVEN
-ds_file_request_quit
+dc_file_request_quit
 	DC.B "Quit",0
 	EVEN
-ds_file_request_reboot
+dc_file_request_reboot
 	DC.B "Reboot",0
 	EVEN
 
 
-ds_startmode_request_title
+dc_startmode_request_title
 	DC.B "Define start mode",0
 	EVEN
-ds_startmode_request_body
+dc_startmode_request_body
 	DC.B "In which mode should the demo start?",ASCII_LINE_FEED,0
 	EVEN
-ds_startmode_request_gadgets
+dc_startmode_request_gadgets
 	DC.B "OCS vanilla|AGA vanilla|turbo",0
 	EVEN
 
@@ -5663,86 +5660,86 @@ adl_error_text5_end
 	EVEN
 
 
-; **** Demo-Selector ****
-ds_note_text
+; **** Demo-Charger ****
+dc_note_text
 	DC.B "Maximum number of entries in playback queue already reached",ASCII_LINE_FEED
-ds_note_text_end
+dc_note_text_end
 	EVEN
 
-ds_error_text1
+dc_error_text1
 	DC.B "Couldn't allocate memory for entries/playback queue buffer",ASCII_LINE_FEED
-ds_error_text1_end
+dc_error_text1_end
 	EVEN
-ds_error_text2
+dc_error_text2
 	DC.B "Couldn't lock playlist file"
-ds_error_text2_end
+dc_error_text2_end
 	EVEN
-ds_error_text3
+dc_error_text3
 	DC.B "Couldn't allocate memory for file info block structure",ASCII_LINE_FEED
-ds_error_text3_end
+dc_error_text3_end
 	EVEN
-ds_error_text4
+dc_error_text4
 	DC.B "Couldn't examine playlist file",ASCII_LINE_FEED
-ds_error_text4_end
+dc_error_text4_end
 	EVEN
-ds_error_text5
+dc_error_text5
 	DC.B "Couldn't allocate memory for playlist file",ASCII_LINE_FEED
-ds_error_text5_end
+dc_error_text5_end
 	EVEN
-ds_error_text6
+dc_error_text6
 	DC.B "Couldn't open playlist file"
-ds_error_text6_end
+dc_error_text6_end
 	EVEN
-ds_error_text7
+dc_error_text7
 	DC.B "Playlist file read error"
-ds_error_text7_end
+dc_error_text7_end
 	EVEN
-ds_error_text8
+dc_error_text8
 	DC.B "Couldn't allocate dos object",ASCII_LINE_FEED
-ds_error_text8_end
+dc_error_text8_end
 	EVEN
-ds_error_text9
+dc_error_text9
 	DC.B "Entry "
-ds_entries_string
+dc_entries_string
 	DC.B "	"
 	DC.B "could not be transferred. Playlist arguments syntax error",ASCII_LINE_FEED
-ds_error_text9_end
+dc_error_text9_end
 	EVEN
-ds_error_text10
+dc_error_text10
 	DC.B "Couldn't open asl.library",ASCII_LINE_FEED
-ds_error_text10_end
+dc_error_text10_end
 	EVEN
-ds_error_text11
+dc_error_text11
 	DC.B "Couldn't lock program directory",ASCII_LINE_FEED
-ds_error_text11_end
+dc_error_text11_end
 	EVEN
-ds_error_text12
+dc_error_text12
 	DC.B "Couldn't get program directory name",ASCII_LINE_FEED
-ds_error_text12_end
+dc_error_text12_end
 	EVEN
-ds_error_text13
+dc_error_text13
 	DC.B "Couldn't initialize file requester structure",ASCII_LINE_FEED
-ds_error_text13_end
+dc_error_text13_end
 	EVEN
-ds_error_text14
+dc_error_text14
 	DC.B "Directory not found"
-ds_error_text14_end
+dc_error_text14_end
 	EVEN
-ds_error_text15
+dc_error_text15
 	DC.B "No demo file selected"
-ds_error_text15_end
+dc_error_text15_end
 	EVEN
-ds_error_text16
+dc_error_text16
 	DC.B "Demo filepath is longer than 123 characters"
-ds_error_text16_end
+dc_error_text16_end
 	EVEN
-ds_error_text17
+dc_error_text17
 	DC.B "Demo file not found"
-ds_error_text17_end
+dc_error_text17_end
 	EVEN
-ds_error_text18
+dc_error_text18
 	DC.B "Couldn't allocate memory for resident program",ASCII_LINE_FEED
-ds_error_text18_end
+dc_error_text18_end
 	EVEN
 
 
@@ -5784,7 +5781,7 @@ rd_error_text9
 rd_error_text9_end
 	EVEN
 rd_error_text10
-	DC.B "Couldn't open demo"
+	DC.B "Couldn't open demo",ASCII_LINE_FEED
 rd_error_text10_end
 	EVEN
 rd_error_text11
@@ -5859,5 +5856,6 @@ rd_error_text27_end
 
 	DC.B "$VER: Amiga Demo Launcher 2.0 (30.7.24)",0
 	EVEN
+
 
 	END
