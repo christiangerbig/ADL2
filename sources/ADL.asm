@@ -2414,11 +2414,12 @@ rd_play_loop
 	bsr	rd_set_ocs_sprite_resolution
  	bsr	rd_blank_display
 	bsr	rd_check_monitor_switch
+
+	bsr	rd_init_output_string_start
+	bsr	rd_start_timer
 	move.l	d0,adl_dos_return_code(a3)
 	bne.s   rd_cleanup_display
 
-	bsr	rd_init_output_string_start
-	bsr	rd_set_timer_play_duration
 	bsr	rd_save_custom_trap_vectors
 	bsr	rd_downgrade_CPU
 	bsr	rd_save_chips_registers
