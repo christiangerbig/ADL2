@@ -1,0 +1,1004 @@
+/* $VER:CreateDemoPlaylist 0.8 (31.05.2019) by Yulquen74 
+*/
+
+g. 						= ""					/* Initialize compound stems for:	Global variables					*/	 
+h. 						= ""					/*									File-handles						*/
+p.						= ""					/*									Procedure variables					*/
+
+g.PlaylistEntries 		= 0						/* Initialize variables to default values								*/
+g.Reset 				= 0
+g.AllCFG 				= 0
+g.PLFirstWrite			= 0
+
+g.CfgSaveDemoCfg		= "OFF"					/* Initialize script default settings 									*/
+g.CfgSaveDemoCfgBac		= "OFF"
+g.CfgDemoCfgPath		= "DEMO_HOMEDIR"
+g.CfgDemoCfgPathBac		= "DEMO_HOMEDIR"
+g.CfgResetQueue			= "OFF"
+g.CfgResetQueueBac		= "OFF"
+g.CfgMaxPlEntries		= 99
+g.CfgMaxPlEntriesBac	= 99
+
+g.ScriptCfgFilePath		= "ENVARC:"				/* Script configuration is loaded and saved from here 					*/
+g.CreatePlaylistPath	= "RAM:"				/* Default path shown in playlist creation file-requester 				*/
+g.AppendPlaylistPath	= "RAM:"				/* Default path shown in playlist append file-requester 				*/				
+g.TransferPlaylistPath	= "RAM:"				/* Default path shown in playlist transfer file-requester 				*/
+g.SelectConfigPath		= "RAM:"				/* Default path shown in demo config path selection file-requester 		*/ 
+g.LastDemoPath 			= "RAM:"				/* Default path shown in demo selection file-requester					*/
+g.DemoPrerunScriptPath	= "SYS:S"				/* Default path shown in demo prerun script selection file-requester	*/
+
+g.CmdRQC				= "C:RequestChoice"		/* Path + filename definition for CLI command RequestChoice				*/
+g.CmdRQF				= "C:RequestFile"       /* Path + filename definition for CLI command RequestFile				*/
+g.CmdCPY				= "C:Copy"				/* Path + filename definition for CLI command Copy						*/
+g.CmdADL				= "C:RSE-ADL"			/* Path + filename definition for CLI command AmigaDemoLauncher			*/
+g.CmdRST				= "C:Reset"				/* Path + filename definition for CLI command Reset						*/
+g.ArgRST				= "NORMAL"				/* Argument for optional reset command (ABCS Amiga Reset V1.0)			*/	
+
+g.RunMode0R				= "Vanilla OCS"			/* Definitions for ADL runmodes (*R= Requester, *P = Playlist argument)	*/
+g.RunMode0P				= "OCSVANILLA"
+g.RunMode1R				= "Vanilla AGA"
+g.RunMode1P				= "AGAVANILLA"
+g.RunMode2R				= "Turbo"
+g.RunMode2P				= "TURBO"
+
+g.LF 					= '0a'x					/* Initialize constants 												*/	
+
+
+/* Check dependencies */
+
+if ~Exists(g.CmdRQC) then say "The file <" || g.CmdRQC || "> was not found!"
+if ~Exists(g.CmdRQF) then ScriptExit("The file <" || g.CmdRQF || "> was not found!")
+if ~Exists(g.CmdCopy) then ScriptExit("The file <" || g.CmdCopy || "> was not found!")
+if ~Exists(g.CmdADL) then ScriptExit("The file <" || g.CmdADL || "> was not found!")
+if  Exists(g.CmdRST) then g.Reset = 1
+if ~Exists('ENV:') then ScriptExit("ENV: path not found!")
+if ~Exists(g.ScriptCfgFilePath) then ScriptExit(g.ScriptCfgFilePath || " path not found!")
+
+
+/* Load script config file (if it exists), and correct any invalid settings. */
+
+if Open(h.ScriptCfg,g.ScriptCfgFilePath ||  "_ScriptCfg","r") then 
+
+do
+	g.CfgSaveDemoCfg		=	Readln(h.ScriptCfg)
+	g.CfgDemoCfgPath		= 	Readln(h.ScriptCfg)
+	g.CfgResetQueue 		= 	Readln(h.ScriptCfg)
+	g.CfgMaxPlEntries		=	Readln(h.ScriptCfg)
+
+	Close(h.ScriptCfg)
+
+	
+	if ~(g.CfgSaveDemoCfg == "ON" | g.CfgSaveDemoCfg == "OFF") then g.CfgSaveDemoCfg = "OFF"
+	if ~Exists(RemQuotes(g.CfgDemoCfgPath)) | g.CfgDemoCfgPath == "" then g.CfgDemoCfgPath = "DEMO_HOMEDIR"
+	if ~(g.CfgResetQueue == "ON" | g.CfgResetQueue == "OFF") then g.CfgResetQueue = "OFF"		
+	if ~(DataType(g.CfgMaxPlEntries) == NUM) then g.CfgMaxPlEntries = 99
+	if g.CfgMaxPlEntries > 99 then g.CfgMaxPlEntries = 99
+	if g.CfgMaxPlEntries < 1 then g.CfgMaxPlEntries = 1
+
+	g.CfgSaveDemoCfgBac		=	g.CfgSaveDemoCfg
+	g.CfgDemoCfgPathBac 	= 	g.CfgDemoCfgPath
+	g.CfgResetQueueBac		= 	g.CfgResetQueue
+	g.CfgMaxPlEntriesBac	=	g.CfgMaxPlEntries
+end
+
+else 
+
+
+/* Script file does not exist. Open startup-requester to let the user decide if a new config file should be created. */
+
+do
+	address command g.CmdRQC ' >ENV:_Startup TITLE="Script Startup Message" BODY="Script configuration file was not found!*N*NCreate new config file in 'g.ScriptCfgFilePath'?" GADGETS=YES NO QUIT '
+
+	if ~Open(h.Startup,"ENV:_Startup","r") then ScriptExit("File ENV:_Startup could not be loaded!")
+
+	g.StartupSel = Readln(h.Startup)
+	Close(h.Startup)
+
+
+/* Process user selection from STARTUP requester */
+
+	select
+		when g.StartupSel == 0 then ScriptExit()					/* STARTUP: Quit 								*/
+		when g.StartupSel == 1 then 								/* STARTUP: Create script config file			*/						
+
+		do
+			if ~Open(h.ScriptCfg,g.ScriptCfgFilePath || "_ScriptCfg","w") then ScriptExit("File _ScriptCfg could not be opened for writing!")
+			Writeln(h.ScriptCfg,g.CfgSaveDemoCfg)
+			Writeln(h.ScriptCfg,g.CfgDemoCfgPath)
+			Writeln(h.ScriptCfg,g.CfgResetQueue)
+			Writeln(h.ScriptCfg,g.CfgMaxPlEntries)
+			Close(h.ScriptCfg)
+		end
+		
+		when g.StartupSel == 2 then nop								/* STARTUP: Do not create script config file 	*/
+
+		otherwise ScriptExit("Invalid data from Requestchoice!")	/* STARTUP: Invalid data 						*/
+	end
+end
+		
+
+/* Script main requester, short description of functionality, and list of user options */
+
+g.MainSelExit = 0
+
+do while g.MainSelExit == 0
+	g.ScriptCfg1Exit = 0
+	g.ScriptCfg2Exit = 0
+
+	address command g.CmdRQC ' >ENV:_Main TITLE="Script Main Menu" BODY="This script serves as a companion to the Amiga Demo Launcher (ADL).*N*NIts main purpose is creating demo playlists for ADL,*Nand then transfer them to the ADL playback queue.*N*N*NCREA
+TE/APPEND: Create a new demo playlist/append more entries to an*Nexisting playlist.*N*N*NTRANSFER: Transfer an existing playlist to the ADL playback queue.*N*N*NSHOW: Display status of the ADL playback queue.*N*N*NCFG1/2: Edit script config." GADGETS=CRE
+ATE/APPEND TRANSFER SHOW CFG1 CFG2 QUIT '
+
+	if ~Open(h.Main,"ENV:_Main","r") then ScriptExit("File ENV:_Start could not be loaded!")
+
+	g.MainSel = Readln(h.Main)
+	Close(h.Main)
+
+/* Process user selection from MAIN requester */
+
+	select
+		when g.MainSel == 0 then ScriptExit()						/* MAIN: Quit 					*/
+		when g.MainSel == 1 then 									/* MAIN: Create/Append			*/						
+
+		do
+			address command g.CmdRQF ' >ENV:_Playlist DRAWER='g.CreatePlaylistPath' NOICONS TITLE="Enter filename / Sel.playlist "'
+
+			if ~Open(h.Playlist,"ENV:_Playlist","r") then ScriptExit("File ENV:_Playlist could not be opened!")
+			g.Playlist = Readln(h.Playlist)
+			Close(h.Playlist)
+
+			if ~(g.Playlist == "" | g.Playlist == """""") then g.MainSelExit = 1
+		end
+
+		when g.MainSel == 2 then 									/* MAIN: Transfer 				*/
+
+		do	
+			address command g.CmdRQF ' >ENV:_Playlist DRAWER='g.TransferPlaylistPath' NOICONS TITLE="Select playlist to transfer"'
+
+			if ~Open(h.Playlist,"ENV:_Playlist","r") then ScriptExit("File ENV:_Playlist could not be opened!")
+			g.Playlist = Readln(h.Playlist)
+			Close(h.Playlist)
+
+			if ~(g.Playlist == "" | g.Playlist == """""") then g.MainSelExit = 1
+		end
+
+		when g.MainSel == 3 then 									/* MAIN: Show Playback Queue */			
+
+		do
+			g.ADLQueue = ""	
+			address command g.CmdADL ' >ENV:_ADLQueue SHOWQUEUE QUIET'		
+			if ~Open(h.ADLQueue,"ENV:_ADLQueue","r") then ScriptExit("File ENV:_ADLQueue could not be loaded!")
+	
+			do while ~EOF(h.ADLQueue)
+				g.ADLQueue = g.ADLQueue || Readln(h.ADLQueue) || g.LF
+			end		
+
+			Close(h.ADLQueue)								
+
+			if Length(g.ADLQueue) > 1 then 
+
+			do
+				if ~Open(h.RawWindow,'RAW:0/0/640/240/Amiga Demo Selector Playback Queue Status') then ScriptExit("Output window could not be opened!")
+				
+				Writech(h.RawWindow,g.ADLQueue)
+				Writech(h.RawWindow,g.LF || "Press any key to continue...")
+				g.Char = Readch(h.RawWindow,1)
+				Close(h.RawWindow)
+			end
+			
+			else address command g.CmdRQC ' >NIL: TITLE="Script Message" BODY="ADL playback queue is empty!" GADGETS = QUIT'			
+		end	
+
+		when g.MainSel == 4 then									/* MAIN: Open CONFIG1 Requester	*/				
+
+		do while g.ScriptCfg1Exit == 0
+			g.CfgDemoCfgPathTrunc = g.CfgDemoCfgPath
+			if Length(g.CfgDemoCfgPath) > 50 then g.CfgDemoCfgPathTrunc = Left(g.CfgDemoCfgPath,50) || "..."
+			
+			g.CfgResetQueueTemp = "Bottom of playlist queue"
+			if g.CfgResetQueue == ON then g.CfgResetQueueTemp = "Top of playlist queue"
+
+			address command g.CmdRQC ' >ENV:_ScriptCfg1Sel TITLE="Script Configuration Menu 1" BODY="DCF: Save demo config files.*N!DCF Do not save demo config files.*N*NCurrent setting: 'g.CfgSaveDemoCfg'*N*N*NSave demo config files in:*N*NCFP: Single dir.*N!CFP
+: Demo home dirs.*N*NCurrent setting: 'g.CfgDemoCfgPathTrunc'*N*N*N*Always transfer new playlist entries to:*N*NRSQ: The top of the playlist queue (overwrite).*N!RSQ: The bottom of the playlist queue (append).*N*NCurrent setting: 'g.CfgResetQueueTemp'*N"
+ GADGETS=DCF !DCF CFP !CFP RSQ !RSQ SAVE USE EXIT QUIT '
+
+			if ~Open(h.ScriptCfg1Sel,"ENV:_ScriptCfg1Sel","r") then ScriptExit("File ENV:_ScriptCfg1Sel could not be loaded!")
+			g.ScriptCfg1Sel = Readln(h.ScriptCfg1Sel)
+			Close(h.ScriptCfg1Sel)		
+
+/* Process user selection from CONFIG1 requester */
+	
+			select
+				when g.ScriptCfg1Sel == 0 then ScriptExit()										/* CONFIG1: Quit */
+
+				when g.ScriptCfg1Sel == 1 then g.CfgSaveDemoCfg = "ON"							/* CONFIG1: Enable Saving Of Demo Config Files */
+				when g.ScriptCfg1Sel == 2 then g.CfgSaveDemoCfg = "OFF"							/* CONFIG1: Disable Saving Of Demo Config Files */
+				when g.ScriptCfg1Sel == 3 then													/* CONFIG1: Demo Config Path */ 
+		
+				do
+					address command g.CmdRQF ' >ENV:_DemoCfgPath DRAWER='g.SelectConfigPath' DRAWERSONLY TITLE="Select demo config file-path"'
+
+					if ~Open(h.DemoCfgPath,"ENV:_DemoCfgPath","r") then ScriptExit("File ENV:_DemoCfgPath could not be loaded!")
+					g.CfgDemoCfgPath = RemQuotes(Readln(h.DemoCfgPath))
+					Close(h.DemoCfgPath)
+
+					if ~Exists(RemQuotes(g.CfgDemoCfgPath)) then
+
+					do
+						ScriptMsg("Invalid path spesified!*N*N" || g.CfgDemoCfgPath)
+						g.CfgDemoCfgPath = g.CfgDemoCfgPathBac
+					end
+
+					if g.CfgDemoCfgPath == "" | g.CfgDemoCfgPath == """" then g.CfgDemoCfgPath = g.CfgDemoCfgPathBac 
+				end	
+						
+				when g.ScriptCfg1Sel == 4 then g.CfgDemoCfgPath	= "DEMO_HOMEDIR"				/* CONFIG1: No Demo Config Path	*/			 
+				when g.ScriptCfg1Sel == 5 then g.CfgResetQueue = "ON"							/* CONFIG1: Reset Existing Playback Queue */
+				when g.ScriptCfg1Sel == 6 then g.CfgResetQueue = "OFF"							/* CONFIG1: Do Not Reset Existing Playback Queue */
+				when g.ScriptCfg1Sel == 7 then													/* CONFIG1: Save Config & Continue */
+
+				do
+					if ~Open(h.ScriptCfg,g.ScriptCfgFilePath || "_ScriptCfg","w") then ScriptExit("File _ScriptCfg could not be opened for writing!")
+					Writeln(h.ScriptCfg,g.CfgSaveDemoCfg)
+					Writeln(h.ScriptCfg,g.CfgDemoCfgPath)
+					Writeln(h.ScriptCfg,g.CfgResetQueue)
+					Writeln(h.ScriptCfg,g.CfgMaxPlEntries)
+					Close(h.ScriptCfg)
+	
+					g.CfgSaveDemoCfgBac		=	g.CfgSaveDemoCfg
+					g.CfgDemoCfgPathBac 	= 	g.CfgDemoCfgPath
+					g.CfgResetQueueBac		= 	g.CfgResetQueue
+					g.ScriptCfg1Exit = 1
+				end
+					
+				when g.ScriptCfg1Sel == 8 then 													/* CONFIG1: Use (Continue Without Saving Config) */			
+
+				do
+					g.CfgSaveDemoCfgBac 	= g.CfgSaveDemoCfg
+					g.CfgDemoCfgPathBac 	= g.CfgDemoCfgPath
+					g.CfgResetQueueBac		= g.CfgResetQueue
+					g.ScriptCfg1Exit = 1								
+				end
+
+				when g.ScriptCfg1Sel == 9 then													/* CONFIG1: Exit (Continue Without Saving Config, And With Config Unchanged) */				 
+			
+				do
+					g.CfgSaveDemoCfg 	= g.CfgSaveDemoCfgBac
+					g.CfgDemoCfgPath 	= g.CfgDemoCfgPathBac
+					g.CfgResetQueue		= g.CfgResetQueueBac
+					g.ScriptCfg1Exit = 1
+				end								
+	
+				otherwise ScriptExit("Invalid data from Requestchoice!")						/* CONFIG1: Invalid data */	
+			end
+		end
+
+		when g.MainSel == 5 then									/* MAIN: Open CONFIG2 Requester	*/				
+
+		do while g.ScriptCfg2Exit == 0
+			address command g.CmdRQC ' >ENV:_ScriptCfg2Sel TITLE="Script Configuration Menu 2" BODY="+10/+1: Set maximum number of entries in playback queue (1-99).*N*NCurrent setting: 'g.CfgMaxPlEntries'*N" GADGETS=+10 +1 SAVE USE EXIT QUIT '
+
+			if ~Open(h.ScriptCfg2Sel,"ENV:_ScriptCfg2Sel","r") then ScriptExit("File ENV:_ScriptCfg2Sel could not be loaded!")
+			g.ScriptCfg2Sel = Readln(h.ScriptCfg2Sel)
+			Close(h.ScriptCfg2Sel)		
+
+/* Process user selection from CONFIG2 requester */
+	
+			select
+				when g.ScriptCfg2Sel == 0 then ScriptExit()										/* CONFIG2: Quit */
+				when g.ScriptCfg2Sel == 1 then													/* CONFIG2: Add 10 to Max Playlist Entries Parameter */
+
+				do
+					g.CfgMaxPlEntries = g.CfgMaxPlEntries	+ 10
+					if g.CfgMaxPlEntries > 99 then g.CfgMaxPlEntries = g.CfgMaxPlEntries - 100
+					if g.CfgMaxPlEntries = 0 then g.CfgMaxPlEntries = 1	
+				end
+
+				when g.ScriptCfg2Sel == 2 then													/* CONFIG2: Add 1 to Max Playlist Entries Parameter */
+
+				do
+					g.CfgMaxPlEntries = g.CfgMaxPlEntries	+ 1
+					if g.CfgMaxPlEntries > 99 then g.CfgMaxPlEntries = 1	
+				end
+
+				when g.ScriptCfg2Sel == 3 then													/* CONFIG2: Save Config & Continue */
+
+				do
+					if ~Open(h.ScriptCfg,g.ScriptCfgFilePath || "_ScriptCfg","w") then ScriptExit("File _ScriptCfg could not be opened for writing!")
+					Writeln(h.ScriptCfg,g.CfgSaveDemoCfg)
+					Writeln(h.ScriptCfg,g.CfgDemoCfgPath)
+					Writeln(h.ScriptCfg,g.CfgResetQueue)
+					Writeln(h.ScriptCfg,g.CfgMaxPlEntries)
+					Close(h.ScriptCfg)
+
+					g.CfgMaxPlEntriesBac	= 	g.CfgMaxPlEntries
+					g.ScriptCfg2Exit = 1
+				end	
+
+				when g.ScriptCfg2Sel == 4 then 													/* CONFIG2: Use (Continue Without Saving Config) */
+					
+				do
+					g.CfgMaxPlEntriesBac = g.CfgMaxPlEntries
+					g.ScriptCfg2Exit = 1		
+				end
+
+				when g.ScriptCfg2Sel == 5 then 													/* CONFIG2: Exit (Continue Without Saving Config, And With Config Unchanged) */
+					
+				do
+					g.CfgMaxPlEntries = g.CfgMaxPlEntriesBac
+					g.ScriptCfg2Exit = 1		
+				end
+
+				otherwise ScriptExit("Invalid data from Requestchoice!")						/* CONFIG2: Invalid data */	
+			end
+		end
+
+		otherwise ScriptExit("Invalid data from Requestchoice!")	/*	 MAIN: Invalid data */
+	end
+end
+
+if ~Open(h.Playlist,"ENV:_Playlist","r") then ScriptExit("File ENV:_Playlist could not be opened!")
+g.Playlist = Readln(h.Playlist)
+Close(h.Playlist)
+
+if g.Playlist == "" | g.Playlist == """""" then ScriptExit()
+if Length(g.Playlist) < 3 then ScriptExit("Bad data from Requestfile!")
+
+
+/* Separate path and filename of spesified playlist, and exit if either is invalid */
+
+g.PlaylistNQ 	= RemQuotes(g.Playlist)
+g.PlaylistPath 	= GetPath(g.PlaylistNQ)
+g.PlaylistName	= GetName(g.PlaylistNQ)
+
+if (g.PlaylistPath == "" | g.PlaylistName == "") then ScriptExit("Invalid filename!")
+if Upper(g.PlaylistName) == "_TEMPPLAYLIST" then ScriptExit("Illegal filename*N*N" || g.PlaylistName || "*N*Nspesified for playlist!")
+
+
+/* If user selected function TRANSFER, check if playlist exists, and then add it to playback queue */
+
+if g.MainSel == 2 then 
+
+do
+	if ~Exists(g.PlaylistNQ) then ScriptExit("Playlist*N*N" || g.PlaylistName || "*N*Ndoes not exist!  ")
+
+	g.ADL.ResetQueue = ""
+
+	if g.CfgResetQueue = "ON" then g.ADL.ResetQueue = "RESETLOADPOS "	
+
+	address command g.CmdADL ' >ENV:_ADL MAXENTRIES 'g.CfgMaxPlEntries' 'g.ADL.ResetQueue' PLAYLIST ' g.Playlist
+
+	if ~Open(h.ADL,"ENV:_ADL","r") then ScriptExit("File ENV:_ADL could not be opened!")
+	g.ADL = ""
+
+	do while ~EOF(h.ADL) 
+		g.String = RemNull(Readln(h.ADL))
+		if Length(g.String) > 70 then g.String = Left(g.String,70) || "..."
+		g.ADL = g.ADL || g.String || "*N"
+	end
+
+	Close(h.ADL)
+
+	if Length(g.ADL) > 460 then g.ADL = Right(g.ADL,370) || "*N*NOutput too large for requester,*Ncheck ENV:_ADL for more details."
+	if ~g.Reset then 
+
+	do 
+		address command g.CmdRQC ' >NIL: TITLE="ADL Output" BODY="'g.ADL'" GADGETS=QUIT'		
+		ScriptExit()
+	end
+
+	else
+
+	do
+		address command g.CmdRQC ' >ENV:_ADLEnd TITLE="ADL Output" BODY="'g.ADL'" GADGETS=RESET QUIT'		
+
+		if ~Open(h.ADL,"ENV:_ADLEnd","r") then ScriptExit("File ENV:_ADLEnd could not be opened!")
+		g.ADLEnd = Readln(h.ADLEnd)
+		Close(h.ADLEnd)
+	
+		if g.ADLEnd == 1 then 
+
+		do
+			g.CmdTMP = g.CmdRST||" "||g.ArgRST 
+			say "Reset in progress... "	
+			address command g.CmdTMP
+		end
+
+		ScriptExit() 
+	end
+end
+
+
+/* User selected CREATE / APPEND */
+/* If existing playlist was spesified, copy it to ENV:_TempPlaylist and open file for write/append */
+
+g.PLWriteMode = 2 								/* Non Existing Playlist File Write Mode 	*/
+									
+if Exists(g.PlaylistNQ) then 
+
+do
+	address command g.CmdCPY ' >NIL:' g.Playlist ' TO ENV:_TempPlaylist'
+
+	do
+		address command g.CmdRQC ' >ENV:_WriteMode TITLE="Playlist Write Mode" BODY="Playlist already exists, OVERWRITE file completely,*Nor just APPEND new entries to it?" GADGETS=APPEND OVERWRITE QUIT'
+
+		if ~Open(h.WriteMode,"ENV:_WriteMode","r") then ScriptExit("File ENV:_WriteMode could not be opened!")
+		g.PLWriteMode = Readln(h.WriteMode)
+		Close(h.WriteMode)
+
+		select
+			when g.PLWriteMode == 0 then ScriptExit()					/* PLAYLIST WRITE MODE: Quit 								*/
+			when g.PLWriteMode == 1 then nop							/* PLAYLIST WRITE MODE: Existing Playlist, Append Write		*/
+			when g.PLWriteMode == 2 then nop							/* PLAYLIST WRITE MODE: Existing Playlist, Overwrite 	 	*/
+			otherwise ScriptExit("Invalid data from Requestchoice!")	/* PLAYLIST WRITE MODE: Invalid								*/
+		end
+	end
+end
+
+
+/* Main Loop Start */
+
+do forever
+
+g.AllCFG = 0
+
+
+/* Select demo executable(s) */
+
+	address command g.CmdRQF ' >ENV:_Demo PATTERN=~(#?.txt|#?.readme|#?.diz|#?.nfo|#?.bin|#?.dat|#?.pak|#?.vars|_dl.#?) NOICONS MULTISELECT DRAWER=' g.LastDemoPath ' TITLE="Please Select The Next Demo(s)"'
+
+	if ~Open(h.Demo,"ENV:_Demo","r") then ScriptExit("File ENV:_Demo could not be opened!")
+
+
+/* Parse demo executable(s) returned from Requestfile into compound variable structure */
+
+	g.Char = ""
+	i = 0
+
+	do while ~EOF(h.Demo)
+
+		do while ~EOF(h.Demo) & g.Char ~== """"
+			g.Char = ReadCh(h.Demo,1)
+		end
+
+		if g.Char == """" then 
+	
+		do
+			i = i + 1
+			g.Demo.i = ""
+		end
+
+		do while ~EOF(h.Demo) & g.Char == """"
+			g.Char = ReadCh(h.Demo,1)
+		end
+
+		do while ~EOF(h.Demo) & g.Char ~== """"
+			g.Demo.i = g.Demo.i || g.Char	
+			g.Char = ReadCh(h.Demo,1)		
+		end
+
+		do while ~EOF(h.Demo) & g.Char == """"
+			g.Char = ReadCh(h.Demo,1)
+		end	
+	end		
+
+	Close(h.Demo)
+
+	if i == 0 then ScriptExit()
+	g.DemoCount = i
+
+
+/* Check if demo executable(s) exists, and also place filename and path into data structure */
+
+	do i = 1 to g.DemoCount
+		if ~Exists(g.Demo.i) then 
+	
+		do
+			if Length(g.Demo.i) >70 then g.Demo.i = Left(g.Demo.i,70) || "..." 
+			ScriptExit("Demo executable  *N*N" || g.Demo.i || "*N*Ndoes not exist!")
+		end
+
+		g.Demo.i.Filename = GetName(g.Demo.i)
+		g.Demo.i.Path = GetPath(g.Demo.i)
+
+		if Length(g.Demo.i) > 125 then 
+
+		do
+			if Length(g.Demo.i.Filename) > 70 then g.Demo.i.Filename = Left(g.Demo.i.Filename,70) || "..."
+			ScriptExit("Too long path+filename for demo executable*N*N" || g.Demo.i.Filename || "*N*NMaximum allowed is 125 characters!")
+		end	
+	end
+
+
+/* Start of inner loop (set RunMode/Playtime/Prerun Script settings for selected demo executable(s)) */
+
+	do i = 1 to g.DemoCount
+
+
+/* Check if demo config file exist in demo config Path / demo homedir, and if so, check if valid */
+
+		g.Demo.i.RunModeCFG = "none"
+		g.Demo.i.PlayTimeCFG = "none"
+		g.Demo.i.PRScriptCFG = "none"
+		g.BadRunModeCFG = 0
+		g.BadPlayTimeCFG = 0
+		g.BadPRScriptCFG = 0
+		g.PriCfgFiles = 0
+		g.SecCfgFiles = 0
+		g.DemoFNMax = g.Demo.i.FileName
+
+		if Length(g.Demo.i.FileName) > 26 then g.DemoFNMax = Left(g.Demo.i.FileName,26)
+		if ~(g.CfgDemoCfgPath = "DEMO_HOMEDIR") then 
+
+		do
+			if Open(h.DemoCFG,g.CfgDemoCfgPath || "_dl." || g.DemoFNMax ,"r") then g.PriCfgFiles = 1
+			
+			else if Open(h.DemoCFG,g.Demo.i.Path || "_dl." || g.DemoFNMax ,"r") then g.SecCfgFiles = 1
+		end
+
+		else if Open(h.DemoCFG,g.Demo.i.Path || "_dl." || g.DemoFNMax ,"r") then g.PriCfgFiles = 1
+		if g.PriCfgFiles == 1 | g.SecCfgFiles == 1 then	
+
+		do
+  			g.Demo.i.RunModeCFG = Readln(h.DemoCFG)
+  			g.Demo.i.PlayTimeCFG = Readln(h.DemoCFG)
+  			g.Demo.i.PRScriptCFG = Readln(h.DemoCFG)
+   			Close(h.DemoCFG)   
+
+	    	if ~(g.Demo.i.RunModeCFG == g.RunMode0P | g.Demo.i.RunModeCFG == g.RunMode1P | g.Demo.i.RunModeCFG == g.RunMode2P) then 
+
+			do
+				g.Demo.i.RunModeCFG = g.RunMode2P
+				g.BadRunModeCFG = 1
+			end
+
+			if ~(g.Demo.i.PlayTimeCFG == "") then
+
+			do
+				if ~(Length(g.Demo.i.PlayTimeCFG) == 4) then g.BadPlayTimeCFG = 1
+				if ~(DataType(g.Demo.i.PlayTimeCFG) == NUM) then g.BadPlayTimeCFG = 1
+				if ~(g.BadPlayTimeCFG == 1) then if Right(g.Demo.i.PlayTimeCFG,2) > 59 then g.BadPlayTimeCFG = 1
+				if g.BadPlayTimeCFG	== 1 then g.Demo.i.PlayTimeCFG = ""
+			end	
+
+			if ~Exists(RemQuotes(g.Demo.i.PRScriptCFG)) then 
+
+			do	
+				g.Demo.i.PRScriptCFG = ""
+				g.BadPRScriptCFG = 1
+			end
+		end
+		
+		else Close(h.DemoCFG)
+	
+
+/* Select Demo RunMode */
+
+		g.Demo.i.RunMode = ""
+
+		if   g.Demo.i.RunModeCFG == "none" then address command g.CmdRQC ' >ENV:_RunMode TITLE="Select Demo RunMode' i '/' g.DemoCount '" BODY="Select appropriate run-mode for demo executable:*N*N'g.Demo.i.Filename '" GADGETS="'g.RunMode0R'" "'g.RunMode1R'" "'
+g.RunMode2R'" "QUIT"'
+		if ~(g.Demo.i.RunModeCFG == "none") & g.AllCFG == 0 then address command g.CmdRQC ' >ENV:_RunMode TITLE="Select Demo RunMode' i '/' g.DemoCount '" BODY="Select appropriate run-mode for demo executable:*N*N'g.Demo.i.Filename '*N*NSelect CFG / ALLCFG to 
+use existing config file*Nfor this / all demo files." GADGETS="'g.RunMode0R'" "'g.RunMode1R'" "'g.RunMode2R'" "CFG" "ALLCFG" "QUIT"'
+		if   g.Demo.i.RunModeCFG == "none" | g.AllCFG == 0 then
+
+		do
+			if ~Open(h.RunMode,"ENV:_RunMode","r") then ScriptExit("File ENV:_RunMode could not be loaded!")
+			g.RunMode = Readln(h.RunMode)
+			Close(h.RunMode)
+
+			select
+				when g.RunMode == 0 then ScriptExit()					
+				when g.RunMode == 1 then g.Demo.i.RunMode = g.RunMode0P				/* RUNMODE: Stock OCS	*/			
+				when g.RunMode == 2 then g.Demo.i.RunMode = g.RunMode1P				/* RUNMODE: Stock AGA	*/
+				when g.RunMode == 3 then g.Demo.i.RunMode = g.RunMode2P				/* RUNMODE: Fast AGA	*/
+				when g.RunMode == 4 then g.Demo.i.RunMode = g.Demo.i.RunModeCFG		/* RUNMODE: CONFIG		*/
+				when g.RunMode == 5 then 											/* RUNMODE: ALLCONFIG	*/		
+
+				do
+					g.Demo.i.RunMode = g.Demo.i.RunModeCFG
+					g.AllCFG = 1
+				end
+
+				otherwise ScriptExit("Bad data from Requestchoice")					/* RUNMODE: Invalid		*/	
+			end
+		end
+
+		else g.Demo.i.RunMode = g.Demo.i.RunModeCFG
+
+
+/* Select Demo PlayMode / Playtime */
+
+		g.Demo.i.PlayTime = ""
+
+		if  (g.Demo.i.PlayTimeCFG == "none") then address command g.CmdRQC ' >ENV:_PlayMode TITLE="Select Demo PlayMode' i '/' g.DemoCount '" BODY="Select PlayMode for demo executable:*N*N'g.Demo.i.Filename '*N*NSelect INFINITE for demos with exit, or DEFINED 
+for timed exit*N(requires reset device)." GADGETS=INFINITE DEFINED QUIT'
+		if ~(g.Demo.i.PlayTimeCFG == "none") & g.AllCFG == 0 then address command g.CmdRQC ' >ENV:_PlayMode TITLE="Select Demo PlayMode' i '/' g.DemoCount '" BODY="Select PlayMode for demo executable:*N*N'g.Demo.i.Filename '*N*NSelect INFINITE for demos with e
+xit, or DEFINED for timed exit*N(requires reset device).*N*NSelect CFG / ALLCFG to use existing config file*Nfor this / all demo files." GADGETS=INFINITE DEFINED CFG ALLCFG QUIT'
+		if   g.Demo.i.PlayTimeCFG == "none"  | g.AllCFG == 0 then
+	
+		do
+			if ~Open(h.PlayMode,"ENV:_PlayMode","r") then ScriptExit("File ENV:_PlayMode could not be opened!")
+			g.PlayMode = Readln(h.PlayMode)
+			Close(h.PlayMode)
+	
+			g.PlayTimeM_	= "-"
+			g.PlayTime_M	= "-"
+			g.PlayTimeS_ 	= "-"
+			g.PlayTime_S 	= "-"
+			g.PlayTimeSet 	= 0
+
+			select
+				when g.PlayMode == 0 then ScriptExit()									/* PLAYMODE: Quit		*/
+				when g.PlayMode == 1 then nop											/* PLAYMODE: Infinite 	*/
+				when g.PlayMode == 2 then 												/* PLAYMODE: Defined	*/
+		
+				do while g.PlayTimeSet = 0
+					if g.PlayTimeM_ == "-" then 
+		
+					do
+						address command g.CmdRQC ' >ENV:_PlayTimeM_ TITLE="Select Demo PlayTime" BODY="Please set demo PlayTime in minutes (00 - 99) and seconds (00 - 59),*None digit at a time: 'g.PlayTimeM_||g.PlayTime_M':'g.PlayTimeS_||g.PlayTime_S'" GADGETS=0 1 2 3 4 5
+ 6 7 8 9 QUIT'
+						if ~Open(h.PlayTimeM_,"ENV:_PlayTimeM_","r") then ScriptExit("File ENV:_PlaytimeM_ could not be opened!")
+ 						g.PlayTimeM_ = Readln(h.PlayTimeM_)
+						Close(h.PlayTimeM_)
+
+						if ~(DataType(g.PlayTimeM_) == NUM) then ScriptExit("Bad data from Requestchoice")
+						if (g.PlayTimeM_ < 0 | g.PlayTimeM_ > 10) then ScriptExit("Bad data from Requestchoice")
+						if g.PlayTimeM_ == 0 then ScriptExit()
+						g.PlayTimeM_ = g.PlayTimeM_ - 1	
+					end
+
+			    	address command g.CmdRQC ' >ENV:_PlayTime_M TITLE="Select Demo PlayTime" BODY="Please set demo PlayTime in minutes (00 - 99) and seconds (00 - 59),*None digit at a time: 'g.PlayTimeM_||g.PlayTime_M':'g.PlayTimeS_||g.PlayTime_S'" GADGETS=0 1 2 3 4
+ 5 6 7 8 9 QUIT'
+	
+		   		 	if ~Open(h.PlayTime_M,"ENV:_PlayTime_M","r") then ScriptExit("File ENV:_Playtime_M could not be opened!")
+					g.PlayTime_M = Readln(h.PlayTime_M)
+			   	 	Close(h.PlayTime_M)
+
+					if ~(DataType(g.PlayTime_M) == NUM) then ScriptExit("Bad data from Requestchoice")
+					if (g.PlayTime_M < 0 | g.PlayTime_M > 10) then ScriptExit("Bad data from Requestchoice")
+					if g.PlayTime_M == 0 then ScriptExit()
+					g.PlayTime_M = g.PlayTime_M - 1
+
+			    	address command g.CmdRQC ' >ENV:_PlayTimeS_ TITLE="Select Demo PlayTime" BODY="Please set demo PlayTime in minutes (00 - 99) and seconds (00 - 59),*None digit at a time: 'g.PlayTimeM_||g.PlayTime_M':'g.PlayTimeS_||g.PlayTime_S'" GADGETS=0 1 2 3 4
+ 5 QUIT'
+
+		   		 	if ~Open(h.PlayTimeS_,"ENV:_PlayTimeS_","r") then ScriptExit("File ENV:_PlaytimeS_ could not be opened!")
+   				 	g.PlayTimeS_ = Readln(h.PlayTimeS_)
+			   	 	Close(h.PlayTimeS_)
+
+					if ~(DataType(g.PlayTimeS_) == NUM) then ScriptExit("Bad data from Requestchoice")
+					if (g.PlayTimeS_ < 0 | g.PlayTimeS_ > 6) then ScriptExit("Bad data from Requestchoice")
+					if g.PlayTimeS_ == 0 then ScriptExit()
+					g.PlayTimeS_ = g.PlayTimeS_ - 1
+
+ 			 	  	address command g.CmdRQC ' >ENV:_PlayTime_S TITLE="Select Demo PlayTime" BODY="Please set demo PlayTime in minutes (00 - 99) and seconds (00 - 59),*None digit at a time: 'g.PlayTimeM_||g.PlayTime_M':'g.PlayTimeS_||g.PlayTime_S'" GADGETS=0 1 2 3 
+4 5 6 7 8 9 QUIT'
+
+			    	if ~Open(h.Playtime_S,"ENV:_Playtime_S","r") then ScriptExit("File ENV:_Playtime_S could not be opened!")
+			    	g.PlayTime_S = Readln(h.PlayTime_S)
+			    	Close(h.PlayTime_S)
+
+ 					if ~(DataType(g.PlayTime_S) == NUM) then ScriptExit("Bad data from Requestchoice")
+					if (g.PlayTime_S < 0 | g.PlayTime_S > 10) then ScriptExit("Bad data from Requestchoice")
+					if g.PlayTime_S == 0 then ScriptExit()
+					g.PlayTime_S = g.PlayTime_S - 1
+
+					address command g.CmdRQC ' >ENV:_PlayTimeM_ TITLE="Select Demo PlayTime" BODY="Please set demo PlayTime in minutes (00 - 99) and seconds (00 - 59),*None digit at a time: 'g.PlayTimeM_||g.PlayTime_M':'g.PlayTimeS_||g.PlayTime_S'*N*NClick DONE to cont
+inue, or enter digits again." GADGETS=0 1 2 3 4 5 6 7 8 9 DONE QUIT'
+					if ~Open(h.PlayTimeM_,"ENV:_PlayTimeM_","r") then ScriptExit("File ENV:_PlaytimeM_ could not be opened!")
+					g.Char = Readln(h.PlayTimeM_)
+					Close(h.PlayTimeM_)
+
+					if g.Char == 11 then g.PlayTimeSet = 1
+
+					else
+
+					do
+						g.PlayTimeM_ = g.Char
+						if ~(DataType(g.PlayTimeM_) == NUM) then ScriptExit("Bad data from Requestchoice")
+						if (g.PlayTimeM_ < 0 | g.PlayTimeM_ > 10) then ScriptExit("Bad data from Requestchoice")
+						if g.PlayTimeM_ == 0 then ScriptExit()
+						g.PlayTimeM_ = g.PlayTimeM_ - 1	
+					end
+
+					g.Demo.i.PlayTime = g.PlayTimeM_ || g.PlayTime_M || g.PlayTimeS_ || g.PlayTime_S
+				end
+
+				when g.PlayMode == 3 then g.Demo.i.PlayTime = g.Demo.i.PlayTimeCFG		/* PLAYMODE: Config 	*/
+				when g.PlayMode == 4 then 												/* PLAYMODE: AllConfig 	*/	
+
+				do
+					g.Demo.i.PlayTime = g.Demo.i.PlayTimeCFG
+					g.AllCFG = 1
+				end	
+
+				otherwise ScriptExit("Bad data from Requestchoice")						/* PLAYMODE: Invalid	*/
+			end
+		end
+
+		else g.Demo.i.PlayTime = g.Demo.i.PlayTimeCFG
+
+
+/* Select Demo pre-run mode / script */
+
+		g.Demo.i.PRScript = ""
+
+		if   g.Demo.i.PRScriptCFG == "none" then address command g.CmdRQC ' >ENV:_PRMode TITLE="Select Demo Prerun Mode' i '/' g.DemoCount '" BODY="Select prerun mode for demo executable:*N*N'g.Demo.i.Filename '*N*NSelect NONE for no prerun script, or SCRIPT t
+o select a prerun script.*N*NPlease note a maximum script path+filename length*Nlimitation of 63 characters!" GADGETS=NONE SCRIPT QUIT'
+		if ~(g.Demo.i.PRScriptCFG == "none") & g.AllCFG == 0 then address command g.CmdRQC ' >ENV:_PRMode TITLE="Select Demo Prerun Mode' i '/' g.DemoCount '" BODY="Select prerun mode for demo executable:*N*N'g.Demo.i.Filename '*N*NSelect NONE for no prerun sc
+ript, or SCRIPT to select a prerun script.*N*NPlease note a maximum script path+filename length limitation of*N63 characters!" GADGETS=NONE SCRIPT CFG ALLCFG QUIT'
+		if   g.Demo.i.PRScriptCFG == "none"  | g.AllCFG == 0 then
+
+		do
+			if ~Open(h.PRMode,"ENV:_PRMode","r") then ScriptExit("File ENV:_PRMode could not be opened!")
+			g.PRMode = Readln(h.PRMode)
+			Close(h.PRMode)
+
+			select
+				when g.PRMode == 0 then ScriptExit()								/* PRE-RUN: Quit 					*/
+				when g.PRMode == 1 then nop 										/* PRE-RUN: No pre-run script 		*/
+				when g.PRMode == 2 then 											/* PRE-RUN: Use pre-run script 		*/
+				
+				do
+					address command g.CmdRQF ' >ENV:_PRScript DRAWER='g.DemoPrerunScriptPath' NOICONS TITLE="Please Select Prerun Script"'	
+
+					if ~Open(h.PRScript,"ENV:_PRScript","r") then ScriptExit("File ENV:_PRScript could not be opened!")
+					g.PRScript = Readln(h.PRScript)
+					Close(h.PRSCript)
+
+					if g.PRScript == "" | g.PRScript == """""" then ScriptExit()
+					if Length(g.PRScript) < 3 then ScriptExit("Bad data from Requestfile!")
+					g.PRScript = RemQuotes(g.PRScript)
+
+					if ~Exists(g.PRScript) then ScriptExit("Prerun script file does not exist!")
+					if Length(g.PRScript) > 63 then ScriptExit("Prerun script file path + filename > 63 characters!")
+ 					g.Demo.i.PRScript = g.PRScript
+				end
+		
+				when g.PRMode == 3 then g.Demo.i.PRScript = g.Demo.i.PRScriptCFG	/* PRE-RUN: Config 					*/
+				when g.PRMode == 4 then 											/* PRE-RUN: AllConfig				*/					
+		
+				do
+					g.Demo.i.PRScript = g.Demo.i.PRScriptCFG
+					g.AllCFG = 1
+				end
+		
+				otherwise ScriptExit("Bad data from Requestchoice")					/* PRE-RUN: Invalid 				*/
+			end
+		end
+
+		else g.Demo.i.PRScript = g.Demo.i.PRScriptCFG
+
+
+/* Assemble playlist record, and write / append entry to playlist file */    
+
+		g.PLRecord = """" || g.Demo.i || """" || " " || g.Demo.i.Runmode || " "
+
+		if ~(g.Demo.i.PlayTime == "") then g.PLRecord = g.PLRecord || "MINS " || Left(g.Demo.i.PlayTime,2) || " SECS " || Right(g.Demo.i.PlayTime,2) || " "
+		if ~(g.Demo.i.PRScript == "") then g.PLRecord = g.PLRecord || """" || g.Demo.i.PRScript || """"
+		g.PlaylistEntries = g.PlaylistEntries + 1
+
+		if g.PLWriteMode == 1 then 				/* Existing Playlist, Append Write		*/
+
+		do
+			if ~Open(h.Playlist,"ENV:_TempPlaylist","a") then ScriptExit("Could not open file ENV:_TempPlaylist for append write!")
+			Writeln(h.Playlist,g.PLRecord)
+			Close(h.Playlist)
+		end
+
+		if g.PLWriteMode == 2 then				/* Normal (Over)Write					*/
+	
+		do
+			if g.PLFirstWrite == 0 then if ~Open(h.Playlist,"ENV:_TempPlaylist","w") then ScriptExit("Could not open file ENV:_TempPlaylist for (over)write!")
+			if g.PLFirstWrite == 1 then if ~Open(h.Playlist,"ENV:_TempPlaylist","a") then ScriptExit("Could not open file ENV:_TempPlaylist for (over)write!")
+			Writeln(h.Playlist,g.PLRecord)
+			Close(h.Playlist)
+			g.PLFirstWrite = 1
+		end
+
+
+/* Write / Update RunMode, PlayTime and Prerun Script CONFIG files, if enabled */
+
+		if g.CfgSaveDemoCfg == "ON" then 
+
+		do	
+			if g.BadRunModeCFG == 1 | g.BadPlayTimeCFG == 1 | g.BadPRScriptCFG == 1 | ~(g.Demo.i.RunMode == g.Demo.i.RunModeCFG) | ~(g.Demo.i.PlayTime == g.Demo.i.PlayTimeCFG) | ~(g.Demo.i.PRScript == g.Demo.i.PRScriptCFG) | g.SecCfgFiles == 1 then 
+
+			do
+				y = 0
+				if ~(g.CfgDemoCfgPath = "DEMO_HOMEDIR") then
+
+				do
+					 if Open(h.DemoCFG,g.CfgDemoCfgPath || "_dl." || g.DemoFNMax ,"w") then y = 1
+				end
+
+				else if Open(h.DemoCFG,g.Demo.i.Path || "_dl." || g.DemoFNMax ,"w") then y = 1
+
+				if y == 1 then	
+
+				do
+					Writeln(h.DemoCFG,g.Demo.i.RunMode)
+					Writeln(h.DemoCFG,g.Demo.i.PlayTime)
+					Writeln(h.DemoCFG,g.Demo.i.PRScript)
+					Close(h.DemoCFG)
+				end
+	
+				else ScriptExit("File *N*N" || "_dl." || g.DemoFNMax || "*N*Ncould not be opened for writing!")
+			end
+		end
+	
+	
+/* Remember demo path of the last main loop pass */
+
+		g.LastDemoPath = """" || g.Demo.i.Path || """"
+
+
+/* End of inner loop */
+
+	end
+
+
+/* End of main loop */
+
+end
+
+
+/* SCRIPT FUNCTIONS */
+
+
+/* Show message passed to function in requester */
+
+ScriptMsg: Procedure Expose g. h.             
+parse arg p.ErrorMsg
+
+if Length(p.ErrorMsg) > 67 then p.ErrorMsg = Left(p.ErrorMsg,67) || "..."
+
+address command g.CmdRQC ' TITLE="Script Error Message" BODY="'p.ErrorMsg'" GADGETS=OK'		
+return 0
+
+
+/* Show message passed to function in requester, close playlist file, and exit program */
+
+ScriptExit: Procedure Expose g. h.             
+parse arg p.ExitMessage
+
+if (p.ExitMessage == "" & g.PlaylistEntries == 0) then exit
+if (p.ExitMessage == "" & g.PlaylistEntries > 0) then 
+
+do
+	address command g.CmdRQC ' >ENV:_ScriptExit TITLE="Script Exit Mode" BODY="'g.PlaylistEntries' entries has been added to ENV:_TempPlaylist so far.*NSelect SAVE to save playlist to*N*N'g.PlaylistPath || g.PlaylistName '*N*Nor TRANSFER to add it to playba
+ck queue, or QUIT to leave*Nwith no further action." GADGETS=SAVE TRANSFER SAVE&TRANSFER QUIT'
+
+	if ~Open(hp.ScriptExit,"ENV:_ScriptExit","r") then 
+	
+	do
+		address command g.CmdRQC ' >NIL: TITLE="Script Error Message" BODY="File ENV:_ScriptExit could not be opened!" GADGETS=QUIT'
+		exit
+	end
+ 
+	p.ScriptExit = Readln(hp.ScriptExit)
+	Close(hp.ScriptExit)
+
+	select
+		when p.ScriptExit == 0 then exit					/* EXIT MODE: Quit														*/
+		when p.ScriptExit == 1 then 						/* EXIT MODE: Save playlist												*/				
+
+		do
+			address command g.CmdCPY ' >NIL: ENV:_TempPlaylist to ' g.Playlist							
+			exit
+		end
+
+		when p.ScriptExit == 2 | p.ScriptExit == 3 then		/* EXIT MODE: Transfer / Save and Transfer playlist to playlist queue 	*/	
+
+		do
+			if p.ScriptExit == 3 then address command g.CmdCPY ' >NIL: ENV:_TempPlaylist to ' g.Playlist
+	
+			address command g.CmdADL ' >ENV:_ADL MAXENTRIES 'g.CfgMaxPlEntries' 'g.ADL.ResetQueue' PLAYLIST ENV:_TempPlaylist'
+			if ~Open(hp.ADL,"ENV:_ADL",'r') then address command g.CmdRQC ' >NIL: TITLE="Script Error Message" BODY="File ENV:_ADL could not be opened!" GADGETS=QUIT'
+			p.ADL = ""
+
+			do while ~EOF(hp.ADL) 
+				p.String = RemNull(Readln(hp.ADL))
+				if Length(p.String) > 70 then p.String = Left(p.String,70) || "..."
+				p.ADL = p.ADL || p.String || "*N"
+			end
+
+			Close(hp.ADL)
+
+			if Length(p.ADL) > 460 then p.ADL = Right(p.ADL,370) || "*N*NOutput too large for requester,*Ncheck ENV:_ADL for more details."
+			if ~g.Reset then 
+
+			do 
+				address command g.CmdRQC ' >NIL: TITLE="ADL Output" BODY="'p.ADL'" GADGETS=QUIT'		
+				exit
+			end
+
+			else
+	
+			do
+				address command g.CmdRQC ' >ENV:_ADLEnd TITLE="ADL Output" BODY="'p.ADL'" GADGETS=RESET QUIT'		
+	
+				if ~Open(hp.ADLEnd,"ENV:_ADLEnd","r") then address command g.CmdRQC ' >NIL: TITLE="Script Error Message" BODY="File ENV:_ADLEnd could not be opened!" GADGETS=QUIT'
+				p.ADLEnd = Readln(hp.ADLEnd)
+				Close(hp.ADLEnd)	
+
+				select
+					when p.ADLEnd == 0 then exit
+					when p.ADLEnd == 1 then 
+
+					do
+						g.CmdTMP = g.CmdRST||" "||g.ArgRST 
+						say "Reset in progress... "	
+						address command g.CmdTMP
+						exit 
+					end
+				end
+			end
+		end
+
+		otherwise 											/* EXIT MODE: Invalid 													*/																	
+
+		do
+			address command g.CmdRQC ' >NIL: TITLE="Script Error Message" BODY="Invalid data from Requestchoice!" GADGETS=QUIT'
+			exit
+		end
+	end
+end
+
+else 
+
+do	
+	address command g.CmdRQC ' >NIL: TITLE="Script Error Message" BODY=' """" || p.ExitMessage || """" 'GADGETS=QUIT'
+	exit
+end
+
+
+/* Remove double quotes from source string */    
+
+RemQuotes: Procedure               
+parse arg p.String
+if Left(p.String,1) == """" then p.String = Right(p.String,Length(p.String) - 1)
+if Right(p.String,1) == """" then p.String = Left(p.String,Length(p.String) - 1)
+return p.String
+
+
+/* Filter out path from source string */ 
+
+GetPath: Procedure               
+parse arg p.String
+p.StrLength = Length(p.String)
+p.LastSlash = LastPos("/",p.String)
+p.LastColon = LastPos(":",p.String)
+
+if p.LastSlash > p.LastColon then return Left(p.String,p.StrLength - (p.StrLength - p.LastSlash))
+if p.LastColon > p.LastSlash then return Left(p.String,p.StrLength - (p.StrLength - p.LastColon))
+return ""
+
+
+/* Filter out filename from source string */        
+
+GetName: Procedure               
+parse arg p.String
+p.StrLength = Length(p.String)
+p.LastSlash = LastPos("/",p.String)
+p.LastColon = LastPos(":",p.String)
+
+if p.LastSlash > p.LastColon then return Right(p.String,p.StrLength - p.LastSlash)
+if p.LastColon > p.LastSlash then return Right(p.String,p.StrLength - p.LastColon)
+return p.String
+
+
+/* Remove null characters from source string */
+
+RemNull: Procedure
+parse arg p.SrcStr
+p.DestStr = ""
+
+do i = 1 to Length(p.SrcStr)
+	p.Char = Substr(p.SrcStr,i,1)
+	if ~(p.Char == '00'x) then p.DestStr = p.DestStr || p.Char
+end
+
+return p.DestStr	

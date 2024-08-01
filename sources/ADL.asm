@@ -108,7 +108,7 @@
 ; Longword-Alignment bei Variablen durch Dummies garantiert
 ; Reihenfolge der Aktivierung MMU/Caches bei "AGA 020"-Modus geändert: Erst
 ; werden die Caches aktiviert, dann die MMU
-; "No AGA" startmode: Nun wird auch die MMU deaktiviert
+; "No AGA" runmode: Nun wird auch die MMU deaktiviert
 ; Abfrage der AGA-Chip-Version verbessert
 ; Argument SOFTRESET: Wird nur ausgeführt, wenn die Argumente LOOP und QUIET
 ; nicht angegeben wurden. Bei QUIET erfolgt nur eine Ausführung, wenn Demos
@@ -170,7 +170,7 @@
 ; ausgegeben.
 ; Abbruch einer LOOP-Ausführung erst bei Fehlernummer = 20 (DOS-ERROR FAIL)
 ; oder > 121 (Datei ist nicht ausführbar)
-; Routinen zur Umwandlung von Zahlen umgeschrieben und von Fehlern bereinigt		 		 			<
+; Routinen zur Umwandlung von Zahlen umgeschrieben und Fehler bereinigt		 		 			<
 ; Fehler in Routine zum Warten auf eine Rasterzeile bereinigt
 ; Fehler bei der Berechnung der Länge des Demo-Dateinamens bereinigt
 ; Das Argument LOOP kann jetzt über CTRL-C abgebrochen werden. Bevor das Demo
@@ -183,15 +183,16 @@
 ; V.2.0
 ; - Code komplett überarbeitet
 ; - Texte geändert
-; - Umbenennung der Start-Modi:
+; - Umbenennung der Run-Modi für die Playlist:
 ;   "OCS" ->	"OCSVANILLA"
 ;   "AGA" ->	"AGAVANILLA"
 ;   "FAST" ->	"TURBO"
-; - Neue Werte der Startmodi:
-;   STARTMODE_TURBO		= $01
-;   STARTMODE_OCS_VANILLA	= $02
-;   STARTMODE_AGA_VANILLA	= $03
-; - Argument NOFADER -> FADER (Umkehrung der Logik)
+; - Neue Werte der Runmodi:
+;   RUNMODE_TURBO	= $01
+;   RUNMODE_OCS_VANILLA	= $02
+;   RUNMODE_AGA_VANILLA	= $03
+; - Argument NOFADER -> FADER (Umkehrung der Logik), es wird jetzt der aktive
+;   Screen ausgefadet und nichr mehr der Custom-Screen
 ; - Minimum-Config: 68020/OS3.0/AGA
 ; - Bugfix Argument RESETLOADPOS: Es wurde entries_number auf Null setzt
 ; - Option: Abfrage der WB-Message entfernt, da es passieren kann, dass dies
@@ -260,9 +261,9 @@ CHIP_MEMORY_SIZE_MIN		EQU $100000
 
 MAGIC_COOKIE			EQU $000003f3
 
-STARTMODE_TURBO			EQU $01
-STARTMODE_OCS_VANILLA		EQU $02
-STARTMODE_AGA_VANILLA		EQU $03
+RUNMODE_TURBO			EQU $01
+RUNMODE_OCS_VANILLA		EQU $02
+RUNMODE_AGA_VANILLA		EQU $03
 
 ; **** Amiga-Demo-Launcher ****
 adl_level_7_handler_enabled	EQU FALSE
@@ -561,9 +562,9 @@ cmd_results_array_size		RS.B 0
 playlist_results_array		RS.B 0
 
 pra_demofile			RS.L 1
-pra_STARTMODE_OCS_VANILLA	RS.L 1
-pra_STARTMODE_AGA_VANILLA	RS.L 1
-pra_STARTMODE_TURBO		RS.L 1
+pra_OCSVANILLA			RS.L 1
+pra_AGAVANILLA			RS.L 1
+pra_TURBO			RS.L 1
 pra_MINS			RS.L 1
 pra_SECS			RS.L 1
 pra_LMBEXIT			RS.L 1
@@ -578,7 +579,7 @@ playback_queue_entry		RS.B 0
 
 pqe_demofile_path		RS.B adl_demofile_path_length
 pqe_playtime			RS.W 1
-pqe_startmode			RS.B 1
+pqe_runmode			RS.B 1
 pqe_tag_active			RS.B 1
 pqe_prerunscript_path		RS.B adl_prerunscript_path_length
 
@@ -675,7 +676,7 @@ dc_open_file_request_loop
 	move.l	d0,adl_dos_return_code(a3)
 	bne.s	dc_cleanup_file_request
 	bsr	dc_free_file_request
-	bsr	dc_display_startmode_request
+	bsr	dc_display_runmode_request
         bsr	dc_check_entries_number_max
 	move.l	d0,adl_dos_return_code(a3)
 	beq.s	dc_open_file_request_loop
@@ -811,7 +812,7 @@ adl_init_variables
 	CNOP 0,4
 adl_init_structures
 	bsr	adl_init_cool_capture_request
-	bsr     dc_init_startmode_request
+	bsr     dc_init_runmode_request
 	bsr	dc_init_file_request_tag_lists
 	bsr	rd_init_load_color_table
 	bsr	rd_init_custom_screen_tag_list
@@ -836,15 +837,15 @@ adl_init_cool_capture_request
 
 
 	CNOP 0,4
-dc_init_startmode_request
-	lea	dc_startmode_request(pc),a0
+dc_init_runmode_request
+	lea	dc_runmode_request(pc),a0
 	move.l	d2,(a0)+		; Größe der Struktur
 	move.l	d0,(a0)+		; Keine Flags
-	lea	dc_startmode_request_title(pc),a1
+	lea	dc_runmode_request_title(pc),a1
 	move.l	a1,(a0)+		; Zeiger auf Titeltext
-	lea	dc_startmode_request_body(pc),a1
+	lea	dc_runmode_request_body(pc),a1
 	move.l	a1,(a0)+		; Zeiger auf Text in Requester
-	lea	dc_startmode_request_gadgets(pc),a1
+	lea	dc_runmode_request_gadgets(pc),a1
 	move.l	a1,(a0)			; Zeiger auf Gadgettexte
 	rts
 
@@ -1285,7 +1286,10 @@ dc_check_arg_resetloadpos
 	not.w	d0
 	move.w	d0,rd_arg_resetloadpos_enabled(a3)
 	move.w	#1,rd_arg_playentry_offset(a3)
-	bra	rd_remove_tags
+	bsr	rd_remove_tags
+	lea	rd_note(pc),a0
+	moveq	#rd_note_end-rd_note,d0
+	bra	adl_print_text
 
 ; ** Argument PRERUNSCRIPT **
 rd_check_arg_prerunscript
@@ -1415,7 +1419,12 @@ rd_check_arguments_ok
 	CNOP 0,4
 adl_print_intro_message
 	tst.w	adl_reset_program_active(a3)
-	bne.s	adl_print_intro_message_ok
+	bne.s	adl_check_arg_playlist_enabled
+	rts
+	CNOP 0,4
+adl_check_arg_playlist_enabled
+	tst.w	dc_arg_playlist_enabled(a3)
+	bne.s   adl_print_intro_message_ok
 	rts
 	CNOP 0,4
 adl_print_intro_message_ok
@@ -1690,10 +1699,10 @@ dc_free_file_request
 
 
 	CNOP 0,4
-dc_display_startmode_request
+dc_display_runmode_request
 	move.l	a3,-(a7)
 	sub.l	a0,a0			; Requester erscheint auf Workbench
-	lea	dc_startmode_request(pc),a1
+	lea	dc_runmode_request(pc),a1
 	move.l	a0,a2			; Keine IDCMP-Flags
 	move.l	a0,a3			; Keine Argumentenliste
 	CALLINT EasyRequestArgs
@@ -1704,7 +1713,7 @@ dc_display_startmode_request
 	move.w	dc_multiselect_entries_number(a3),d7
 	subq.w	#1,d7			;wegen dbf
 dc_start_loop
-	move.b	d0,pqe_startmode(a0)	; Kennung eintragen
+	move.b	d0,pqe_runmode(a0)	; Kennung eintragen
 	sub.l	d1,a0			; vorheriger Pfadname
 	dbf	d7,dc_start_loop
 	rts
@@ -1808,6 +1817,7 @@ dc_close_asl_library
 	CALLEXECQ CloseLibrary
 
 
+; ** Playlist-Routinen **
 	CNOP 0,4
 dc_lock_playlist_file
 	move.l	dc_playlist_file_name(a3),d1
@@ -1995,9 +2005,9 @@ dc_parse_playlist_entry
 	lea	dc_playlist_results_array(pc),a5
 	moveq	#0,d0
 	move.l	d0,pra_demofile(a5)	; Alle Ergebnis-Felder der Argumente löschen
-	move.l	d0,pra_STARTMODE_OCS_VANILLA(a5)
-	move.l	d0,pra_STARTMODE_AGA_VANILLA(a5)
-	move.l	d0,pra_STARTMODE_TURBO(a5)
+	move.l	d0,pra_OCSVANILLA(a5)
+	move.l	d0,pra_AGAVANILLA(a5)
+	move.l	d0,pra_TURBO(a5)
 	move.l	d0,pra_SECS(a5)
 	move.l	d0,pra_MINS(a5)
 	move.l	d0,pra_LMBEXIT(a5)
@@ -2038,30 +2048,30 @@ dc_copy_demofile_path_ok
 	bne.s	dc_copy_demofile_path_loop ; Schleife, bis Nullbyte gefunden wurde
 
 	move.l	d6,a1			; Zeiger auf Eintrag im Puffer
-	clr.b	pqe_startmode(a1)
+	clr.b	pqe_runmode(a1)
 ; ** Playlist-Argument OCSVANILLA **
-	tst.l	pra_STARTMODE_OCS_VANILLA(a5)
+	tst.l	pra_OCSVANILLA(a5)
 	beq.s	dc_check_arg_AGAVANILLA
-	move.b	#STARTMODE_OCS_VANILLA,pqe_startmode(a1)
+	move.b	#RUNMODE_OCS_VANILLA,pqe_runmode(a1)
 	bra.s	dc_check_entry_start_mode
 
 ; ** Playlist-Argument AGAVANILLA **
 	CNOP 0,4
 dc_check_arg_agavanilla
-	tst.l	pra_STARTMODE_AGA_VANILLA(a5)
+	tst.l	pra_AGAVANILLA(a5)
 	beq.s	dc_check_arg_turbo
-	move.b	#STARTMODE_AGA_VANILLA,pqe_startmode(a1)
+	move.b	#RUNMODE_AGA_VANILLA,pqe_runmode(a1)
 	bra.s	dc_check_entry_start_mode
 
 ; ** Playlist-Argument TURBO **
 	CNOP 0,4
 dc_check_arg_turbo
-	tst.l	pra_STARTMODE_TURBO(a5)
+	tst.l	pra_TURBO(a5)
 	beq.s	dc_check_entry_start_mode
-	move.b	#STARTMODE_TURBO,pqe_startmode(a1)
+	move.b	#RUNMODE_TURBO,pqe_runmode(a1)
 
 dc_check_entry_start_mode
-	tst.b	pqe_startmode(a1)
+	tst.b	pqe_runmode(a1)
 	bne.s   dc_check_arg_secs
 	bsr	dc_parse_playlist_entry_error
 	bra	dc_free_custom_arguments
@@ -2721,20 +2731,30 @@ sf_alloc_color_cache_ok
 
 	CNOP 0,4
 rd_get_demofile_name
+	tst.w	rd_arg_random_enabled(a3)
+	bne.s	rd_get_fixed_entry
+rd_get_random_entry_loop
+	move.w	adl_entries_number(a3),d1
+	bsr	rd_get_random_entry
+	MULUF.L playback_queue_entry_size,d0,d1 ; Offset in Dateipfade-Puffer berechnen
+	move.l	adl_entries_buffer(a3),a0 ; Zeiger auf Puffer für Einträge
+	add.l	d0,a0
+	tst.b	pqe_tag_active(a0)	; Demo bereits abgespielt ?
+	bne.s	rd_get_random_entry_loop ; Ja -> neue Berechnung
+	bra.s	rd_check_demofile_path
+	CNOP 0,4
+rd_get_fixed_entry
 	move.w	rd_arg_playentry_offset(a3),d0
 	subq.w	#1,d0			; Zählung beginnt bei Null
-	bpl.s	rd_calculate_entry_offset
-	tst.w	rd_arg_random_enabled(a3)
-	beq	rd_random_entry_offsets
+	bpl.s	rd_get_entry_offset
 	RP_POINTER_ENTRIES_OFFSET
 	move.l	d0,a0
 	moveq	#0,d0
 	move.w	(a0),d0
-	addq.w	#1,(a0)			; Variable rp_entries_offset erhöhen
-rd_calculate_entry_offset
+rd_get_entry_offset
 	MULUF.L playback_queue_entry_size,d0,d1 ; Offset in Dateipfade-Puffer berechnen
 	move.l	adl_entries_buffer(a3),a0 ; Zeiger auf Puffer für Einträge
-	add.l	d0,a0			; Offset in Dateipfade-Puffer
+	add.l	d0,a0
 rd_check_demofile_path
 	move.l	a0,rd_demofile_path(a3)
 	moveq	#0,d0			; Zähler für Dateinamen-Länge
@@ -2768,9 +2788,10 @@ rd_demofile_name_ok
 	moveq	#rd_demofile_name_tail_end-rd_demofile_name_tail,d0
 	bra	adl_print_text
 
+
 ; Input
 ; Result
-; d0 ... Rückgabewert: Return-Code
+; d0.l ... Rückgabewert: Return-Code
 	CNOP 0,4
 rd_check_demofile_play_state
 	move.l	rd_demofile_path(a3),a0	; Zeiger auf Eintrag in Puffer
@@ -2787,31 +2808,25 @@ rd_check_demofile_play_state_ok
 	rts
 
 
+; Input
+; d1.w ... Anzahl der Einträge
+; Result
+; d0.l ... Rückgabewert: Zufallsoffset
 	CNOP 0,4
-rd_random_entry_offsets
-	move.l	#_CUSTOM+VHPOSR,a1
-	move.w	adl_entries_number(a3),d1
-	move.l	#_CIAA+CIATODLOW,a2
-	move.w	(a1),d0		;f(x)
-	move.l	#_CIAB+CIATODLOW,a4
-rd_random_entry_offsets_loop
-	mulu.w	(a1),d0			; f(x)*a
-	move.w	(a1),d2
+rd_get_random_entry
+	move.w	_CUSTOM+VHPOSR,d0	; f(x)
+	mulu.w	_CUSTOM+VHPOSR,d0	; f(x)*a
+	move.w	_CUSTOM+VPOSR,d2
 	swap	d2
-	move.b	(a2),d2
+	move.b	_CIAA+CIATODLOW,d2
 	lsl.w	#8,d2
-	move.b	(a4),d2			; b
+	move.b	_CIAB+CIATODLOW,d2	; b
 	add.l	d2,d0			; (f(x)*a)+b
 	and.l	#$0000ffff,d0		; Nur Low-Word
 	divu.w	d1,d0			; f(x+1) = [(f(x)*a)+b]/mod rp_entries_number
 	swap	d0			; Rest der Division = Zufallsoffset
 	ext.l	d0
-	MULUF.L playback_queue_entry_size,d0,d2 ; Offset in Dateipfade-Puffer berechnen
-	move.l	adl_entries_buffer(a3),a0
-	add.l	d0,a0			; Offset in Dateipfade-Puffer
-	tst.b	pqe_tag_active(a0)
-	bne.s	rd_random_entry_offsets_loop
-	bra	rd_check_demofile_path
+	rts
 
 
 	CNOP 0,4
@@ -2939,7 +2954,7 @@ rd_execute_prerunscript_ok
 	CNOP 0,4
 rd_turn_off_fast_memory
 	move.l	rd_demofile_path(a3),a0
-	cmp.b	#STARTMODE_TURBO,pqe_startmode(a0)
+	cmp.b	#RUNMODE_TURBO,pqe_runmode(a0)
 	bne.s	rd_turn_off_fast_memory_ok1
 	rts
 	CNOP 0,4
@@ -2982,6 +2997,7 @@ rd_load_demofile
 	CALLDOSQ IoErr
 	CNOP 0,4
 rd_load_demo_ok
+	CALLEXEC CacheClearU
 	moveq	#RETURN_OK,d0
 	rts
 
@@ -3476,7 +3492,7 @@ rd_blank_display
 	tst.l	gb_ActiView(a6)		; Erschien zwischenzeitlich ein anderer View ?
 	bne.s	rd_blank_display	; Dann neuer Versuch
 	move.l	rd_demofile_path(a3),a0
-	cmp.b	#STARTMODE_OCS_VANILLA,pqe_startmode(a0)
+	cmp.b	#RUNMODE_OCS_VANILLA,pqe_runmode(a0)
 	bne.s	rd_blank_display_skip
 	moveq	#0,d0
 	move.l	d0,_CUSTOM+BPL1MOD	; OCS-komptible Moduli
@@ -3677,7 +3693,7 @@ rd_downgrade_cpu
 	CALLEXEC Supervisor
 	move.l	d0,rd_old_vbr(a3)
 	move.l	rd_demofile_path(a3),a0
-	cmp.b	#STARTMODE_TURBO,pqe_startmode(a0)
+	cmp.b	#RUNMODE_TURBO,pqe_runmode(a0)
 	bne.s	rd_check_vbr1
 	rts
 	CNOP 0,4
@@ -3693,7 +3709,7 @@ rd_check_060_cpu1
 ; ** 68060 **
 	moveq	#0,d1			; Alle Bits in CACR löschen
 	move.l	rd_demofile_path(a3),a0
-	cmp.b	#STARTMODE_AGA_VANILLA,pqe_startmode(a0)
+	cmp.b	#RUNMODE_AGA_VANILLA,pqe_runmode(a0)
 	bne.s	rd_disable_060_caches
 	or.w	#CACR060F_FIC+CACR060F_EIC,d1 ; 1/2 Instruction-Cache an
 rd_disable_060_caches
@@ -3714,7 +3730,7 @@ rd_disable_caches_mmu
 	moveq	#0,d0			; Alle Bits löschen
 	move.l	#CACRF_EnableI|CACRF_IBE|CACRF_EnableD|CACRF_DBE|CACRF_WriteAllocate|CACRF_EnableE|CACRF_CopyBack,d1 ; Caches ausschalten
 	move.l	rd_demofile_path(a3),a0
-	cmp.b	#STARTMODE_AGA_VANILLA,pqe_startmode(a0)
+	cmp.b	#RUNMODE_AGA_VANILLA,pqe_runmode(a0)
 	bne.s	rd_disable_caches
 	and.b	#~(CACRF_EnableI),d1	; Instruction-Cache nicht ausschalten
 rd_disable_caches
@@ -3816,10 +3832,15 @@ rd_run_demofile
 	ENDC
 	move.l	rd_demofile_path(a3),a0
 	move.b	#FALSE,pqe_tag_active(a0) ; Demo wurde ausgeführt
-	cmp.b	#STARTMODE_OCS_VANILLA,pqe_startmode(a0)
-	beq.s	check_whdload_slave
-	CALLEXEC CacheClearU
-check_whdload_slave
+	addq.w	#1,rd_arg_playentry_offset(a3)
+	RP_POINTER_ENTRIES_OFFSET
+	move.l	d0,a0
+	addq.w	#1,(a0)			; Variable rp_entries_offset erhöhen
+;ü	move.l	rd_demofile_path(a3),a0
+;ü	cmp.b	#RUNMODE_OCS_VANILLA,pqe_runmode(a0)
+;ü	beq.s	check_whdload_slave
+;ü	CALLEXEC CacheClearU
+;ücheck_whdload_slave
 	tst.w	whdl_slave_enabled(a3)
 	beq.s	rd_execute_whdload_slave
 	moveq	#1,d0			; Command-Line-Länge = 1 Zeichen (Line-Feed)
@@ -3836,17 +3857,22 @@ rd_cleanup_demo_loop
 	btst	#DMAB_BLTDONE-8,(a0)	; Sicherheitshalber auf eventuell noch nicht beendete Blits warten
 	bne.s	rd_cleanup_demo_loop
 	tst.w	rd_arg_softreset_enabled(a3)
-	bne.s	rd_check_startmode
+;	bne.s	rd_check_runmode
+	bne.s   rd_run_demofile_ok
 	CALLEXECQ ColdReboot
 	CNOP 0,4
-rd_check_startmode
-	move.l	rd_demofile_path(a3),a0
-	cmp.b	#STARTMODE_TURBO,pqe_startmode(a0)
-	beq.s	rd_clear_caches
+rd_run_demofile_ok
 	rts
-	CNOP 0,4
-rd_clear_caches
-	CALLEXECQ CacheClearU
+
+;ü	CNOP 0,4
+;ürd_check_runmode
+;ü	cmp.b	#RUNMODE_TURBO,pqe_runmode(a0)
+;ü	beq.s	rd_clear_caches
+;ü	rts
+;ü	CNOP 0,4
+;ürd_clear_caches
+;ü	CALLEXECQ CacheClearU
+
 	CNOP 0,4
 rd_execute_whdload_slave
 	lea	whdl_slave_cmd_line(pc),a0
@@ -3857,9 +3883,7 @@ rd_execute_whdload_slave
 	beq.s	rd_check_arg_softreset_enabled
 	lea	rd_error_text27(pc),a0
 	moveq	#rd_error_text27_end-rd_error_text27,d0
-	bsr	adl_print_text
-	moveq	#RETURN_ERROR,d0
-	rts
+	bra	adl_print_text
 	CNOP 0,4
 rd_check_arg_softreset_enabled
 	tst.w	rd_arg_softreset_enabled(a3)
@@ -3867,7 +3891,7 @@ rd_check_arg_softreset_enabled
 	CALLEXECQ ColdReboot
 	CNOP 0,4
 rd_execute_whdload_slave_ok
-	moveq	#RETURN_OK,d0
+;ü	move.l	rd_demofile_path(a3),a0
 	rts
 
 
@@ -3972,7 +3996,7 @@ rd_set_ciab_crb2
 	CNOP 0,4
 rd_upgrade_cpu
 	move.l	rd_demofile_path(a3),a0
-	cmp.b   #STARTMODE_TURBO,pqe_startmode(a0)
+	cmp.b   #RUNMODE_TURBO,pqe_runmode(a0)
 	bne.s	rd_restore_vbr
 	rts
 	CNOP 0,4
@@ -4165,7 +4189,7 @@ sfi_set_rgb_bytes
 	bne.s	sfi_flush_caches	; Nein -> verzweige
 	move.w	#FALSE,sfi_active(a3)	; Fading-In aus
 sfi_flush_caches
-	CALLEXEC CacheClearU		; Caches flushen
+	CALLEXEC CacheClearU
 	rts
 	CNOP 0,4
 sfi_decrease_red
@@ -4252,7 +4276,7 @@ rd_unload_demofile_ok
 	CNOP 0,4
 rd_free_fast_memory
 	move.l	rd_demofile_path(a3),a0
-	cmp.b   #STARTMODE_TURBO,pqe_startmode(a0)
+	cmp.b   #RUNMODE_TURBO,pqe_runmode(a0)
 	bne.s	rd_check_available_fast_memory
 	rts
 	CNOP 0,4
@@ -4474,7 +4498,7 @@ rd_040_060_mmu_off
 	move.l	d2,d3			; ITT0=DTT1 Cachable für Speicherbereich $00000000-$ffffffff (Zorro II/III)
 	moveq	#0,d4			; TC MMU aus
 	move.l	rd_demofile_path(a3),a0
-	cmp.b	#STARTMODE_OCS_VANILLA,pqe_startmode(a0)
+	cmp.b	#RUNMODE_OCS_VANILLA,pqe_runmode(a0)
 	bne.s	rd_set_translation_registers
 	move.l	d1,d3			; ITT0=DTT0 Cache inhibited, precise für Speicherbereich $00000000-$00ffffff (Zorro II)
 rd_set_translation_registers
@@ -5283,7 +5307,7 @@ dc_playlist_results_array
 
 
 	CNOP 0,4
-dc_startmode_request
+dc_runmode_request
 	DS.B EasyStruct_SIZEOF
 
 
@@ -5452,7 +5476,7 @@ adl_cmd_usage_text_end
 ; **** Demo-Charger ****
 dc_playlist_template
 	DC.B "demofile,"
-	DC.B "OCSVANILLA/S,"		; Start-Modi
+	DC.B "OCSVANILLA/S,"		; Run-Modi
 	DC.B "AGAVANILLA/S,"
 	DC.B "TURBO/S,"
 	DC.B "MIN=MINS/K/N,"		; Abspieldauer
@@ -5520,13 +5544,13 @@ dc_file_request_reboot
 	EVEN
 
 
-dc_startmode_request_title
-	DC.B "Define start mode",0
+dc_runmode_request_title
+	DC.B "Define run mode",0
 	EVEN
-dc_startmode_request_body
-	DC.B "In which mode should the demo start?",ASCII_LINE_FEED,0
+dc_runmode_request_body
+	DC.B "In which mode should the demo run?",ASCII_LINE_FEED,0
 	EVEN
-dc_startmode_request_gadgets
+dc_runmode_request_gadgets
 	DC.B "OCS vanilla|AGA vanilla|turbo",0
 	EVEN
 
@@ -5745,6 +5769,11 @@ dc_error_text18_end
 
 
 ; **** Run-Demo ****
+rd_note
+	DC.B "Load position set back to first entry. All demo play states cleared.",ASCII_LINE_FEED
+rd_note_end
+	EVEN
+
 rd_error_text1
 	DC.B "Couldn't open ciaa.resource",ASCII_LINE_FEED
 rd_error_text1_end
