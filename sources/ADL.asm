@@ -76,7 +76,7 @@
 ; Fehlerausgabe bei Nichtladen der Datei verfeinert und korrigiert
 ; Fehlerabfrage korrigiert
 ; Ausgabe des Namens des Demos das ausgeführt wird
-; Änderung des Arguments in PRERUNSCRIPT
+; Änderung des Arguments scriptfile in PRERUNSCRIPT
 
 ; Gesamtprogramm "AmigaDemoLauncher"
 ; Neues Argument NEWENTRY: Manuelles Erstellen eines Eintrags über den Amiga
@@ -160,11 +160,11 @@
 ; QUITKEY angegeben wurden. Es wird dann ein Kommando-String erstellt, der
 ; über die Funktion SystemTagList() ausgeführt wird und das Demo über WHDLoad
 ; startet
-; Neues Argument LMBEXIT n: n=2...10 Bei einem Demo mit mehreren Teilen wird
+; Neues Argument LMBEXIT n: n=2..10 Bei einem Demo mit mehreren Teilen wird
 ; vom Reset Device automatisch das Drücken der linken Maustaste n-mal nach
 ; der vorgegebenen Spielzeit simuliert und somit zum nächsten Teil gesprungen.
 ; Die Spielzeit wird dabei wieder zurückgesetzt und von Neuem heruntergezählt.
-; Intern wird mit n=1...9 gearbeitet und n zu der Spielzeit einfach dazu-
+; Intern wird mit n=1..9 gearbeitet und n zu der Spielzeit einfach dazu-
 ; addiert, bevor der Sekundenwert in Hex/ASCII umgewandelt wird. Wird keine
 ; Spielzeit angegeben, dann wird das Argument ignoriert und eine Fehlermeldung
 ; ausgegeben.
@@ -187,14 +187,15 @@
 ;   "OCS" ->	"OCSVANILLA"
 ;   "AGA" ->	"AGAVANILLA"
 ;   "FAST" ->	"TURBO"
-; - Neue Werte der Runmodi:
+; - Neue Werte und Bezeichnung der Runmodi:
 ;   RUNMODE_TURBO	= $01
 ;   RUNMODE_OCS_VANILLA	= $02
 ;   RUNMODE_AGA_VANILLA	= $03
 ; - Argument NOFADER -> FADER (Umkehrung der Logik), es wird jetzt der aktive
 ;   Screen ausgefadet und nichr mehr der Custom-Screen
-; - Minimum-Config: 68020/OS3.0/AGA
-; - Bugfix Argument RESETLOADPOS: Es wurde entries_number auf Null setzt
+; - Änderung der Minimum-Config: 68020/OS3.0/AGA-Chipset
+; - Bugfix Argument RESETLOADPOS: Es wurde die "entries_number" auf Null ge-
+;   setzt, anstatt auf den Wert 1
 ; - Option: Abfrage der WB-Message entfernt, da es passieren kann, dass dies
 ;   berets von einem Demo gemacht wird und 2x die WB-Message nicht beant-
 ;   wortet werden kann
@@ -202,6 +203,8 @@
 ;   das gleiche Prerun-Script ausgeführt, wenn es über das Argument PRERUNSCRIPT
 ;   angegeben wurde
 ; - Argument QUIET wieder herausgenommen
+; - Argument RANDOM: komplett überarbeitet
+; - Argument ENDLESS: komplett überarbeitet
 
 
 	SECTION code_and_variables,CODE
@@ -335,7 +338,7 @@ sf_colors_number_max		EQU 256
 sfo_fader_speed			EQU 6
 
 ; **** Screen-Fader-In ****
-sfi_fader_speed			EQU 8
+sfi_fader_speed			EQU 10
 
 
 
@@ -347,7 +350,7 @@ RP_POINTER_ENTRIES_NUMBER_MAX	MACRO
 	trap	#1
 	ENDM
 
-RP_POINTER_ENTRIES_OFFSET	MACRO
+RP_POINTER_ENTRY_OFFSET		MACRO
 	trap	#2
 	ENDM
 
@@ -435,34 +438,48 @@ dc_multiselect_entries_number	RS.W 1
 
 
 ; **** Run-Demo ****
-rd_timer_delay			RS.W 1
+rd_arg_prerunscript_enabled	RS.W 1
+rd_arg_showqueue_enabled	RS.W 1
+rd_arg_resetloadpos_enabled	RS.W 1
+rd_arg_random_enabled		RS.W 1
+rd_arg_endless_enabled		RS.W 1
+rd_arg_loop_enabled		RS.W 1
+rd_arg_fader_enabled		RS.W 1
+rd_arg_softreset_enabled	RS.W 1
+rd_arg_remove_enabled		RS.W 1
+
 	RS_ALIGN_LONGWORD
 rd_serial_message_port		RS.L 1
+rd_timer_delay			RS.W 1
 
-rd_available_fast_memory_size	RS.L 1
-rd_available_fast_memory	RS.L 1
+rd_play_duration		RS.W 1
 
-rd_prerunscript_path		RS.L 1
+rd_entry_offset			RS.W 1
 
-rd_demofile_path		RS.L 1
+	RS_ALIGN_LONGWORD
 rd_demofile_name		RS.L 1
 rd_demofile_name_length		RS.L 1
+rd_demofile_path		RS.L 1
 rd_demofile_handle		RS.L 1
 rd_demofile_magic_cookie	RS.L 1
 rd_demofile_seglist		RS.L 1
 rd_demofile_dir_lock		RS.L 1
+
+rd_prerunscript_path		RS.L 1
+
+rd_active_screen		RS.L 1
+rd_monitor_id			RS.L 1
+rd_custom_screen		RS.L 1
+rd_custom_window		RS.L 1
+rd_sprite_pointer_data		RS.L 1
+rd_old_sprite_resolution	RS.L 1
+
+rd_available_fast_memory_size	RS.L 1
+rd_available_fast_memory	RS.L 1
+
 rd_current_dir_lock		RS.L 1
 
-rd_os_screen			RS.L 1
-rd_os_monitor_id		RS.L 1
-
-rd_sprite_data			RS.L 1
-rd_custom_window		RS.L 1
-rd_custom_screen		RS.L 1
-
 rd_custom_trap_vectors		RS.L 1
-
-rd_old_sprite_resolution	RS.L 1
 
 rd_old_vbr			RS.L 1
 rd_old_cacr			RS.L 1
@@ -493,18 +510,6 @@ rd_old_ciab_icr			RS.B 1
 rd_old_ciab_cra			RS.B 1
 rd_old_ciab_crb			RS.B 1
 
-rd_play_duration		RS.W 1	; Argument MIN[S]/SEC[S]
-rd_arg_prerunscript_enabled	RS.W 1
-rd_arg_showqueue_enabled	RS.W 1
-rd_arg_resetloadpos_enabled	RS.W 1
-rd_arg_playentry_offset		RS.W 1
-rd_arg_random_enabled		RS.W 1
-rd_arg_endless_enabled		RS.W 1
-rd_arg_loop_enabled		RS.W 1
-rd_arg_fader_enabled		RS.W 1
-rd_arg_softreset_enabled	RS.W 1
-rd_arg_remove_enabled		RS.W 1
-
 
 ; **** WHDLoad ****
 whdl_slave_enabled		RS.W 1
@@ -514,10 +519,10 @@ whdl_disk_object		RS.L 1
 
 ; **** Screen-Fader ****
 	RS_ALIGN_LONGWORD
-sf_os_screen_colors_number	RS.L 1
+sf_active_screen_colors_number	RS.L 1
 sf_odd_sprite_color_base	RS.L 1
 sf_even_sprite_color_base	RS.L 1
-sf_os_screen_color_table	RS.L 1
+sf_active_screen_color_table	RS.L 1
 sf_color_cache			RS.L 1
 
 ; **** Screen-Fader-In ****
@@ -611,6 +616,18 @@ omr_itt1                        RS.L 1
 omr_tc	                        RS.L 1
 
 old_mmu_registers_size		RS.B 0
+
+
+	RSRESET
+
+sprite_pointer_data		RS.B 0
+
+spd_control_word1		RS.W 1
+spd_control_word2		RS.W 1
+spd_color_descriptor		RS.W 2
+spd_end_of_data			RS.W 2
+
+sprite_pointer_data_size	RS.B 0
 
 
 ; **** Amiga Demo-Launcher ****
@@ -766,6 +783,7 @@ adl_init_variables
 	move.w	d1,adl_arg_help_enabled(a3)
 
 	move.w	d0,adl_entries_number(a3)
+	move.w	#dc_entries_number_default_max,adl_entries_number_max(a3)
 
 
 ; **** Demo-Charger ****
@@ -779,22 +797,27 @@ adl_init_variables
 
 
 ; **** Run-Demo ****
-	move.w	d0,rd_timer_delay(a3)
-	move.l	d0,rd_clear_030_mmu_register(a3)
-
-	move.l	d0,rd_demofile_seglist(a3)
-	move.l	d0,rd_prerunscript_path(a3)
-
 	move.w	d1,rd_arg_prerunscript_enabled(a3)
 	move.w	d1,rd_arg_showqueue_enabled(a3)
 	move.w	d1,rd_arg_resetloadpos_enabled(a3)
-	move.w	d0,rd_arg_playentry_offset(a3)
 	move.w	d1,rd_arg_random_enabled(a3)
 	move.w	d1,rd_arg_endless_enabled(a3)
 	move.w	d1,rd_arg_loop_enabled(a3)
 	move.w	d1,rd_arg_fader_enabled(a3)
 	move.w	d1,rd_arg_softreset_enabled(a3)
 	move.w	d1,rd_arg_remove_enabled(a3)
+
+	move.w	d0,rd_timer_delay(a3)
+
+	move.w	d0,rd_play_duration(a3)
+
+	move.w	#1,rd_entry_offset(a3)
+
+	move.l	d0,rd_demofile_seglist(a3)
+
+	move.l	d0,rd_prerunscript_path(a3)
+
+	move.l	d0,rd_clear_030_mmu_register(a3)
 
 
 ; **** WHDLoad ****
@@ -806,6 +829,17 @@ adl_init_variables
 
 ; **** Screen-Fader-Out ****
 	move.w	d0,sfo_active(a3)
+
+
+; **** Reset-Programm ****
+	lea	rp_entries_number_max(pc),a0
+	move.w	#dc_entries_number_default_max,(a0)
+
+	lea	rp_entry_offset(pc),a0
+	move.w	#1,(a0)
+
+	lea	rp_endless_enabled(pc),a0
+	move.w	d1,(a0)
 	rts
 
 
@@ -1014,6 +1048,9 @@ rd_init_video_control_tag_list
 	rts
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
 adl_open_dos_library
 	lea	dos_library_name(pc),a1
@@ -1030,6 +1067,9 @@ adl_open_dos_library_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code/Error-Code
 	CNOP 0,4
 adl_get_output
 	CALLDOS Output
@@ -1042,6 +1082,9 @@ adl_get_output_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
 adl_open_graphics_library
 	lea	graphics_library_name(pc),a1
@@ -1061,6 +1104,9 @@ adl_open_graphics_library_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
 adl_check_system
 	move.l	_SysBase(pc),a0
@@ -1106,6 +1152,9 @@ adl_check_system_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
 adl_open_intuition_library
 	lea	intuition_library_name(pc),a1
@@ -1125,6 +1174,9 @@ adl_open_intuition_library_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
 adl_check_cool_capture
 	move.l	_SysBase(pc),a0
@@ -1154,6 +1206,9 @@ adl_update_variables
 	move.w	(a0),adl_entries_number(a3)
 	RP_POINTER_ENTRIES_BUFFER
 	move.l	d0,adl_entries_buffer(a3)
+	RP_POINTER_ENTRY_OFFSET
+	move.l	d0,a0
+	move.w	(a0),rd_entry_offset(a3)
 	clr.w   adl_reset_program_active(a3)
 	moveq	#RETURN_OK,d0
 	rts
@@ -1167,6 +1222,9 @@ adl_set_default_values
 	rts
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
 adl_check_cmd_line
 	lea	adl_cmd_template(pc),a0
@@ -1277,7 +1335,7 @@ rd_check_arg_playentry_ok
 	rts
 	CNOP 0,4
 rd_check_arg_playentry_set
-	move.w	d0,rd_arg_playentry_offset(a3)
+	move.w	d0,rd_entry_offset
 
 ; ** Argument RESETLOADPOS **
 dc_check_arg_resetloadpos
@@ -1285,7 +1343,7 @@ dc_check_arg_resetloadpos
 	beq.s	rd_check_arg_prerunscript
 	not.w	d0
 	move.w	d0,rd_arg_resetloadpos_enabled(a3)
-	move.w	#1,rd_arg_playentry_offset(a3)
+	move.w	#1,rd_entry_offset
 	bsr	rd_remove_tags
 	lea	rd_note(pc),a0
 	moveq	#rd_note_end-rd_note,d0
@@ -1378,7 +1436,7 @@ rd_check_demo_parts_number_max
 	rts
 	CNOP 0,4
 rd_arg_lmbexit_set_play_duration
-	subq.w	#1,d0			; Wert anpassen, da intern 1...9 übergeben wird
+	subq.w	#1,d0			; Wert anpassen, da intern 1..9 übergeben wird
 	add.w	d0,rd_play_duration(a3)
 
 ; ** Argument RANDOM **
@@ -1391,8 +1449,20 @@ rd_check_arg_random
 	move.l	cra_ENDLESS(a2),d0
 	not.w	d0
 	move.w	d0,rd_arg_endless_enabled(a3)
+	tst.w	adl_reset_program_active(a3)
+	bne.s	rd_update_endless_enabled
+	move.l	d0,d2
+	RP_POINTER_ENDLESS_ENABLED
+	move.l	d0,a0
+	move.w	d2,(a0)
+	bra.s	rd_check_arg_loop
+	CNOP 0,4
+rd_update_endless_enabled
+	lea	rp_endless_enabled(pc),a0
+	move.w	d0,(a0)
 
 ; ** Argument LOOP **
+rd_check_arg_loop
 	move.l	cra_LOOP(a2),d0
 	not.w	d0
 	move.w	d0,rd_arg_loop_enabled(a3)
@@ -1434,6 +1504,9 @@ adl_print_intro_message_ok
 
 
 ; **** DemoSelector ****
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code/Error-Code
 	CNOP 0,4
 dc_alloc_entries_buffer
 	tst.w	adl_reset_program_active(a3)
@@ -1456,6 +1529,9 @@ dc_alloc_entries_buffer_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
 dc_open_asl_library
 	lea	asl_library_name(pc),a1
@@ -1475,6 +1551,9 @@ dc_open_asl_library_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code/Error-Code
 	CNOP 0,4
 dc_get_program_dir
 	CALLDOS GetProgramDir
@@ -1518,6 +1597,9 @@ dc_request_title_ok
 	bra	rp_dec_to_ascii
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
 dc_make_file_request
 	moveq	#ASL_FileRequest,d0
@@ -1541,6 +1623,9 @@ dc_make_file_request_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
 dc_display_file_request
 	move.l	dc_file_request(a3),a0
@@ -1556,6 +1641,9 @@ dc_display_file_request_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
 dc_get_demofile_path
 	clr.w   dc_multiselect_entries_number(a3)
@@ -1589,12 +1677,11 @@ dc_next_multiselect_entry
 	rts
 
 
-; ** Demo Dateipfad prüfen **
 ; Input
-; a0 ... Zeiger auf Dateiname
-; a1 ... Zeiger auf Verzeichnisname
+; a0	... Zeiger auf Dateiname
+; a1 	... Zeiger auf Verzeichnisname
 ; Result
-; d0 ... Rückgabewert: DOS Error Code
+; d0.l	... Rückgabewert: Return-Code/Error Code
 	CNOP 0,4
 dc_check_demofile_path
 	tst.b	(a1)			; Verzeichnisname vorhanden ?
@@ -1719,6 +1806,9 @@ dc_start_loop
 	rts
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
 dc_check_entries_number_max
 	move.w  adl_entries_number(a3),d0
@@ -1740,15 +1830,21 @@ dc_print_entries_max_message
 	bra     adl_print_text
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code/Error-Code
 	CNOP 0,4
 dc_init_reset_program
 	tst.w	adl_entries_number(a3)
 	bne.s	adl_check_reset_program_active
+	moveq	#RETURN_OK,d0
 	rts
 	CNOP 0,4
 adl_check_reset_program_active
 	tst.w	adl_reset_program_active(a3)
 	beq	dc_update_entries_number
+	lea	rp_entry_offset(pc),a0
+	move.w	rd_entry_offset(a3),(a0)
 	move.l	#rp_reset_program_end-rp_reset_program,d0 ; Programmgröße
 	move.w	d0,d7		
 	moveq	#0,d1
@@ -1784,7 +1880,7 @@ dc_copy_reset_program_loop
 dc_copy_entries_buffer_loop
 	move.b	(a0)+,(a1)+
 	dbf	d7,dc_copy_entries_buffer_loop
-	bsr	rp_calculate_checksum
+	bsr	rp_update_exec_checksum
 	CALLLIBS CacheClearU
 	jsr	rp_install_custom_exception_vectors-rp_reset_program(a2) ; Zeiger auf eigene Exception/Trap-Routinen initialisieren
 	lea	rp_read_VBR(pc),a5
@@ -1817,7 +1913,10 @@ dc_close_asl_library
 	CALLEXECQ CloseLibrary
 
 
-; ** Playlist-Routinen **
+
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
 dc_lock_playlist_file
 	move.l	dc_playlist_file_name(a3),d1
@@ -1828,13 +1927,17 @@ dc_lock_playlist_file
 	lea	dc_error_text2(pc),a0
 	moveq	#dc_error_text2_end-dc_error_text2,d0
 	bsr	adl_print_text
-	CALLLIBQ IoErr
+	moveq	#RETURN_FAIL,d0
+	rts
  	CNOP 0,4
 dc_lock_playlist_file_ok
 	moveq	#RETURN_OK,d0
 	rts
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code/Error-Code
 	CNOP 0,4
 dc_alloc_playlist_file_fib
 	MOVEF.L fib_SIZEOF,d0
@@ -1853,6 +1956,9 @@ dc_alloc_playlist_file_fib_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
 dc_get_playlist_file_length
 	move.l	dc_playlist_file_lock(a3),d1
@@ -1873,6 +1979,9 @@ dc_get_playlist_file_length_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code/Error-Code
 	CNOP 0,4
 dc_alloc_playlist_file_buffer
 	move.l	dc_playlist_file_length(a3),d0
@@ -1891,6 +2000,9 @@ dc_alloc_playlist_file_buffer_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
 dc_open_playlist_file
 	move.l	dc_playlist_file_name(a3),d1
@@ -1901,13 +2013,17 @@ dc_open_playlist_file
 	lea	dc_error_text6(pc),a0
 	moveq	#dc_error_text6_end-dc_error_text6,d0
 	bsr	adl_print_text
-	CALLDOSQ IoErr
+	moveq	#RETURN_FAIL,d0
+	rts
 	CNOP 0,4
 dc_open_playlist_file_ok
 	moveq	#RETURN_OK,d0
 	rts
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
 dc_read_playlist_file
 	move.l	dc_playlist_file_handle(a3),d1
@@ -1919,13 +2035,17 @@ dc_read_playlist_file
 	lea	dc_error_text7(pc),a0
 	moveq	#dc_error_text7_end-dc_error_text7,d0
 	bsr	adl_print_text
-	CALLDOSQ IoErr
+	moveq	#RETURN_FAIL,d0
+	rts
 	CNOP 0,4
 dc_read_playlist_file_ok
 	moveq	#RETURN_OK,d0
 	rts
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
 dc_parse_playlist_file
 	lea	dc_parsing_begin_text(pc),a0
@@ -1942,7 +2062,7 @@ dc_parse_playlist_file
 dc_parse_playlist_file_loop1
 	subq.w	#1,d7			; Wegen dbf
 	bpl.s	dc_parse_playlist_file_proceed
-	bsr.s	dc_parse_playlist_file_result
+	bsr	dc_parse_playlist_file_result
 	moveq	#RETURN_OK,d0
 	rts
 	CNOP 0,4
@@ -1968,37 +2088,9 @@ dc_parse_playlist_file_loop2
 	cmp.b	#ASCII_LINE_FEED,(a2)+
 	beq.s	dc_parse_playlist_entry
 	dbf	d7,dc_parse_playlist_file_loop2
-	bsr.s	dc_parse_playlist_file_result
+	bsr	dc_parse_playlist_file_result
 	moveq	#RETURN_OK,d0
 	rts
-
-
-	CNOP 0,4
-dc_parse_playlist_file_result
-	move.w	dc_transmitted_entries_number(a3),d1 ; Dezimalzahl
-	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
-	lea	dc_transmitted_entries(pc),a0 ; Zeiger auf String
-	bsr	rp_dec_to_ascii
-	move.w	dc_playlist_entries_number(a3),d1 ; Dezimalzahl
-	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
-	lea	dc_playlist_entries(pc),a0 ; Zeiger auf String
-	bsr	rp_dec_to_ascii
-	move.w	adl_entries_number_max(a3),d1
-	sub.w	adl_entries_number(a3),d1 ; Verbleibende Anzahl der zu ladenden Dateien ermitteln
-	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
-	lea	dc_not_used_entries(pc),a0 ; Stringadresse
-	bsr	rp_dec_to_ascii
-	lea	dc_parsing_result_text(pc),a0
-	move.l	#dc_parsing_result_text_end-dc_parsing_result_text,d0
-	bra	adl_print_text
-
-
-; ** Befehlszeile in der Playlist-Datei nach Argumenten durchsuchen **
-; Input
-; d4 ... Länge der Befehlszeile
-; a4 ... Zeiger auf RDArgs-Struktur
-; Result
-; d0 ... Kein Rückgabewert
 	CNOP 0,4
 dc_parse_playlist_entry
 	move.l	d4,CS_Length(a4)
@@ -2142,7 +2234,7 @@ dc_check_demo_parts_number_max
 	bra.s	dc_free_custom_arguments
 	CNOP 0,4
 dc_arg_lmbexit_save_playtime
-	subq.w	#1,d0			; Wert anpassen, da intern 1...9 übergeben wird
+	subq.w	#1,d0			; Wert anpassen, da intern 1..9 übergeben wird
 	add.w	d0,pqe_playtime(a1)
 
 ; ** Playlist-Argument prerunscxript **
@@ -2184,11 +2276,30 @@ dc_free_DosObject
 	bra	dc_parse_playlist_file_loop1
 
 
-; Fehlerhaften Eintrag ausgeben
+	CNOP 0,4
+dc_parse_playlist_file_result
+	move.w	dc_transmitted_entries_number(a3),d1 ; Dezimalzahl
+	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
+	lea	dc_transmitted_entries(pc),a0 ; Zeiger auf String
+	bsr	rp_dec_to_ascii
+	move.w	dc_playlist_entries_number(a3),d1 ; Dezimalzahl
+	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
+	lea	dc_playlist_entries(pc),a0 ; Zeiger auf String
+	bsr	rp_dec_to_ascii
+	move.w	adl_entries_number_max(a3),d1
+	sub.w	adl_entries_number(a3),d1 ; Verbleibende Anzahl der zu ladenden Dateien ermitteln
+	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
+	lea	dc_not_used_entries(pc),a0 ; Stringadresse
+	bsr	rp_dec_to_ascii
+	lea	dc_parsing_result_text(pc),a0
+	move.l	#dc_parsing_result_text_end-dc_parsing_result_text,d0
+	bra	adl_print_text
+
+
 ; Input
-; d6 ... Zeiger auf Eintrag im Puffer
+; d6.l	... Zeiger auf Eintrag im Puffer
 ; Result
-; d0 ... Kein Rückgabewert
+; d0	... Kein Rückgabewert
 	CNOP 0,4
 dc_parse_playlist_entry_error
 	move.l	d6,a0			; Zeiger auf Eintrag im Puffer
@@ -2196,7 +2307,10 @@ dc_parse_playlist_entry_error
 	bra.s 	dc_parse_entry_syntax_error
 
 
-; a0 ... Zeiger auf den Eintrag zum Löschen
+; Input
+; a0	... Zeiger auf den Eintrag zum Löschen
+; Result
+; d0	... Kein Rückgabewert
 	CNOP 0,4
 dc_clear_playlist_entry
 	moveq	#0,d0
@@ -2220,6 +2334,9 @@ dc_parse_entry_syntax_error
 	bra	adl_print_text
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
 dc_check_entries_number_min
 	tst.w	adl_entries_number(a3)
@@ -2312,12 +2429,11 @@ adl_close_dos_library
 	CALLEXECQ CloseLibrary
 
 
-; ** Textstring ausgeben **
 ; Input
-; a0 ... Zeiger auf Fehlertext
-; d0 ... Länge des Textes
+; a0	... Zeiger auf Fehlertext
+; d0.l	... Länge des Textes
 ; Result
-; d0 ... Kein Rückgabewert
+; d0	... Kein Rückgabewert
 	CNOP 0,4
 adl_print_text
 	move.l	adl_output_handle(a3),d1 ; Zeiger auf Datei-Handle
@@ -2335,9 +2451,6 @@ rd_start
 	beq	rd_cleanup_reset_program
 	tst.w	rd_arg_showqueue_enabled(a3)
 	beq	rd_show_queue
-	RP_POINTER_ENDLESS_ENABLED
-	move.l	d0,a0
-	move.w	rd_arg_endless_enabled(a3),(a0)
 
 	bsr	rd_open_ciaa_resource
 	move.l	d0,adl_dos_return_code(a3)
@@ -2353,7 +2466,6 @@ rd_start
 	bsr	rd_create_serial_message_port
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_icon_library
-
 	bsr	rd_init_serial_io
 	bsr	rd_open_serial_device
 	move.l	d0,adl_dos_return_code(a3)
@@ -2375,7 +2487,6 @@ rd_play_loop
 	bsr	rd_check_demofile_play_state
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_io_error
-
 	bsr	rd_open_demofile
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_io_error
@@ -2393,6 +2504,26 @@ rd_play_loop
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_io_error
 
+	bsr	rd_get_active_screen
+	move.l	d0,adl_dos_return_code(a3)
+	bne	rd_cleanup_io_error
+	bsr	rd_get_monitor_id
+	move.l	d0,adl_dos_return_code(a3)
+	bne	rd_cleanup_io_error
+	bsr	sf_get_active_screen_colors_number
+	bsr	sf_get_active_screen_color_table
+	bsr	sf_copy_active_screen_colors
+	bsr	sf_fade_out_active_screen
+	bsr	rd_open_custom_screen
+	move.l	d0,adl_dos_return_code(a3)
+	bne	rd_cleanup_active_screen_colors
+	bsr	rd_open_custom_window
+	bsr	rd_clear_mousepointer
+	bsr	rd_get_sprite_resolution
+	bsr	rd_set_ocs_sprite_resolution
+ 	bsr	rd_blank_display
+	bsr	rd_check_monitor_switch
+
 	bsr	rd_turn_off_fast_memory
 	bsr	rd_load_demofile
 	move.l	d0,adl_dos_return_code(a3)
@@ -2404,31 +2535,10 @@ rd_play_loop
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_demofile
 
-	bsr	rd_get_os_screen
-	move.l	d0,adl_dos_return_code(a3)
-	bne	rd_cleanup_current_dir
-	bsr	rd_get_os_monitor_id
-	move.l	d0,adl_dos_return_code(a3)
-	bne	rd_cleanup_current_dir
-	bsr	sf_get_os_screen_colors_number
-	bsr	sf_get_os_screen_color_table
-	bsr	sf_copy_os_screen_colors
-	bsr	sf_fade_out_os_screen
-
-	bsr	rd_open_custom_screen
-	move.l	d0,adl_dos_return_code(a3)
-	bne.s	rd_cleanup_os_screen_colors
-	bsr	rd_open_custom_window
-	bsr	rd_clear_mousepointer
-	bsr	rd_get_sprite_resolution
-	bsr	rd_set_ocs_sprite_resolution
- 	bsr	rd_blank_display
-	bsr	rd_check_monitor_switch
-
 	bsr	rd_init_output_string_start
 	bsr	rd_start_timer
 	move.l	d0,adl_dos_return_code(a3)
-	bne.s   rd_cleanup_display
+	bne.s   rd_cleanup_current_dir
 
 	bsr	rd_save_custom_trap_vectors
 	bsr	rd_downgrade_CPU
@@ -2445,24 +2555,25 @@ rd_play_loop
 	bsr	rd_stop_timer
 	move.l	d0,adl_dos_return_code(a3)
 
+rd_cleanup_current_dir
+	bsr	rd_restore_current_dir
+	bsr	rd_unlock_demo_dir
+
+rd_cleanup_demofile
+	bsr	rd_unload_demofile
+
+rd_cleanup_fast_memory
+	bsr	rd_free_fast_memory
+
 rd_cleanup_display
 	bsr	rd_restore_sprite_resolution
 rd_cleanup_custom_window
 	bsr	rd_close_custom_window
 rd_cleanup_custom_screen
 	bsr	rd_close_custom_screen
-
-rd_cleanup_os_screen_colors
-	bsr	sf_fade_in_os_screen
-	bsr	rd_check_os_screen_priority
-
-rd_cleanup_current_dir
-	bsr	rd_restore_current_dir
-	bsr	rd_unlock_demo_dir
-rd_cleanup_demofile
-	bsr	rd_unload_demofile
-rd_cleanup_fast_memory
-	bsr	rd_free_fast_memory
+rd_cleanup_active_screen_colors
+	bsr	sf_fade_in_active_screen
+	bsr	rd_check_active_screen_priority
 
 rd_cleanup_io_error
 	bsr	adl_print_io_error
@@ -2479,14 +2590,18 @@ rd_cleanup_screen_color_table
 	bsr	sf_free_screen_color_table
 rd_cleanup_sprite_data
 	bsr	rd_free_sprite_data
+
 rd_cleanup_serial_device
 	bsr	rd_close_serial_device
 rd_cleanup_serial_message_port
 	bsr	rd_delete_serial_message_port
+
 rd_cleanup_icon_library
 	bsr	rd_close_icon_library
+
 rd_cleanup_reset_program
 	bsr	rd_remove_reset_program
+
 rd_quit
 	bra	adl_cleanup_intuition_library
 
@@ -2537,7 +2652,7 @@ rd_entry_filename_ok
 rd_filename_length_ok
 	move.w	d0,d4			; Länge des Dateinamens
 	bsr	adl_print_text
-	lea	rd_show_entry_space(pc),a0 ; Zeiger auf "..."-String
+	lea	rd_show_entry_space(pc),a0 ; Zeiger auf ".."-String
 	moveq	#rd_show_entry_space_end-rd_show_entry_space-1,d0 ; Textlänge der Füllzeile
 	sub.w	d4,d0			; Länge des Dateinamens abziehen
 	bsr	adl_print_text
@@ -2562,12 +2677,15 @@ rd_tag_msg_skip
 	sub.w	adl_entries_number(a3),d1 ; Verbleibende Anzahl der zu ladenden Dateien ermitteln
 	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
 	bsr	rp_dec_to_ascii
-	lea	rd_message_text(pc),a0
-	moveq	#rd_message_text_end-rd_message_text,d0
+	lea	rd_message_text1(pc),a0
+	moveq	#rd_message_text1_end-rd_message_text1,d0
 	bsr	adl_print_text
 	bra	rd_cleanup_icon_library
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
 rd_open_ciaa_resource
 	lea	CIAA_resource_name(pc),a1
@@ -2589,6 +2707,9 @@ rd_open_ciaa_resource_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
 rd_open_ciab_resource
 	lea	CIAB_resource_name(pc),a1
@@ -2610,6 +2731,9 @@ rd_open_ciab_resource_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
 rd_open_icon_library
 	lea	icon_library_name(pc),a1
@@ -2629,6 +2753,9 @@ rd_open_icon_library_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
 rd_create_serial_message_port
 	CALLEXEC CreateMsgPort
@@ -2656,6 +2783,9 @@ rd_init_serial_io
 	rts
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code/Error-Code
 	CNOP 0,4
 rd_open_serial_device
 	lea	serial_device_name(pc),a0
@@ -2675,12 +2805,15 @@ rd_open_serial_device_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code/Error-Code
 	CNOP 0,4
 rd_alloc_sprite_data
-	moveq	#6*WORD_SIZE,d0		; Größe der Speicherbereiches
+	moveq	#sprite_pointer_data_size,d0
 	MOVEF.L	MEMF_CLEAR+MEMF_CHIP+MEMF_PUBLIC+MEMF_REVERSE,d1
 	CALLEXEC AllocMem
-	move.l	d0,rd_sprite_data(a3)
+	move.l	d0,rd_sprite_pointer_data(a3)
 	bne.s	rd_alloc_sprite_data_ok
 	lea	rd_error_text6(pc),a0
 	moveq	#rd_error_text6_end-rd_error_text6,d0
@@ -2693,12 +2826,15 @@ rd_alloc_sprite_data_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code/Error-Code
 	CNOP 0,4
 sf_alloc_screen_color_table
 	MOVEF.L	sf_colors_number_max*3*LONGWORD_SIZE,d0
 	MOVEF.L	MEMF_CLEAR+MEMF_ANY+MEMF_PUBLIC+MEMF_REVERSE,d1
 	CALLEXEC AllocMem
-	move.l	d0,sf_os_screen_color_table(a3)
+	move.l	d0,sf_active_screen_color_table(a3)
 	bne.s	sf_alloc_screen_color_table_ok
 	lea	rd_error_text7(pc),a0
 	moveq	#rd_error_text7_end-rd_error_text7,d0
@@ -2711,6 +2847,9 @@ sf_alloc_screen_color_table_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code/Error-Code
 	CNOP 0,4
 sf_alloc_color_cache
 	MOVEF.L	(1+(sf_colors_number_max*3)+1)*LONGWORD_SIZE,d0
@@ -2744,14 +2883,8 @@ rd_get_random_entry_loop
 	bra.s	rd_check_demofile_path
 	CNOP 0,4
 rd_get_fixed_entry
-	move.w	rd_arg_playentry_offset(a3),d0
+	move.w	rd_entry_offset(a3),d0
 	subq.w	#1,d0			; Zählung beginnt bei Null
-	bpl.s	rd_get_entry_offset
-	RP_POINTER_ENTRIES_OFFSET
-	move.l	d0,a0
-	moveq	#0,d0
-	move.w	(a0),d0
-rd_get_entry_offset
 	MULUF.L playback_queue_entry_size,d0,d1 ; Offset in Dateipfade-Puffer berechnen
 	move.l	adl_entries_buffer(a3),a0 ; Zeiger auf Puffer für Einträge
 	add.l	d0,a0
@@ -2786,12 +2919,19 @@ rd_demofile_name_ok
 	bsr	adl_print_text
 	lea	rd_demofile_name_tail(pc),a0
 	moveq	#rd_demofile_name_tail_end-rd_demofile_name_tail,d0
-	bra	adl_print_text
+	bsr	adl_print_text
+; ++++++++++++++++++++++++++++++
+	addq.w	#1,rd_entry_offset(a3)
+	RP_POINTER_ENTRY_OFFSET
+	move.l	d0,a0
+	addq.w	#1,(a0)			; Variable rp_entry_offset erhöhen
+	moveq	#RETURN_OK,d0
+	rts
 
 
 ; Input
 ; Result
-; d0.l ... Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 rd_check_demofile_play_state
 	move.l	rd_demofile_path(a3),a0	; Zeiger auf Eintrag in Puffer
@@ -2809,9 +2949,9 @@ rd_check_demofile_play_state_ok
 
 
 ; Input
-; d1.w ... Anzahl der Einträge
+; d1.w	... Anzahl der Einträge
 ; Result
-; d0.l ... Rückgabewert: Zufallsoffset
+; d0.l	... Rückgabewert: Zufallswert für Offset
 	CNOP 0,4
 rd_get_random_entry
 	move.w	_CUSTOM+VHPOSR,d0	; f(x)
@@ -2829,6 +2969,9 @@ rd_get_random_entry
 	rts
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
 rd_open_demofile
 	move.l	rd_demofile_path(a3),d1
@@ -2862,6 +3005,9 @@ rd_close_demofile
 	CALLDOSQ Close
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code/Error-Code
 	CNOP 0,4
 rd_check_demofile_header
 	cmp.l	#MAGIC_COOKIE,rd_demofile_MAGIC_COOKIE(a3)
@@ -2895,6 +3041,9 @@ rd_get_prerunscript_path_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code/Error-Code
 	CNOP 0,4
 rd_check_prerunscript_path
 	move.l	rd_prerunscript_path(a3),d0
@@ -2921,6 +3070,9 @@ rd_check_prerunscript_path_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
 rd_execute_prerunscript
 	move.l	rd_prerunscript_path(a3),d0
@@ -2943,12 +3095,344 @@ rd_copy_prerunscript_path_loop
 	lea	rd_error_text13(pc),a0
 	moveq	#rd_error_text13_end-rd_error_text13,d0
 	bsr	adl_print_text
-	moveq	#RETURN_WARN,d0
+	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
 rd_execute_prerunscript_ok
 	moveq	#RETURN_OK,d0
 	rts
+
+
+; Input
+; Result
+; d0.l	... Rückgabewert: Return-Code
+	CNOP 0,4
+rd_get_active_screen
+	moveq	#0,d0			; Alle Locks
+	CALLINT LockIBase
+	move.l	d0,a0
+	move.l	ib_ActiveScreen(a6),a2
+	CALLLIBS UnlockIBase
+	move.l	a2,rd_active_screen(a3)
+	bne.s	rd_get_active_screen_ok
+	lea	rd_error_text17(pc),a0
+	moveq	#rd_error_text17_end-rd_error_text17,d0
+	bsr	adl_print_text
+	moveq	#RETURN_FAIL,d0
+	rts
+	CNOP 0,4
+rd_get_active_screen_ok
+	moveq	#RETURN_OK,d0
+	rts
+
+
+; ** Monitor-ID ermitteln **
+; Input
+; Result
+; d0.l	... Rückgabewert: Return-Code
+	CNOP 0,4
+rd_get_monitor_id
+	move.l	rd_active_screen(a3),a0
+	lea	sc_ViewPort(a0),a0
+	CALLGRAF GetVPModeID
+	CMPF.L	INVALID_ID,d0
+	bne.s	rd_get_monitor_id_save
+	lea	rd_error_text18(pc),a0
+	moveq	#rd_error_text18_end-rd_error_text18,d0
+	bsr	adl_print_text
+	moveq	#RETURN_FAIL,d0
+	rts
+	CNOP 0,4
+rd_get_monitor_id_save
+	and.l	#MONITOR_ID_MASK,d0	; Ohne Auflösung
+	move.l	d0,rd_monitor_id(a3)
+	moveq	#RETURN_OK,d0
+	rts
+
+
+	CNOP 0,4
+sf_get_active_screen_colors_number
+	move.l	rd_active_screen(a3),a2
+	move.l	a2,a0                   ; Zeiger auf Screen
+	CALLINT GetScreenDrawInfo
+	move.l	d0,a1			; Zeiger auf Draw-Info-Struktur
+	moveq	#1,d0			; Minimale Tiefe eines Screens
+	move.w	dri_depth(a1),d7
+	subq.w	#1,d7			; wegen dbf
+sf_active_screen_depth_loop
+	add.w	d0,d0			; Farbanzahl ermitteln
+	dbf	d7,sf_active_screen_depth_loop
+	move.l	d0,sf_active_screen_colors_number(a3)
+	move.l	a2,a0                   ; Zeiger auf Screen
+	CALLLIBQ FreeScreenDrawInfo
+
+
+	CNOP 0,4
+sf_get_active_screen_color_table
+	move.l	rd_active_screen(a3),a0
+	move.l	sc_ViewPort+vp_ColorMap(a0),a0
+	move.l	sf_active_screen_color_table(a3),a1 ; 32-Bit RGB-Werte
+	moveq	#0,d0			; Ab COLOR00
+	MOVEF.L	sf_colors_number_max,d1 ; Alle 256 Farben
+ 	CALLGRAFQ GetRGB32
+
+
+	CNOP 0,4
+sf_copy_active_screen_colors
+	move.l	sf_active_screen_color_table(a3),a0	; Quelle 32-Bit RGB-Werte
+	move.l	sf_color_cache(a3),a1	; Ziel 32-Bit RGB-Werte
+	move.w	#sf_colors_number_max,(a1)+ ; Anzahl der Farben
+	moveq	#0,d0
+	move.w	d0,(a1)+		; Ab COLOR00
+	MOVEF.W	sf_colors_number_max-1,d7 ; Anzahl der Farbwerte
+sf_copy_active_screen_colors_loop
+	move.l	(a0)+,(a1)+		; 32-Bit-Rotwert
+	move.l	(a0)+,(a1)+		; 32-Bit-Grünwert
+	move.l	(a0)+,(a1)+		; 32-Bit-Blauwert
+	dbf	d7,sf_copy_active_screen_colors_loop
+	move.l	d0,(a1)			; Listenende
+        rts
+
+
+	CNOP 0,4
+sf_fade_out_active_screen
+	tst.w	rd_arg_fader_enabled(a3)
+	beq.s	sf_fade_out_active_screen_loop
+	rts
+	CNOP 0,4
+sf_fade_out_active_screen_loop
+	CALLGRAF WaitTOF
+	bsr.s	screen_fader_out
+	bsr	sf_set_new_colors
+	tst.w	sfo_active(a3)
+	beq.s	sf_fade_out_active_screen_loop
+	rts
+
+
+      CNOP 0,4
+screen_fader_out
+	MOVEF.W	sf_colors_number_max*3,d6 ; Zähler
+	move.l	sf_color_cache(a3),a0	; Istwerte
+	addq.w  #4,a0			; Offset überspringen
+	sub.l	a1,a1			; Sollwert ($000000)
+	move.w  #sfo_fader_speed,a4	; Additions-/Subtraktionswert RGB-Werte
+	MOVEF.W sf_colors_number_max-1,d7 ;Anzahl der Farbwerte
+screen_fader_out_loop
+	moveq   #0,d0
+	move.b  (a0),d0			; 8-Bit Rot-Istwert
+	move.l  a1,d3			
+	swap    d3                      ; 8-Bit Rot-Sollwert
+	moveq   #0,d1
+	move.b  4(a0),d1		; 8-Bit Grün-Istwert
+	move.w  a1,d4			
+	lsr.w   #8,d4                   ; 8-Bit Grün-Sollwert
+	moveq   #0,d2
+	move.b  8(a0),d2		; 8-Bit Blau-Istwert
+	move.w  a1,d5
+	and.w	#$00ff,d5		; 8-Bit Blau-Sollwert
+
+	cmp.w	d3,d0
+	bgt.s	sfo_decrease_red
+	blt.s	sfo_increase_red
+sfo_matched_red
+	subq.w  #1,d6			; Ziel-Rotwert erreicht
+sfo_check_green_byte
+	cmp.w	d4,d1
+	bgt.s	sfo_decrease_green
+	blt.s	sfo_increase_green
+sfo_matched_green
+	subq.w  #1,d6			; Ziel-Grünwert erreicht
+sfo_check_blue_byte
+	cmp.w	d5,d2
+	bgt.s	sfo_decrease_blue
+	blt.s	sfo_increase_blue
+sfo_matched_blue
+	subq.w	#1,d6			; Ziel-Blauwert erreicht
+sfo_set_rgb_bytes
+	move.b	d0,(a0)+		; 4x 8-Bit Rotwert in Cache schreiben
+	move.b	d0,(a0)+
+	move.b	d0,(a0)+
+	move.b	d0,(a0)+
+	move.b	d1,(a0)+		; 4x 8-Bit Grünwert in Cache schreiben
+	move.b	d1,(a0)+
+	move.b	d1,(a0)+
+	move.b	d1,(a0)+
+	move.b	d2,(a0)+		; 4x 8-Bit Blauwert in Cache schreiben
+	move.b	d2,(a0)+
+	move.b	d2,(a0)+
+	move.b	d2,(a0)+
+	dbf	d7,screen_fader_out_loop
+	tst.w   d6			; Fertig mit ausblenden ?
+	bne.s   sfo_flush_caches	; Nein -> verzweige
+	move.w  #FALSE,sfo_active(a3)	; Fading-Out aus
+sfo_flush_caches
+	CALLEXECQ CacheClearU
+	CNOP 0,4
+sfo_decrease_red
+	sub.w	a4,d0
+	cmp.w	d3,d0
+	bgt.s	sfo_check_green_byte
+	move.w	d3,d0
+	bra.s	sfo_matched_red
+	CNOP 0,4
+sfo_increase_red
+	add.w	a4,d0
+	cmp.w	d3,d0
+	blt.s	sfo_check_green_byte
+	move.w	d3,d0
+	bra.s	sfo_matched_red
+	CNOP 0,4
+sfo_decrease_green
+	sub.w	a4,d1
+	cmp.w	d4,d1
+	bgt.s	sfo_check_blue_byte
+	move.w	d4,d1
+	bra.s	sfo_matched_green
+	CNOP 0,4
+sfo_increase_green
+	add.w	a4,d1
+	cmp.w	d4,d1
+	blt.s	sfo_check_blue_byte
+	move.w	d4,d1
+	bra.s	sfo_matched_green
+	CNOP 0,4
+sfo_decrease_blue
+	sub.w	a4,d2
+	cmp.w	d5,d2
+	bgt.s	sfo_set_rgb_bytes
+	move.w	d5,d2
+	bra.s	sfo_matched_blue
+	CNOP 0,4
+sfo_increase_blue
+	add.w	a4,d2
+	cmp.w	d5,d2
+	blt.s	sfo_set_rgb_bytes
+	move.w	d5,d2
+	bra.s	sfo_matched_blue
+
+	CNOP 0,4
+sf_set_new_colors
+	move.l	rd_active_screen(a3),a0
+	lea	sc_ViewPort(a0),a0
+	move.l	sf_color_cache(a3),a1
+	CALLGRAFQ LoadRGB32
+
+
+; Input
+; Result
+; d0.l	... Rückgabewert: Return-Code
+	CNOP 0,4
+rd_open_custom_screen
+	lea	rd_custom_screen_tag_list(pc),a1
+	move.l	sf_color_cache(a3),a0
+	move.l	a0,sctl_SA_Colors32+ti_Data(a1)
+	sub.l	a0,a0			; Keine NewScreen-Struktur
+	CALLINT OpenScreenTagList
+	move.l	d0,rd_custom_screen(a3)
+	bne.s	rd_open_custom_screen_ok
+	lea	rd_error_text19(pc),a0
+	moveq	#rd_error_text19_end-rd_error_text19,d0
+	bsr	adl_print_text
+	moveq	#RETURN_FAIL,d0
+	rts
+	CNOP 0,4
+rd_open_custom_screen_ok
+	lea	rd_custom_window_tag_list(pc),a0
+	move.l	d0,wtl_WA_CustomScreen+ti_data(a0) ; Zeiger auf Screen in WindowTagList eintragen
+	moveq	#RETURN_OK,d0
+	rts
+
+
+; Input
+; Result
+; d0.l	... Rückgabewert: Return-Code
+	CNOP 0,4
+rd_open_custom_window
+	sub.l	a0,a0			; Keine NewWindow-Struktur
+	lea	rd_custom_window_tag_list(pc),a1
+	CALLINT OpenWindowTagList
+	move.l	d0,rd_custom_window(a3)
+	bne.s	rd_open_custom_window_ok
+	lea	rd_error_text20(pc),a0
+	moveq	#rd_error_text20_end-rd_error_text20,d0
+	bsr	adl_print_text
+	moveq	#RETURN_FAIL,d0
+	rts
+	CNOP 0,4
+rd_open_custom_window_ok
+	moveq	#RETURN_OK,d0
+	rts
+
+
+	CNOP 0,4
+rd_clear_mousepointer
+	move.l	rd_custom_window(a3),a0
+	move.l	rd_sprite_pointer_data(a3),a1
+	moveq	#rd_sprite_y_size,d0
+	moveq	#rd_sprite_x_size,d1
+	moveq	#0,d2			; x-Offset
+	moveq	#0,d3			; y-Offset
+	CALLINTQ SetPointer
+
+
+	CNOP 0,4
+rd_get_sprite_resolution
+	move.l	rd_custom_screen(a3),a0
+	move.l  sc_ViewPort+vp_ColorMap(a0),a0
+	lea	rd_video_control_tag_list(pc),a1
+	move.l	#VTAG_SPRITERESN_GET,vctl_VTAG_SPRITERESN+ti_tag(a1)
+	clr.l	ti_data(a1)
+	CALLGRAF VideoControl
+	lea     rd_video_control_tag_list(pc),a0
+	move.l  vctl_VTAG_SPRITERESN+ti_Data(a0),rd_old_sprite_resolution(a3)
+	rts
+
+
+	CNOP 0,4
+rd_set_ocs_sprite_resolution
+	move.l	rd_custom_screen(a3),a2
+	move.l	sc_ViewPort+vp_ColorMap(a2),a0
+	lea	rd_video_control_tag_list(pc),a1
+	move.l	#VTAG_SPRITERESN_SET,+vctl_VTAG_SPRITERESN+ti_tag(a1)
+	move.l	#SPRITERESN_140NS,vctl_VTAG_SPRITERESN+ti_data(a1)
+	CALLGRAF VideoControl		; Sprite-Auflösung auf 140 ns Pixel zurücksetzen
+	move.l	a2,a0			; Zeiger auf Screen
+	CALLINT MakeScreen
+	CALLLIBQ RethinkDisplay
+
+
+	CNOP 0,4
+rd_blank_display
+	sub.l	a1,a1			; Hardware-Register auf PAL-Werte zurücksetzen
+	CALLGRAF LoadView
+	CALLLIBS WaitTOF		; Warten bis Änderung sichtbar ist
+	CALLLIBS WaitTOF		; Warten bis Interlace-Screens mit 2 Copperlisten auch voll geändert sind
+	tst.l	gb_ActiView(a6)		; Erschien zwischenzeitlich ein anderer View ?
+	bne.s	rd_blank_display	; Dann neuer Versuch
+	move.l	rd_demofile_path(a3),a0
+	cmp.b	#RUNMODE_OCS_VANILLA,pqe_runmode(a0)
+	bne.s	rd_blank_display_skip
+	moveq	#0,d0
+	move.l	d0,_CUSTOM+BPL1MOD	; OCS-komptible Moduli
+rd_blank_display_skip
+	rts
+
+
+	CNOP 0,4
+rd_check_monitor_switch
+	move.l	rd_monitor_id(a3),d0
+	CMPF.L	DEFAULT_MONITOR_ID,d0
+	bne.s	rd_check_monitor_id_pal
+	rts
+	CNOP 0,4
+rd_check_monitor_id_pal
+	cmp.l	#PAL_MONITOR_ID,d0
+	bne.s	rd_wait_monitor_switch
+	rts
+	CNOP 0,4
+rd_wait_monitor_switch
+	MOVEF.L	rd_switch_delay,d1
+	CALLDOSQ Delay
 
 
 	CNOP 0,4
@@ -2985,6 +3469,9 @@ rd_turn_off_fast_memory_proceed2
 	bra.s	rd_turn_off_fast_memory_loop
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
 rd_load_demofile
 	move.l	rd_demofile_path(a3),d1
@@ -2994,7 +3481,8 @@ rd_load_demofile
 	lea	rd_error_text14(pc),a0
 	moveq	#rd_error_text14_end-rd_error_text14,d0
 	bsr	adl_print_text
-	CALLDOSQ IoErr
+	moveq	#RETURN_FAIL,d0
+	rts
 	CNOP 0,4
 rd_load_demo_ok
 	CALLEXEC CacheClearU
@@ -3003,6 +3491,9 @@ rd_load_demo_ok
 
 
 ; ** Prüfen, ob es sich um eine WHDLoad Slave-Datei handelt **
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
 rd_check_demo_header
 	move.l	rd_demofile_seglist(a3),a0
@@ -3121,12 +3612,12 @@ rd_free_whdload_disk_object
 	moveq	#RETURN_OK,d0
 	rts
 
-; ** Wert von Tooltype QUITKEY umwandeln **
+
 ; Input
-; a0 ... Zeiger auf String
-; a2 ... Zeiger auf Kommando-String
+; a0	... Zeiger auf String
+; a2	... Zeiger auf Kommando-String
 ; Result
-; d0 ... Kein Rückgabewert
+; d0	... Kein Rückgabewert
 	CNOP 0,4
 rd_convert_quitkey_hexvalue
 	addq.w	#1,a0			; "$"-Zeichen in String überspringen
@@ -3140,12 +3631,11 @@ rd_convert_quitkey_hexvalue
 	rts
 
 
-; ** ASCII-Zeichen in Hexadezimalzahl umwandeln **
 ; Input
-; a0 ... Zeiger auf String
-; d7 ... Anzahl der Stellen zum Umwandeln
+; a0	... Zeiger auf String
+; d7.l	... Anzahl der Stellen zum Umwandeln
 ; Result
-; d0 ... Rückgabewert: Hexadezimalzahl
+; d0.l	... Rückgabewert: Hexadezimalzahl
 	CNOP 0,4
 rd_ascii_to_hex
 	add.l	d7,a0			; Zeiger auf Ende des Strings
@@ -3155,13 +3645,13 @@ rd_ascii_to_hex
 rd_ascii_to_hex_loop
 	moveq	#0,d1
 	move.b	-(a0),d1		; ASCII-Wert lesen
-	sub.b	#"0",d1			; ASCII-Wert "0" abziehen = 0...9
-	cmp.b	#9,d1			; Hex-Ziffern 0...9 ?
+	sub.b	#"0",d1			; ASCII-Wert "0" abziehen = 0..9
+	cmp.b	#9,d1			; Hex-Ziffern 0..9 ?
 	ble.s	rd_ascii_to_hex_ok	; Ja -> verzweige
 	subq.b	#7,d1			; ASCII-Wert "A" abziehen
-	cmp.b	#15,d1			; Hex-Ziffern A...F ?
+	cmp.b	#15,d1			; Hex-Ziffern A..F ?
 	ble.s	rd_ascii_to_hex_ok	; Ja -> verzweige
-	sub.b	#32,d1			; Ansonsten ASCII-Wert "a" abziehen für Hex-Ziffern a...f
+	sub.b	#32,d1			; Ansonsten ASCII-Wert "a" abziehen für Hex-Ziffern a..f
 rd_ascii_to_hex_ok
 	lsl.l	d2,d1			; *Hex-Stellenwert (16^0,16^1,16^2,...)
 	addq.w	#4,d2			; Shiftwert um 16^n erhöhen
@@ -3171,6 +3661,9 @@ rd_ascii_to_hex_ok
 
 
 ; ** Demo-Verzeichnisname ermitteln und zu aktuellem Verzeichnis erklären **
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code
 rd_set_new_current_dir
 	moveq	#"/",d2
 	moveq	#":",d3
@@ -3219,333 +3712,6 @@ rd_demofile_dir_lock_ok
 	rts
 
 
-; ** Aktiven Screen ermitteln **
-; Input
-; Result
-; d0 ... Rückgabewert: ggf. DOS-Error-Code
-	CNOP 0,4
-rd_get_os_screen
-	moveq	#0,d0			; Alle Locks
-	CALLINT LockIBase
-	move.l	d0,a0
-	move.l	ib_ActiveScreen(a6),a2
-	CALLLIBS UnlockIBase
-	move.l	a2,rd_os_screen(a3)
-	bne.s	rd_get_os_screen_ok
-	lea	rd_error_text17(pc),a0
-	moveq	#rd_error_text17_end-rd_error_text17,d0
-	bsr	adl_print_text
-	moveq	#RETURN_FAIL,d0
-	rts
-	CNOP 0,4
-rd_get_os_screen_ok
-	moveq	#RETURN_OK,d0
-	rts
-
-
-; ** Monitor-ID ermitteln **
-; Input
-; Result
-; d0 ... Rückgabewert: ggf. DOS-Error-Code
-	CNOP 0,4
-rd_get_os_monitor_id
-	move.l	rd_os_screen(a3),a0
-	lea	sc_ViewPort(a0),a0
-	CALLGRAF GetVPModeID
-	CMPF.L	INVALID_ID,d0
-	bne.s	rd_get_os_monitor_id_save
-	lea	rd_error_text18(pc),a0
-	moveq	#rd_error_text18_end-rd_error_text18,d0
-	bsr	adl_print_text
-	moveq	#RETURN_FAIL,d0
-	rts
-	CNOP 0,4
-rd_get_os_monitor_id_save
-	and.l	#MONITOR_ID_MASK,d0	; Ohne Auflösung
-	move.l	d0,rd_os_monitor_id(a3)
-	moveq	#RETURN_OK,d0
-	rts
-
-
-	CNOP 0,4
-sf_get_os_screen_colors_number
-	move.l	rd_os_screen(a3),a2
-	move.l	a2,a0                   ; Zeiger auf Screen
-	CALLINT GetScreenDrawInfo
-	move.l	d0,a1			; Zeiger auf Draw-Info-Struktur
-	moveq	#1,d0			; Minimale Tiefe eines Screens
-	move.w	dri_depth(a1),d7
-	subq.w	#1,d7			; wegen dbf
-sf_os_screen_depth_loop
-	add.w	d0,d0			; Farbanzahl ermitteln
-	dbf	d7,sf_os_screen_depth_loop
-	move.l	d0,sf_os_screen_colors_number(a3)
-	move.l	a2,a0                   ; Zeiger auf Screen
-	CALLLIBQ FreeScreenDrawInfo
-
-
-	CNOP 0,4
-sf_get_os_screen_color_table
-	move.l	rd_os_screen(a3),a0
-	move.l	sc_ViewPort+vp_ColorMap(a0),a0
-	move.l	sf_os_screen_color_table(a3),a1 ; 32-Bit RGB-Werte
-	moveq	#0,d0			; Ab COLOR00
-	MOVEF.L	sf_colors_number_max,d1 ; Alle 256 Farben
- 	CALLGRAFQ GetRGB32
-
-
-	CNOP 0,4
-sf_copy_os_screen_colors
-	move.l	sf_os_screen_color_table(a3),a0	; Quelle 32-Bit RGB-Werte
-	move.l	sf_color_cache(a3),a1	; Ziel 32-Bit RGB-Werte
-	move.w	#sf_colors_number_max,(a1)+ ; Anzahl der Farben
-	moveq	#0,d0
-	move.w	d0,(a1)+		; Ab COLOR00
-	MOVEF.W	sf_colors_number_max-1,d7 ; Anzahl der Farbwerte
-sf_copy_os_screen_colors_loop
-	move.l	(a0)+,(a1)+		; 32-Bit-Rotwert
-	move.l	(a0)+,(a1)+		; 32-Bit-Grünwert
-	move.l	(a0)+,(a1)+		; 32-Bit-Blauwert
-	dbf	d7,sf_copy_os_screen_colors_loop
-	move.l	d0,(a1)			; Listenende
-        rts
-
-
-	CNOP 0,4
-sf_fade_out_os_screen
-	tst.w	rd_arg_fader_enabled(a3)
-	beq.s	sf_fade_out_os_screen_loop
-	rts
-	CNOP 0,4
-sf_fade_out_os_screen_loop
-	CALLGRAF WaitTOF
-	bsr.s	screen_fader_out
-	bsr	sf_set_new_colors
-	tst.w	sfo_active(a3)
-	beq.s	sf_fade_out_os_screen_loop
-	rts
-
-
-      CNOP 0,4
-screen_fader_out
-	MOVEF.W	sf_colors_number_max*3,d6 ; Zähler
-	move.l	sf_color_cache(a3),a0	; Istwerte
-	addq.w  #4,a0			; Offset überspringen
-	sub.l	a1,a1			; Sollwert ($000000)
-	move.w  #sfo_fader_speed,a4	; Additions-/Subtraktionswert RGB-Werte
-	MOVEF.W sf_colors_number_max-1,d7 ;Anzahl der Farbwerte
-screen_fader_out_loop
-	moveq   #0,d0
-	move.b  (a0),d0			; 8-Bit Rot-Istwert
-	move.l  a1,d3			
-	swap    d3                      ; 8-Bit Rot-Sollwert
-	moveq   #0,d1
-	move.b  4(a0),d1		; 8-Bit Grün-Istwert
-	move.w  a1,d4			
-	lsr.w   #8,d4                   ; 8-Bit Grün-Sollwert
-	moveq   #0,d2
-	move.b  8(a0),d2		; 8-Bit Blau-Istwert
-	move.w  a1,d5
-	and.w	#$00ff,d5		; 8-Bit Blau-Sollwert
-
-	cmp.w	d3,d0
-	bgt.s	sfo_decrease_red
-	blt.s	sfo_increase_red
-sfo_matched_red
-	subq.w  #1,d6			; Ziel-Rotwert erreicht
-sfo_check_green_byte
-	cmp.w	d4,d1
-	bgt.s	sfo_decrease_green
-	blt.s	sfo_increase_green
-sfo_matched_green
-	subq.w  #1,d6			; Ziel-Grünwert erreicht
-sfo_check_blue_byte
-	cmp.w	d5,d2
-	bgt.s	sfo_decrease_blue
-	blt.s	sfo_increase_blue
-sfo_matched_blue
-	subq.w	#1,d6			; Ziel-Blauwert erreicht
-sfo_set_rgb_bytes
-	move.b	d0,(a0)+		; 4x 8-Bit Rotwert in Cache schreiben
-	move.b	d0,(a0)+
-	move.b	d0,(a0)+
-	move.b	d0,(a0)+
-	move.b	d1,(a0)+		; 4x 8-Bit Grünwert in Cache schreiben
-	move.b	d1,(a0)+
-	move.b	d1,(a0)+
-	move.b	d1,(a0)+
-	move.b	d2,(a0)+		; 4x 8-Bit Blauwert in Cache schreiben
-	move.b	d2,(a0)+
-	move.b	d2,(a0)+
-	move.b	d2,(a0)+
-	dbf	d7,screen_fader_out_loop
-	tst.w   d6			; Fertig mit ausblenden ?
-	bne.s   sfo_flush_caches	; Nein -> verzweige
-	move.w  #FALSE,sfo_active(a3)	; Fading-Out aus
-sfo_flush_caches
-	CALLEXECQ CacheClearU
-	CNOP 0,4
-sfo_decrease_red
-	sub.w	a4,d0
-	cmp.w	d3,d0
-	bgt.s	sfo_check_green_byte
-	move.w	d3,d0
-	bra.s	sfo_matched_red
-	CNOP 0,4
-sfo_increase_red
-	add.w	a4,d0
-	cmp.w	d3,d0
-	blt.s	sfo_check_green_byte
-	move.w	d3,d0
-	bra.s	sfo_matched_red
-	CNOP 0,4
-sfo_decrease_green
-	sub.w	a4,d1
-	cmp.w	d4,d1
-	bgt.s	sfo_check_blue_byte
-	move.w	d4,d1
-	bra.s	sfo_matched_green
-	CNOP 0,4
-sfo_increase_green
-	add.w	a4,d1
-	cmp.w	d4,d1
-	blt.s	sfo_check_blue_byte
-	move.w	d4,d1
-	bra.s	sfo_matched_green
-	CNOP 0,4
-sfo_decrease_blue
-	sub.w	a4,d2
-	cmp.w	d5,d2
-	bgt.s	sfo_set_rgb_bytes
-	move.w	d5,d2
-	bra.s	sfo_matched_blue
-	CNOP 0,4
-sfo_increase_blue
-	add.w	a4,d2
-	cmp.w	d5,d2
-	blt.s	sfo_set_rgb_bytes
-	move.w	d5,d2
-	bra.s	sfo_matched_blue
-
-	CNOP 0,4
-sf_set_new_colors
-	move.l	rd_os_screen(a3),a0
-	lea	sc_ViewPort(a0),a0
-	move.l	sf_color_cache(a3),a1
-	CALLGRAFQ LoadRGB32
-
-
-	CNOP 0,4
-rd_open_custom_screen
-	lea	rd_custom_screen_tag_list(pc),a1
-	move.l	sf_color_cache(a3),a0
-	move.l	a0,sctl_SA_Colors32+ti_Data(a1)
-	sub.l	a0,a0			; Keine NewScreen-Struktur
-	CALLINT OpenScreenTagList
-	move.l	d0,rd_custom_screen(a3)
-	bne.s	rd_open_custom_screen_ok
-	lea	rd_error_text19(pc),a0
-	moveq	#rd_error_text19_end-rd_error_text19,d0
-	bsr	adl_print_text
-	moveq	#RETURN_FAIL,d0
-	rts
-	CNOP 0,4
-rd_open_custom_screen_ok
-	lea	rd_custom_window_tag_list(pc),a0
-	move.l	d0,wtl_WA_CustomScreen+ti_data(a0) ; Zeiger auf Screen in WindowTagList eintragen
-	moveq	#RETURN_OK,d0
-	rts
-
-
-	CNOP 0,4
-rd_get_sprite_resolution
-	move.l	rd_custom_screen(a3),a0
-	move.l  sc_ViewPort+vp_ColorMap(a0),a0
-	lea	rd_video_control_tag_list(pc),a1
-	move.l	#VTAG_SPRITERESN_GET,vctl_VTAG_SPRITERESN+ti_tag(a1)
-	clr.l	ti_data(a1)
-	CALLGRAF VideoControl
-	lea     rd_video_control_tag_list(pc),a0
-	move.l  vctl_VTAG_SPRITERESN+ti_Data(a0),rd_old_sprite_resolution(a3)
-	rts
-
-
-	CNOP 0,4
-rd_set_ocs_sprite_resolution
-	move.l	rd_custom_screen(a3),a2
-	move.l	sc_ViewPort+vp_ColorMap(a2),a0
-	lea	rd_video_control_tag_list(pc),a1
-	move.l	#VTAG_SPRITERESN_SET,+vctl_VTAG_SPRITERESN+ti_tag(a1)
-	move.l	#SPRITERESN_140NS,vctl_VTAG_SPRITERESN+ti_data(a1)
-	CALLGRAF VideoControl		; Sprite-Auflösung auf 140 ns Pixel zurücksetzen
-	move.l	a2,a0			; Zeiger auf Screen
-	CALLINT MakeScreen
-	CALLLIBQ RethinkDisplay
-
-
-	CNOP 0,4
-rd_blank_display
-	sub.l	a1,a1			; Hardware-Register auf PAL-Werte zurücksetzen
-	CALLGRAF LoadView
-	CALLLIBS WaitTOF		; Warten bis Änderung sichtbar ist
-	CALLLIBS WaitTOF		; Warten bis Interlace-Screens mit 2 Copperlisten auch voll geändert sind
-	tst.l	gb_ActiView(a6)		; Erschien zwischenzeitlich ein anderer View ?
-	bne.s	rd_blank_display	; Dann neuer Versuch
-	move.l	rd_demofile_path(a3),a0
-	cmp.b	#RUNMODE_OCS_VANILLA,pqe_runmode(a0)
-	bne.s	rd_blank_display_skip
-	moveq	#0,d0
-	move.l	d0,_CUSTOM+BPL1MOD	; OCS-komptible Moduli
-rd_blank_display_skip
-	rts
-
-
-	CNOP 0,4
-rd_check_monitor_switch
-	move.l	rd_os_monitor_id(a3),d0
-	CMPF.L	DEFAULT_MONITOR_ID,d0
-	bne.s	rd_check_monitor_id_pal
-	rts
-	CNOP 0,4
-rd_check_monitor_id_pal
-	cmp.l	#PAL_MONITOR_ID,d0
-	bne.s	rd_wait_monitor_switch
-	rts
-	CNOP 0,4
-rd_wait_monitor_switch
-	MOVEF.L	rd_switch_delay,d1
-	CALLDOSQ Delay
-
-
-	CNOP 0,4
-rd_open_custom_window
-	sub.l	a0,a0			; Keine NewWindow-Struktur
-	lea	rd_custom_window_tag_list(pc),a1
-	CALLINT OpenWindowTagList
-	move.l	d0,rd_custom_window(a3)
-	bne.s	rd_open_custom_window_ok
-	lea	rd_error_text20(pc),a0
-	moveq	#rd_error_text20_end-rd_error_text20,d0
-	bsr	adl_print_text
-	moveq	#RETURN_FAIL,d0
-	rts
-	CNOP 0,4
-rd_open_custom_window_ok
-	moveq	#RETURN_OK,d0
-	rts
-
-
-	CNOP 0,4
-rd_clear_mousepointer
-	move.l	rd_custom_window(a3),a0
-	move.l	rd_sprite_data(a3),a1	; Leersprite
-	moveq	#rd_sprite_y_size,d0
-	moveq	#rd_sprite_x_size,d1
-	moveq	#0,d2			; x-Offset
-	moveq	#0,d3			; y-Offset
-	CALLINTQ SetPointer
-
-
 	CNOP 0,4
 rd_init_output_string_start
 	move.w	rd_play_duration(a3),d1
@@ -3556,11 +3722,10 @@ rd_init_output_string_start
 	rts
 
 
-; Output-String mit Spieldauer initialisieren
 ; Input
-; d1 ... Spieldauer
+; d1.w	... Spieldauer
 ; Result
-; d0 ... Kein Rückgabewert
+; d0	... Kein Rückgabewert
 	CNOP 0,4
 rd_create_output_string
 	move.w	d1,rd_timer_delay(a3)
@@ -3569,7 +3734,7 @@ rd_create_output_string
 	bsr	rp_dec_to_ascii
 	lea	rd_output_string(pc),a0 ; Zeiger auf Ausgabe-String
 	moveq	#rd_output_string_checksum-rd_output_string,d7 ; Anzahl der ASCII-Zeichen über die die Checksumme gebildet werden soll
-	bsr	rp_get_ascii_checksum
+	bsr	rp_update_output_checksum
 	move.w  d0,d1
 	bsr	rp_dec_to_hex
 	move.w  d0,d1
@@ -3578,6 +3743,9 @@ rd_create_output_string
 	bra	rp_hex_to_ascii
 
 
+; Input
+; Result
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 rd_start_timer
 	tst.w	rd_timer_delay(a3)
@@ -3592,10 +3760,10 @@ rd_set_timer_play_duration
 	rts
 
 
-; ** Serielle Schnittstelle initialisieren **
+; ** Parameter für serielle Schnittstelle initialisieren **
 ; Input
 ; Result
-; d0 ... Rückgabewert: DOS-Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 rd_set_timer
 	lea	rd_serial_io(pc),a1
@@ -3657,6 +3825,9 @@ rd_set_timer_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 rd_write_timer
 	lea	rd_serial_io(pc),a1
@@ -3736,7 +3907,6 @@ rd_disable_caches_mmu
 rd_disable_caches
 	CALLEXEC CacheControl		; CPU neu konfigurieren und Caches flushen
 	move.l	d0,rd_old_cacr(a3)
-
 	btst	#AFB_68040,AttnFlags+1(a6)
 	beq.s   rd_check_030_cpu1
 	lea	rd_040_060_mmu_off(pc),a5
@@ -3832,10 +4002,6 @@ rd_run_demofile
 	ENDC
 	move.l	rd_demofile_path(a3),a0
 	move.b	#FALSE,pqe_tag_active(a0) ; Demo wurde ausgeführt
-	addq.w	#1,rd_arg_playentry_offset(a3)
-	RP_POINTER_ENTRIES_OFFSET
-	move.l	d0,a0
-	addq.w	#1,(a0)			; Variable rp_entries_offset erhöhen
 ;ü	move.l	rd_demofile_path(a3),a0
 ;ü	cmp.b	#RUNMODE_OCS_VANILLA,pqe_runmode(a0)
 ;ü	beq.s	check_whdload_slave
@@ -4075,6 +4241,9 @@ rd_init_output_string_stop
 	bra     rd_create_output_string
 
 
+; Input
+; Result
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 rd_stop_timer
 	bsr	rd_set_timer
@@ -4084,15 +4253,53 @@ rd_stop_timer
 
 
 	CNOP 0,4
-rd_reset_mousepointer
-	move.l	rd_custom_window(a3),a0
-	CALLINTQ ClearPointer
+rd_restore_current_dir
+	move.l	rd_current_dir_lock(a3),d1
+	CALLDOSQ CurrentDir
 
 
 	CNOP 0,4
-rd_close_custom_window
-	move.l	rd_custom_window(a3),a0
-	CALLINTQ CloseWindow
+rd_unlock_demo_dir
+	move.l	rd_demofile_dir_lock(a3),d1
+	CALLDOSQ Unlock
+
+
+	CNOP 0,4
+rd_unload_demofile
+	move.l	rd_demofile_seglist(a3),d1
+	bne.s	rd_unload_demofile_ok
+	rts
+	CNOP 0,4
+rd_unload_demofile_ok
+	CALLDOSQ UnLoadSeg
+
+
+	CNOP 0,4
+rd_free_fast_memory
+	move.l	rd_demofile_path(a3),a0
+	cmp.b   #RUNMODE_TURBO,pqe_runmode(a0)
+	bne.s	rd_check_available_fast_memory
+	rts
+	CNOP 0,4
+rd_check_available_fast_memory
+	move.l	rd_available_fast_memory(a3),d2
+	bne.s	rd_turn_on_fast__memory
+	rts
+	CNOP 0,4
+rd_turn_on_fast__memory
+	move.l	_SysBase(pc),a6
+	move.l	d2,a2		
+turn_on_fast_memory_loop
+	move.l	(a2)+,d0		; Größe des Speicherbereichs
+	beq.s	free_first_fast_memory_block
+	move.l	(a2)+,a1		; Zeiger auf Speicherbereich
+	CALLLIBS FreeMem
+	bra.s	turn_on_fast_memory_loop
+	CNOP 0,4
+free_first_fast_memory_block
+	move.l	d2,a1			; Zeiger auf ersten größten Block
+	move.l	rd_available_fast_memory_size(a3),d0 ; Größe des ersten größten Blocks
+	CALLLIBQ FreeMem
 
 
 	CNOP 0,4
@@ -4109,23 +4316,29 @@ rd_restore_sprite_resolution
 
 
 	CNOP 0,4
+rd_close_custom_window
+	move.l	rd_custom_window(a3),a0
+	CALLINTQ CloseWindow
+
+
+	CNOP 0,4
 rd_close_custom_screen
 	move.l	rd_custom_screen(a3),a0
 	CALLINTQ CloseScreen
 
 
 	CNOP 0,4
-sf_fade_in_os_screen
+sf_fade_in_active_screen
 	tst.w	rd_arg_fader_enabled(a3)
-	beq.s	sf_fade_in_os_screen_loop
+	beq.s	sf_fade_in_active_screen_loop
 	rts
 	CNOP 0,4
-sf_fade_in_os_screen_loop
+sf_fade_in_active_screen_loop
 	CALLGRAF WaitTOF
 	bsr	screen_fader_in
 	bsr	sf_set_new_colors
 	tst.w	sfi_active(a3)
-	beq.s	sf_fade_in_os_screen_loop
+	beq.s	sf_fade_in_active_screen_loop
 	rts
 
 
@@ -4135,7 +4348,7 @@ screen_fader_in
 	move.l	sf_color_cache(a3),a0	; Puffer für Farbwerte
 	addq.w	#4,a0                   ; Offset überspringen
 	move.w	#sfi_fader_speed,a4	; Additions-/Subtraktionswert für RGB-Werte
-	move.l	sf_os_screen_color_table(a3),a1 ; Sollwerte
+	move.l	sf_active_screen_color_table(a3),a1 ; Sollwerte
 	MOVEF.W	sf_colors_number_max-1,d7 ; Anzahl der Farben
 screen_fader_in_loop
 	moveq	#0,d0
@@ -4236,71 +4449,24 @@ sfi_increase_blue
 
 
 	CNOP 0,4
-rd_check_os_screen_priority
+rd_check_active_screen_priority
 	moveq	#0,d0			; alle Locks
 	CALLINT LockIBase
 	move.l	d0,a0
 	move.l	ib_FirstScreen(a6),a2
 	CALLLIBS UnLockIBase
-	cmp.l	rd_os_screen(a3),a2
-	bne.s	rd_put_os_screen_to_front
+	cmp.l	rd_active_screen(a3),a2
+	bne.s	rd_put_active_screen_to_front
 	rts
 	CNOP 0,4
-rd_put_os_screen_to_front
-	move.l	rd_os_screen(a3),a0
+rd_put_active_screen_to_front
+	move.l	rd_active_screen(a3),a0
 	CALLLIBQ ScreenToFront
 
 
-	CNOP 0,4
-rd_restore_current_dir
-	move.l	rd_current_dir_lock(a3),d1
-	CALLDOSQ CurrentDir
-
-
-	CNOP 0,4
-rd_unlock_demo_dir
-	move.l	rd_demofile_dir_lock(a3),d1
-	CALLDOSQ Unlock
-
-
-	CNOP 0,4
-rd_unload_demofile
-	move.l	rd_demofile_seglist(a3),d1
-	bne.s	rd_unload_demofile_ok
-	rts
-	CNOP 0,4
-rd_unload_demofile_ok
-	CALLDOSQ UnLoadSeg
-
-
-	CNOP 0,4
-rd_free_fast_memory
-	move.l	rd_demofile_path(a3),a0
-	cmp.b   #RUNMODE_TURBO,pqe_runmode(a0)
-	bne.s	rd_check_available_fast_memory
-	rts
-	CNOP 0,4
-rd_check_available_fast_memory
-	move.l	rd_available_fast_memory(a3),d2
-	bne.s	rd_turn_on_fast__memory
-	rts
-	CNOP 0,4
-rd_turn_on_fast__memory
-	move.l	_SysBase(pc),a6
-	move.l	d2,a2		
-turn_on_fast_memory_loop
-	move.l	(a2)+,d0		; Größe des Speicherbereichs
-	beq.s	free_first_fast_memory_block
-	move.l	(a2)+,a1		; Zeiger auf Speicherbereich
-	CALLLIBS FreeMem
-	bra.s	turn_on_fast_memory_loop
-	CNOP 0,4
-free_first_fast_memory_block
-	move.l	d2,a1			; Zeiger auf ersten größten Block
-	move.l	rd_available_fast_memory_size(a3),d0 ; Größe des ersten größten Blocks
-	CALLLIBQ FreeMem
-
-
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
 rd_check_demofile_pathtags
 	MOVEF.L	playback_queue_entry_size,d0
@@ -4313,18 +4479,17 @@ rd_check_demofile_pathtags_loop
 	beq.s	rd_not_all_demofile_pathtags_set
 	add.l	d0,a0			; nächster Eintrag
 	dbf	d7,rd_check_demofile_pathtags_loop
-
 rd_all_demofile_pathtags_set
 	tst.w 	rd_arg_endless_enabled(a3) ; Endlosschleife aktiviert ?
 	beq.s	rd_remove_tags		; Ja -> verzweige
 rd_no_more_demos_left
-	clr.w	rd_arg_remove_enabled(a3) ; Reset-Prg entfernen
+	clr.w	rd_arg_remove_enabled(a3)
 	lea	rd_message_text2(pc),a0
 	moveq	#rd_message_text2_end-rd_message_text2,d0
 	bsr	adl_print_text
 	moveq	#RETURN_WARN,d0
 	rts
-  CNOP 0,4
+	CNOP 0,4
 rd_remove_tags
 	moveq 	#0,d0
 	MOVEF.L	playback_queue_entry_size,d1
@@ -4336,14 +4501,18 @@ rd_remove_tags_loop
 	move.b	d0,(a0)			; Tag-Status löschen
 	add.l	d1,a0			; nächster Eintrag
 	dbf	d7,rd_remove_tags_loop
-	RP_POINTER_ENTRIES_OFFSET
+	move.w	#1,rd_entry_offset(a3)
+	RP_POINTER_ENTRY_OFFSET
 	move.l	d0,a0
-	clr.w	(a0)			; Variable rp_entries_offset zurücksetzen
+	move.w	#1,(a0)			; Variable rp_entry_offset zurücksetzen
 rd_not_all_demofile_pathtags_set
 	moveq	#RETURN_OK,d0
 	rts
 
 
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code/Error-Code
 	CNOP 0,4
 rd_check_arg_LOOP_enabled
 	tst.w	rd_arg_loop_enabled(a3)
@@ -4402,15 +4571,15 @@ sf_free_color_cache
 
 	CNOP 0,4
 sf_free_screen_color_table
-	move.l	sf_os_screen_color_table(a3),a1
+	move.l	sf_active_screen_color_table(a3),a1
 	MOVEF.L	sf_colors_number_max*3*LONGWORD_SIZE,d0
 	CALLEXECQ FreeMem
 
 
 	CNOP 0,4
 rd_free_sprite_data
-	move.l	rd_sprite_data(a3),a1
-	moveq	#6*WORD_SIZE,d0
+	move.l	rd_sprite_pointer_data(a3),a1
+	moveq	#sprite_pointer_data_size,d0
 	CALLEXECQ FreeMem
 
 
@@ -4450,11 +4619,11 @@ rd_free_reset_programm_memory
 
 
 ; **** Exception-Routinen ****
-; ** VBR beschreiben **
+
 ; Input
-; d0 ... neuer Inhalt von VBR
+; d0.l	... neuer Inhalt von VBR
 ; Result
-; d0 ... Kein Rückgabewert
+; d0	... Kein Rückgabewert
 	CNOP 0,4
 rd_write_vbr
 	or.w	#SRF_I0+SRF_I1+SRF_I2,SR ; Level-7-Interruptebene
@@ -4464,12 +4633,10 @@ rd_write_vbr
 	rte
 
 
-; ** 68060-Caches aus **
 ; Input
-; d0 ... alter Inhalt von CACR
-; d1 ... neuer Inhalt von CACR
+; d1.l	... neuer Inhalt von CACR
 ; Result
-; d0 ... Kein Rückgabewert
+; d0.l	... Rückgabewert: alter Inhalt von CACR
 	MC68040
 	CNOP 0,4
 rd_060_caches_off
@@ -4484,12 +4651,11 @@ rd_060_caches_off
 	rte
 
 
-; ** 68040/060-MMU deaktivieren **
 ; Input
-; a1 ... Zeiger auf Speicherbereich für alte Werte
-; a3 ... Zeiger auf Variablen-Base
+; a1	... Zeiger auf Speicherbereich für alte Werte
+; a3	... Zeiger auf Variablen-Base
 ; Result
-; d0 ... Kein Rückgabewert
+; d0	... Kein Rückgabewert
 	MC68040
 	CNOP 0,4
 rd_040_060_mmu_off
@@ -4539,11 +4705,10 @@ rd_set_translation_registers
 	rte
 
 
-; ** 68030-MMU deaktivieren **
 ; Input
-; a1 ... Zeiger auf Speicherbereich für alte Werte
+; a1	... Zeiger auf Speicherbereich für alte Werte
 ; Result
-; d0 ... Kein Rückgabewert
+; d0	... Kein Rückgabewert
 	MC68030
 	CNOP 0,4
 rd_030_mmu_off
@@ -4567,11 +4732,10 @@ rd_030_mmu_off
 	rte
 
 
-; ** 68060 parallele Verarbeitung aus **
 ; Input
-; d1 ... neuer Inhalt von PCR
+; d1.l	... neuer Inhalt von PCR
 ; Result
-; d0 ... Alter Inhalt von PCR
+; d0.l	... alter Inhalt von PCR
 	MC68040
 	CNOP 0,4
 rd_060_superscalar_off
@@ -4584,22 +4748,10 @@ rd_060_superscalar_off
 	rte
 
 
-; ** 68060-Caches flushen **
-;	MC68040
-; 	CNOP 0,4
-; flush_060_caches
-;	or.w	#SRF_I0+SRF_I1+SRF_I2,SR ; Level-7-Interruptebene
-; 	nop
-; 	CPUSHA	BC			; Instruction/Data/Branch-Caches flushen
-; 	nop
-; 	rte
-
-
-; ** 68060 parallele Verarbeitung an **
 ; Input
-; d1 ... alter Inhalt von PCR
+; d1.l	... alter Inhalt von PCR
 ; Result
-; d0 ... Kein Rückgabewert
+; d0	... Kein Rückgabewert
 	MC68040
 	CNOP 0,4
 rd_060_superscalar_on
@@ -4610,11 +4762,10 @@ rd_060_superscalar_on
 	rte
 
 
-; ** 68040/060-MMU an **
 ; Input
-; a1 ... Zeiger auf Speicherbereich für alte Werte
+; a1	... Zeiger auf Speicherbereich für alte Werte
 ; Result
-; d0 ... Kein Rückgabewert
+; d0	... Kein Rückgabewert
 	MC68040
 	CNOP 0,4
 rd_040_060_mmu_on
@@ -4645,11 +4796,10 @@ rd_040_060_mmu_on
 	rte
 
 
-; ** 68030-MMU an **
 ; Input
-; a1 ... Zeiger auf Speicherbereich für alte Werte
+; a1	... Zeiger auf Speicherbereich für alte Werte
 ; Result
-; d0 ... Kein Rückgabewert
+; d0	... Kein Rückgabewert
 	MC68030
 	CNOP 0,4
 rd_030_mmu_on
@@ -4666,8 +4816,10 @@ rd_030_mmu_on
 	rte
 
 
-; ** 68060-Caches an **
-; d1 ... alter Inhalt von CACR
+; Input
+; d1.l	... alter Inhalt von CACR
+; Result
+; d0	... Kein Rückgabewert
 	MC68040
 	CNOP 0,4
 rd_060_caches_on
@@ -4732,8 +4884,10 @@ rp_reset_program_quit
 	rts
 
 
-; ** n Rasterzeilen warten **
-; d7 ... Anzahl der Rasterzeilen
+; Input
+; d7.w	... Anzahl der Rasterzeilen
+; Result
+; d0	... Kein Rückgabewert
 	CNOP 0,4
 rp_wait_rasterline
 	move.l	#$0001ff00,d2		; Maske für vertikale Position V0-V8 des Rasterstrahls
@@ -4763,7 +4917,7 @@ rp_init_serial_output_string
 	bsr.s	rp_dec_to_ascii
 	lea	rp_output_string(pc),a0 ; Zeiger auf Ausgabe-String
 	moveq	#rp_output_string_checksum-rp_output_string,d7 ; Anzahl der ASCII-Zeichen über die die Checksumme gebildet werden soll
-	bsr.s	rp_get_ascii_checksum
+	bsr.s	rp_update_output_checksum
 	move.l	d0,d1
 	bsr.s	rp_dec_to_hex
 	move.l	d0,d1
@@ -4772,11 +4926,10 @@ rp_init_serial_output_string
 	bra.s	rp_hex_to_ascii
 
 
-; ** Dezimalzahl in Hexadezimalzahl umwandeln **
 ; Input
-; d1 ... Dezimalzahl
+; d1.w	... Dezimalzahl
 ; Result
-; d0 ... Rückgabewert: Hexadezimalzahl & $ff
+; d0.w	... Rückgabewert: Hexadezimalzahl & $ff
 	CNOP 0,4
 rp_dec_to_hex
 	ext.l	d1
@@ -4796,13 +4949,12 @@ rp_dec_to_hex_loop
 	rts
 
 
-; ** Dezimalzahl in ASCII-Zeichen umwandeln **
 ; Input
-; d1 ... Dezimalzahl
-; d7 ... Anzahl der Stellen zum Umwandeln
-; a0 ... Stringadresse
+; d1.w	... Dezimalzahl
+; d7.w	... Anzahl der Stellen zum Umwandeln
+; a0	... Stringadresse
 ; Result
-; d0 ... Kein Rückgabewert
+; d0	... Kein Rückgabewert
 	CNOP 0,4
 rp_dec_to_ascii
 	ext.l	d1
@@ -4823,13 +4975,12 @@ rp_dec_to_ascii_loop2
 	rts
 
 
-; ** Hexadezimalzahl in ASCII-Zeichen umwandeln **
 ; Input
-; d1 ... Hexadezimalzahl
-; d7 ... Anzahl der Stellen zum Umwandeln
-; a0 ... Zeiger auf String
+; d1.w	... Hexadezimalzahl
+; d7.w	... Anzahl der Stellen zum Umwandeln
+; a0	... Zeiger auf String
 ; Result
-; d0 ... Kein Rückgabewert
+; d0	... Kein Rückgabewert
 	CNOP 0,4
 rp_hex_to_ascii
 	ext.l	d1
@@ -4851,19 +5002,19 @@ rp_hex_to_ascii_ok
 
 ; ** Checksumme aus den ersten 7 ASCII-Zeichen des Ausgabe-Strings bilden **
 ; Input
-; d7 ... Anzahl der ASCII-Zeichen über die die Checksumme gebildet werden soll
-; a0 ... Zeiger auf String
+; d7.w	... Anzahl der ASCII-Zeichen über die die Checksumme gebildet werden soll
+; a0	... Zeiger auf String
 ; Result
-; d0 ... Rückgabewert: Checksumme
+; d0.w	... Rückgabewert: Checksumme
 	CNOP 0,4
-rp_get_ascii_checksum
+rp_update_output_checksum
 	moveq	#0,d0			; Checksumme
 	moveq	#0,d1
 	subq.w	#1,d7			; wegen dbf
-rp_get_ascii_checksum_loop
+rp_update_output_checksum_loop
 	move.b	(a0)+,d1		; ASCII-Wert
 	add.w	d1,d0
-	dbf	d7,rp_get_ascii_checksum_loop
+	dbf	d7,rp_update_output_checksum_loop
 	rts
 
 
@@ -4892,6 +5043,9 @@ rp_write_string_loop
 
 
 ; ** Prüfen, ob alle Demos bereits gestartet wurden **
+; Input
+; Result
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 rp_check_demofile_pathtags
 	MOVEF.L playback_queue_entry_size,d0
@@ -4919,15 +5073,17 @@ rp_remove_tags_loop
 	move.b	d0,(a0)			; Tag-Status löschen
 	add.l	d1,a0			; nächster Eintrag
 	dbf	d7,rp_remove_tags_loop
-	lea	rp_entries_offset(pc),a0
-	clr.w	(a0)			; Offset in Dateipfade-Tabelle zurücksetzen
+	lea	rp_entry_offset(pc),a0
+	move.w	#1,(a0)			; Offset in Dateipfade-Tabelle zurücksetzen
 rp_not_all_demofile_pathtags_set
-	moveq	#RETURN_ERROR,d0
+	moveq	#RETURN_WARN,d0
 	rts
 
 
-; ** Bildschirm für kurze Zeit (n-mal 50 FPS) umfärben **
-; d3 ... RBG4 Farbwert
+; Input
+; d3.w	... RBG4-Farbwert
+; Result
+; d0	... Kein Rückgabewert
 	CNOP 0,4
 rp_screen_colour_flash
 	moveq	#$0001,d2		; Maske für vertikale Position Bit 8
@@ -4948,24 +5104,23 @@ rp_wait_tick
 	CNOP 0,4
 rp_restore_custom_cool_capture
 	move.l	rp_reset_program_memory(pc),CoolCapture(a6)
-	bsr.s	rp_calculate_checksum
+	bsr.s	rp_update_exec_checksum
 	CALLLIBQ CacheClearU
 
 
-; ** Checksumm für Exec-Base berechnen **
 ; Input
-; a6 ... Exec-Base
+; a6	... Exec-Base
 ; Result
-; d0 ... Kein Rückgabewert
+; d0	... Kein Rückgabewert
 	CNOP 0,4
-rp_calculate_checksum
+rp_update_exec_checksum
 	moveq	#0,d0
 	move.w	d0,LowMemChkSum(a6)	; Checksumme in Execbase löschen
 	lea	SoftVer(a6),a0		; Start-Abschnitt in Execbase
 	moveq	#((ChkSum-SoftVer)/WORD_SIZE)-1,d1 ; Anzahl Worte, über die Checksumme gebildet wird
-rp_calculate_checksum_loop
+rp_update_exec_checksum_loop
 	add.w	(a0)+,d0
-	dbf	d1,rp_calculate_checksum_loop
+	dbf	d1,rp_update_exec_checksum_loop
 	not.w	d0
 	move.w	d0,(a0)			; Neue Checksumme
 	rts
@@ -5042,58 +5197,57 @@ rp_install_custom_exception_vectors
 
 
 ; Input
-; a6 ... Exec-Base
+; a6	... Exec-Base
 ; Result
-; d0 ... Kein Rückgabewert
+; d0	... Kein Rückgabewert
 	CNOP 0,4
 rp_clear_cool_capture
 	moveq	#0,d0
 	move.l	d0,CoolCapture(a6)
-	bsr	rp_calculate_checksum
+	bsr	rp_update_exec_checksum
 	CALLLIBQ CacheClearU
 
 
 ; Input
-; a6 ... Exec-Base
+; a6	... Exec-Base
 ; Result
-; d0 ... Kein Rückgabewert
+; d0	... Kein Rückgabewert
 	CNOP 0,4
 rp_old_exception_vectors
 	lea	rp_read_vbr(pc),a5
 	CALLLIBS Supervisor
 	tst.l	d0			; VBR = $000000 ?
 	beq.s	rp_chip_memory_old_trap_vectors ; Ja -> verzweige
-	move.l	d0,a0
+	move.l	d0,a1
 	IFEQ adl_level_7_handler_enabled
-		move.l	rp_old_level_7_autovector(pc),LEVEL_7_AUTOVECTOR(a0) ; Zeiger alte Level-7-Interrptprogramm eintragen
+		move.l	rp_old_level_7_autovector(pc),LEVEL_7_AUTOVECTOR(a1) ; Zeiger alte Level-7-Interrptprogramm eintragen
 	ENDC
-	add.w	#TRAP_0_VECTOR,a0	; Ab Trap0-Vektor
+	add.w	#TRAP_0_VECTOR,a1	; Ab Trap0-Vektor
 	bsr.s	rp_copy_old_trap_vectors
 rp_chip_memory_old_trap_vectors
 	IFEQ adl_level_7_handler_enabled
-		move.l	d0,a0
-		move.l	rp_old_level_7_autovector(pc),LEVEL_7_AUTOVECTOR(a0) ; Zeiger alte Level-7-Interrptprogramm eintragen
+		move.l	d0,a1
+		move.l	rp_old_level_7_autovector(pc),LEVEL_7_AUTOVECTOR(a1) ; Zeiger alte Level-7-Interrptprogramm eintragen
 	ENDC
-	move.w	#TRAP_0_VECTOR,a0	; Ab Trap0-Vektor
+	move.w	#TRAP_0_VECTOR,a1	; Ab Trap0-Vektor
 	bsr.s	rp_copy_old_trap_vectors
 	CALLLIBQ CacheClearU
 
 
-; Alte Trap-Vektoren wieder setzen
 ; Input
-; a0 ... Ziel Trap#0-Vektor
+; a1	... Ziel: Trap#0-Vektor
 ; Result
-; d0 ... Kein Rückgabewert
+; d0	... Kein Rückgabewert
 	CNOP 0,4
 rp_copy_old_trap_vectors
-	lea	rp_old_trap_0_vector(pc),a1
+	lea	rp_old_trap_0_vector(pc),a0
 	IFEQ adl_level_7_handler_enabled
 		moveq	#8-1,d7		; Anzahl der Trap-Vektoren
 	ELSE
 		moveq	#7-1,d7		; Anzahl der Trap-Vektoren
 	ENDC
 rd_copy_old_trap_vectors_loop
-	move.l	(a1)+,(a0)+		; Vektor kopieren
+	move.l	(a0)+,(a1)+		; Vektor kopieren
 	dbf	d7,rd_copy_old_trap_vectors_loop
 	rts
 
@@ -5109,8 +5263,7 @@ rp_level_7_program
 		move.l	rp_reset_program_memory(pc),CoolCapture(a6)
 		moveq	#0,d0
 		move.l	d0,WarmCapture(a6)
-		move.w	d0,LowMemChkSum(a6)
-		bsr.s   rp_calculate_checksum
+		bsr.s   rp_update_exec_checksum
 		CALLLIBS CacheClearU
 		CALLLIBQ ColdReboot
 		CNOP 0,4
@@ -5121,10 +5274,10 @@ rp_no_reset
 	ENDC
 
 
-; ** RP_POINTER_ENTRIES_NUMBER **
+; RP_POINTER_ENTRIES_NUMBER
 ; Input
 ; Result
-; d0 ... Rückgabewert: Zeiger auf Variable
+; d0.l	... Rückgabewert: Zeiger auf Variable
 	CNOP 0,4
 rp_trap_0_program
 	lea	rp_entries_number(pc),a0
@@ -5133,10 +5286,10 @@ rp_trap_0_program
 	rte
 
 
-; ** RP_POINTER_ENTRIES_NUMBER_MAX **
+; RP_POINTER_ENTRIES_NUMBER_MAX
 ; Input
 ; Result
-; d0 ... Rückgabewert: Zeiger auf Variable
+; d0.l	... Rückgabewert: Zeiger auf Variable
 	CNOP 0,4
 rp_trap_1_program
 	lea	rp_entries_number_max(pc),a0
@@ -5145,22 +5298,22 @@ rp_trap_1_program
 	rte
 
 
-; ** RP_POINTER_ENTRIES_OFFSET **
+; RP_POINTER_ENTRY_OFFSET
 ; Input
 ; Result
-; d0 ... Rückgabewert: Zeiger auf Variable
+; d0.l	... Rückgabewert: Zeiger auf Variable
 	CNOP 0,4
 rp_trap_2_program
-	lea	rp_entries_offset(pc),a0
+	lea	rp_entry_offset(pc),a0
 	move.l	a0,d0
 	nop
 	rte
 
 
-; ** RP_POINTER_ENTRIES_BUFFER **
+; RP_POINTER_ENTRIES_BUFFER
 ; Input
 ; Result
-; d0 ... Rückgabewert: Zeiger auf Puffer für Dateipfade
+; d0.l	... Rückgabewert: Zeiger auf Puffer
 	CNOP 0,4
 rp_trap_3_program
 	lea	rp_entries_buffer(pc),a0
@@ -5169,10 +5322,10 @@ rp_trap_3_program
 	rte
 
 
-; ** RP_POINTER_ENDLESS_ENABLED **
+; RP_POINTER_ENDLESS_ENABLED
 ; Input
 ; Result
-; d0 ... Rückgabewert: Zeiger auf Variable
+; d0.l	... Rückgabewert: Zeiger auf Variable
 	CNOP 0,4
 rp_trap_4_program
 	lea	rp_endless_enabled(pc),a0
@@ -5181,10 +5334,10 @@ rp_trap_4_program
 	rte
 
 
-; ** RP_POINTER_CUSTOM_VECTORS **
+; RP_POINTER_CUSTOM_VECTORS
 ; Input
 ; Result
-; d0 ... Rückgabewert: Zeiger auf eigene Trap-Vektoren
+; d0.l	... Rückgabewert: Zeiger auf eigene Trap-Vektoren
 	CNOP 0,4
 rp_trap_5_program
 	lea	rp_custom_trap_0_vector(pc),a0
@@ -5193,10 +5346,10 @@ rp_trap_5_program
 	rte
 
 
-; ** RP_REMOVE_RESET_PROGRAM **
+; RP_REMOVE_RESET_PROGRAM
 ; Input
 ; Result
-; d0 ... Rückgabewert: Gesamtgröße des Reset-Programms
+; d0.l	... Rückgabewert: Größe des Reset-Programms mit Puffer
 	CNOP 0,4
 rp_trap_6_program
 	movem.l	a5-a6,-(a7)
@@ -5211,7 +5364,7 @@ rp_trap_6_program
 
 
 	IFEQ adl_level_7_handler_enabled
-; ** RP_SET_LEVEL_7_RESET_ACTIVE **
+; RP_SET_LEVEL_7_RESET_ACTIVE
 		CNOP 0,4
 rp_trap_7_program
 		lea	rp_level_7_reset_active(pc),a0
@@ -5221,7 +5374,9 @@ rp_trap_7_program
 	ENDC
 
 
-; d0 ... Rückgabewert Inhalt von VBR
+; Input
+; Result
+; d0.l	... Rückgabewert: Inhalt von VBR
 	CNOP 0,4
 rp_read_vbr
 	or.w	#SRF_I0+SRF_I1+SRF_I2,SR ; Level-7-Interruptebene
@@ -5265,7 +5420,7 @@ rp_level_7_reset_active		DC.W 0
 
 rp_entries_number		DC.W 0
 rp_entries_number_max		DC.W 0
-rp_entries_offset	 	DC.W 0
+rp_entry_offset	 		DC.W 0
 rp_endless_enabled		DC.W 0
 
 
@@ -5591,12 +5746,12 @@ rd_tag_active_text2_end
 	EVEN
 
 
-rd_message_text
+rd_message_text1
 	DC.B "Playback queue has "
 rd_not_used_entries_string
 	DC.B "   "
 	DC.B "unused entries left",ASCII_LINE_FEED
-rd_message_text_end
+rd_message_text1_end
 	EVEN
 
 rd_message_text2
@@ -5696,7 +5851,7 @@ dc_error_text1
 dc_error_text1_end
 	EVEN
 dc_error_text2
-	DC.B "Couldn't lock playlist file"
+	DC.B "Couldn't lock playlist file",ASCII_LINE_FEED
 dc_error_text2_end
 	EVEN
 dc_error_text3
@@ -5712,11 +5867,11 @@ dc_error_text5
 dc_error_text5_end
 	EVEN
 dc_error_text6
-	DC.B "Couldn't open playlist file"
+	DC.B "Couldn't open playlist file",ASCII_LINE_FEED
 dc_error_text6_end
 	EVEN
 dc_error_text7
-	DC.B "Playlist file read error"
+	DC.B "Playlist file read error",ASCII_LINE_FEED
 dc_error_text7_end
 	EVEN
 dc_error_text8
@@ -5827,11 +5982,11 @@ rd_error_text13
 rd_error_text13_end
 	EVEN
 rd_error_text14
-	DC.B "Couldn't load demo"
+	DC.B "Couldn't load demo",ASCII_LINE_FEED
 rd_error_text14_end
 	EVEN
 rd_error_text15
-	DC.B "Couldn't open WHDLoad .info file"
+	DC.B "Couldn't open WHDLoad .info file",ASCII_LINE_FEED
 rd_error_text15_end
 	EVEN
 rd_error_text16
