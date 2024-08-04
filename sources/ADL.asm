@@ -631,6 +631,7 @@ sprite_pointer_data_size	RS.B 0
 
 
 ; **** Amiga Demo-Launcher ****
+	lea	rd_output_string(pc),a0
 	movem.l d2-d7/a2-a6,-(a7)
 	lea	adl_variables(pc),a3
 	bsr	adl_init_variables
@@ -1363,12 +1364,6 @@ rd_check_arg_secs
 	beq.s	rd_check_arg_mins
 	move.l	d0,a0			; Zeiger auf String
 	move.l	(a0),d0			; Sekundenwert
-	bne.s	rd_check_arg_secs_ok
-	bsr	adl_print_cmd_usage
-	MOVEF.L	ERROR_KEY_NEEDS_ARG,d0
-	rts
-	CNOP 0,4
-rd_check_arg_secs_ok
 	moveq	#rd_secondc_max,d2
 	cmp.l	d2,d0
 	ble.s   rd_check_arg_mins
@@ -1383,12 +1378,6 @@ rd_check_arg_mins
 	beq.s	rd_calculate_ms_sum
 	move.l	d1,a0			; Zeiger auf String
 	move.l	(a0),d1			; Minutenwert
-	bne.s	rd_check_arg_mins_ok
-	bsr	adl_print_cmd_usage
-	MOVEF.L	ERROR_KEY_NEEDS_ARG,d0
-	rts
-	CNOP 0,4
-rd_check_arg_mins_ok
 	moveq	#rd_minutes_max,d2
 	cmp.l	d2,d1
 	ble.s   rd_calculate_ms_sum
@@ -2375,20 +2364,18 @@ dc_unlock_playlist_file
 	CALLDOSQ UnLock
 
 
-
-
 	CNOP 0,4
 dc_free_entries_buffer
 	tst.w	adl_reset_program_active(a3)
-	beq.s	dc_free_entries_buffer_skip
+	bne.s	dc_free_entries_buffer_ok
+	rts
+	CNOP 0,4
+dc_free_entries_buffer_ok
 	move.l	adl_entries_buffer(a3),a1
 	moveq	#0,d0
 	move.w	adl_entries_number_max(a3),d0
 	MULUF.L playback_queue_entry_size,d0,d1 ; Größe des Puffers ermitteln
 	CALLEXECQ FreeMem
-	CNOP 0,4
-dc_free_entries_buffer_skip
-	rts
 
 
 	CNOP 0,4
@@ -2484,6 +2471,7 @@ rd_start
 
 rd_play_loop
 	bsr	rd_get_demofile_name
+	bsr	rd_print_demofile_start_message
 	bsr	rd_check_demofile_play_state
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_io_error
@@ -2554,7 +2542,7 @@ rd_play_loop
 	bsr	rd_init_output_string_stop
 	bsr	rd_stop_timer
 	move.l	d0,adl_dos_return_code(a3)
-
+	
 rd_cleanup_current_dir
 	bsr	rd_restore_current_dir
 	bsr	rd_unlock_demo_dir
@@ -2567,6 +2555,7 @@ rd_cleanup_fast_memory
 
 rd_cleanup_display
 	bsr	rd_restore_sprite_resolution
+	bsr	rd_check_monitor_switch
 rd_cleanup_custom_window
 	bsr	rd_close_custom_window
 rd_cleanup_custom_screen
@@ -2785,7 +2774,7 @@ rd_init_serial_io
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code/Error-Code
+; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
 rd_open_serial_device
 	lea	serial_device_name(pc),a0
@@ -2798,7 +2787,8 @@ rd_open_serial_device
 	lea	rd_error_text5(pc),a0
 	moveq	#rd_error_text5_end-rd_error_text5,d0
 	bsr	adl_print_text
-	CALLDOSQ IOErr
+	moveq	#RETURN_FAIL,d0
+	rts
 	CNOP 0,4
 rd_open_serial_device_ok
 	moveq	#RETURN_OK,d0
@@ -2911,6 +2901,16 @@ rd_demofile_name_ok
 	move.l	a0,rd_demofile_name(a3) ; Zeiger auf Dateinamen retten
 	subq.w	#1,d0			; "/" oder ":" abziehen
 	move.l	d0,rd_demofile_name_length(a3)
+	addq.w	#1,rd_entry_offset(a3)
+	RP_POINTER_ENTRY_OFFSET
+	move.l	d0,a0
+	addq.w	#1,(a0)			; Variable rp_entry_offset erhöhen
+	moveq	#RETURN_OK,d0
+	rts
+
+
+	CNOP 0,4
+rd_print_demofile_start_message
 	lea	rd_demofile_name_header(pc),a0
 	moveq	#rd_demofile_name_header_end-rd_demofile_name_header,d0
 	bsr	adl_print_text
@@ -2919,14 +2919,7 @@ rd_demofile_name_ok
 	bsr	adl_print_text
 	lea	rd_demofile_name_tail(pc),a0
 	moveq	#rd_demofile_name_tail_end-rd_demofile_name_tail,d0
-	bsr	adl_print_text
-; ++++++++++++++++++++++++++++++
-	addq.w	#1,rd_entry_offset(a3)
-	RP_POINTER_ENTRY_OFFSET
-	move.l	d0,a0
-	addq.w	#1,(a0)			; Variable rp_entry_offset erhöhen
-	moveq	#RETURN_OK,d0
-	rts
+	bra	adl_print_text
 
 
 ; Input
@@ -4603,6 +4596,11 @@ rd_close_icon_library
 
 	CNOP 0,4
 rd_remove_reset_program
+	tst.w	adl_reset_program_active(a3)
+	beq.s	rd_check_arg_remove_enabled2
+	rts
+	CNOP 0,4
+rd_check_arg_remove_enabled2
 	tst.w	rd_arg_remove_enabled(a3)
 	beq.s	rd_free_reset_programm_memory
 	rts
