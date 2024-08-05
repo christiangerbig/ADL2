@@ -1,6 +1,6 @@
 ; AmigaDemoLauncher2
 ; Christian Gerbig
-; 30.07.2024
+; 05.08.2024
 ; V.2.0
 
 ; Requirements
@@ -477,7 +477,7 @@ rd_old_sprite_resolution	RS.L 1
 rd_available_fast_memory_size	RS.L 1
 rd_available_fast_memory	RS.L 1
 
-rd_current_dir_lock		RS.L 1
+rd_old_current_dir_lock		RS.L 1
 
 rd_custom_trap_vectors		RS.L 1
 
@@ -2483,6 +2483,10 @@ rd_play_loop
 	bsr	rd_check_demofile_header
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_io_error
+	bsr	rd_get_demofile_dir_path
+	bsr	rd_set_new_current_dir
+	move.l	d0,adl_dos_return_code(a3)
+	bne	rd_cleanup_io_error
 
 	bsr	rd_get_prerunscript_path
 	bsr	rd_check_prerunscript_path
@@ -2516,10 +2520,7 @@ rd_play_loop
 	bsr	rd_load_demofile
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_fast_memory
-	bsr	rd_check_demo_header
-	move.l	d0,adl_dos_return_code(a3)
-	bne	rd_cleanup_demofile
-	bsr	rd_set_new_current_dir
+	bsr	rd_check_whdloadfile
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_demofile
 
@@ -2543,10 +2544,6 @@ rd_play_loop
 	bsr	rd_stop_timer
 	move.l	d0,adl_dos_return_code(a3)
 	
-rd_cleanup_current_dir
-	bsr	rd_restore_current_dir
-	bsr	rd_unlock_demo_dir
-
 rd_cleanup_demofile
 	bsr	rd_unload_demofile
 
@@ -2563,6 +2560,9 @@ rd_cleanup_custom_screen
 rd_cleanup_active_screen_colors
 	bsr	sf_fade_in_active_screen
 	bsr	rd_check_active_screen_priority
+
+rd_cleanup_current_dir
+	bsr	rd_restore_current_dir
 
 rd_cleanup_io_error
 	bsr	adl_print_io_error
@@ -3012,6 +3012,62 @@ rd_check_demofile_header
 	rts
 	CNOP 0,4
 rd_check_demofile_header_ok
+	moveq	#RETURN_OK,d0
+	rts
+
+
+	CNOP 0,4
+rd_get_demofile_dir_path
+	moveq	#"/",d2
+	moveq	#":",d3
+	moveq	#adl_demofile_path_length-1,d7
+	move.l	rd_demofile_path(a3),a0 ; Zeiger auf Eintrag in Playback-Queue
+	add.l	d7,a0			; Ende des Quellpuffers
+	lea	rd_demo_dir_path(pc),a1 ; Zeiger auf Puffer für Demo-Directory-Pfad
+	add.l	d7,a1			; Ende des Zielpuffers
+rd_get_dir_loop
+	move.b	-(a0),d0		; Quell-Pfadename rückwärts byteweise auslesen
+	subq.w	#1,d7			; Zähler verringern
+	clr.b	-(a1)			; Quell-Pfadename rückwärts byteweise löschen
+	cmp.b	d2,d0			; Ende des Verzeichnisnamens gefunden ?
+	beq.s	rd_dir_name_found2	; Ja -> verzweige
+	cmp.b	d3,d0			; Ende des Gerätenamens gefunden ?
+	beq.s	rd_dir_name_found1	; Ja -> verzweige
+	bra.s	rd_get_dir_loop
+	CNOP 0,4
+rd_dir_name_found1
+	move.b	d0,(a1)			; ":" eintragen
+rd_dir_name_found2
+	subq.w	#1,d7			; wegen dbf
+rd_copy_characters_loop
+	move.b	-(a0),-(a1)
+	dbf	d7,rd_copy_characters_loop
+        rts
+
+
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code
+rd_set_new_current_dir
+	lea	rd_demo_dir_path(pc),a0
+	move.l	a0,d1			; Zeiger auf Puffer für Pfad
+	MOVEF.L	ACCESS_READ,d2
+	CALLDOS Lock
+	move.l	d0,rd_demofile_dir_lock(a3)
+	bne.s	rd_demofile_dir_lock_ok
+	lea	rd_error_text16(pc),a0
+	moveq	#rd_error_text16_end-rd_error_text16,d0
+	bsr	adl_print_text
+	moveq	#RETURN_FAIL,d0
+	rts
+	CNOP 0,4
+rd_demofile_dir_lock_ok
+	move.l	d0,d1			; Lock für Programm-Directory
+	move.l	d0,d3			; Lock für Current-Directory
+	CALLLIBS SetProgramDir		; PRGDIR: = Demo-Directory
+	move.l	d3,d1			; Current-Directory-Lock
+	CALLLIBS CurrentDir		; Current Directory = Demo-Directory
+	move.l	d0,rd_old_current_dir_lock(a3) ; Lock von altem Current Directory
 	moveq	#RETURN_OK,d0
 	rts
 
@@ -3470,14 +3526,14 @@ rd_load_demofile
 	move.l	rd_demofile_path(a3),d1
 	CALLDOS LoadSeg
 	move.l	d0,rd_demofile_seglist(a3)
-	bne.s	rd_load_demo_ok
+	bne.s	rd_load_demofile_ok
 	lea	rd_error_text14(pc),a0
 	moveq	#rd_error_text14_end-rd_error_text14,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
-rd_load_demo_ok
+rd_load_demofile_ok
 	CALLEXEC CacheClearU
 	moveq	#RETURN_OK,d0
 	rts
@@ -3488,7 +3544,7 @@ rd_load_demo_ok
 ; Result
 ; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
-rd_check_demo_header
+rd_check_whdloadfile
 	move.l	rd_demofile_seglist(a3),a0
 	add.l	a0,a0			; BCPL-Zeiger
 	add.l	a0,a0
@@ -3650,58 +3706,6 @@ rd_ascii_to_hex_ok
 	addq.w	#4,d2			; Shiftwert um 16^n erhöhen
 	add.l	d1,d0			; Stelle zum Ergebnis addieren
 	dbf	d7,rd_ascii_to_hex_loop
-	rts
-
-
-; ** Demo-Verzeichnisname ermitteln und zu aktuellem Verzeichnis erklären **
-; Input
-; Result
-; d0.l	Rückgabewert: Return-Code
-rd_set_new_current_dir
-	moveq	#"/",d2
-	moveq	#":",d3
-	moveq	#adl_demofile_path_length-1,d7
-	move.l	rd_demofile_path(a3),a0 ; Zeiger auf Eintrag in Playback-Queue
-	add.l	d7,a0			; Ende des Quellpuffers
-	lea	rd_demo_dir_path(pc),a1 ; Zeiger auf Puffer für Demo-Directory-Pfad
-	add.l	d7,a1			; Ende des Zielpuffers
-rd_get_dir_loop
-	move.b	-(a0),d0		; Quell-Pfadename rückwärts byteweise auslesen
-	subq.w	#1,d7			; Zähler verringern
-	clr.b	-(a1)			; Quell-Pfadename rückwärts byteweise löschen
-	cmp.b	d2,d0			; Ende des Verzeichnisnamens gefunden ?
-	beq.s	rd_dir_name_found2	; Ja -> verzweige
-	cmp.b	d3,d0			; Ende des Gerätenamens gefunden ?
-	beq.s	rd_dir_name_found1	; Ja -> verzweige
-	bra.s	rd_get_dir_loop
-	CNOP 0,4
-rd_dir_name_found1
-	move.b	d0,(a1)			; ":" eintragen
-rd_dir_name_found2
-	subq.w	#1,d7			; wegen dbf
-rd_copy_characters_loop
-	move.b	-(a0),-(a1)
-	dbf	d7,rd_copy_characters_loop
-	lea	rd_demo_dir_path(pc),a0 
-	move.l	a0,d1			; Zeiger auf Puffer für Pfad
-	MOVEF.L	ACCESS_READ,d2
-	CALLDOS Lock
-	move.l	d0,rd_demofile_dir_lock(a3)
-	bne.s	rd_demofile_dir_lock_ok
-	lea	rd_error_text16(pc),a0
-	moveq	#rd_error_text16_end-rd_error_text16,d0
-	bsr	adl_print_text
-	moveq	#RETURN_FAIL,d0
-	rts
-	CNOP 0,4
-rd_demofile_dir_lock_ok
-	move.l	d0,d1			; Lock für Programm-Directory
-	move.l	d0,d3			; Lock für Current-Directory
-	CALLLIBS SetProgramDir		; PRGDIR: = Demo-Directory
-	move.l	d3,d1			; Current-Directory-Lock
-	CALLLIBS CurrentDir		; Current Directory = Demo-Directory
-	move.l	d0,rd_current_dir_lock(a3) ; Lock von altem Current Directory
-	moveq	#RETURN_OK,d0
 	rts
 
 
@@ -3995,11 +3999,6 @@ rd_run_demofile
 	ENDC
 	move.l	rd_demofile_path(a3),a0
 	move.b	#FALSE,pqe_tag_active(a0) ; Demo wurde ausgeführt
-;ü	move.l	rd_demofile_path(a3),a0
-;ü	cmp.b	#RUNMODE_OCS_VANILLA,pqe_runmode(a0)
-;ü	beq.s	check_whdload_slave
-;ü	CALLEXEC CacheClearU
-;ücheck_whdload_slave
 	tst.w	whdl_slave_enabled(a3)
 	beq.s	rd_execute_whdload_slave
 	moveq	#1,d0			; Command-Line-Länge = 1 Zeichen (Line-Feed)
@@ -4016,21 +4015,12 @@ rd_cleanup_demo_loop
 	btst	#DMAB_BLTDONE-8,(a0)	; Sicherheitshalber auf eventuell noch nicht beendete Blits warten
 	bne.s	rd_cleanup_demo_loop
 	tst.w	rd_arg_softreset_enabled(a3)
-;	bne.s	rd_check_runmode
 	bne.s   rd_run_demofile_ok
 	CALLEXECQ ColdReboot
 	CNOP 0,4
 rd_run_demofile_ok
 	rts
 
-;ü	CNOP 0,4
-;ürd_check_runmode
-;ü	cmp.b	#RUNMODE_TURBO,pqe_runmode(a0)
-;ü	beq.s	rd_clear_caches
-;ü	rts
-;ü	CNOP 0,4
-;ürd_clear_caches
-;ü	CALLEXECQ CacheClearU
 
 	CNOP 0,4
 rd_execute_whdload_slave
@@ -4050,7 +4040,6 @@ rd_check_arg_softreset_enabled
 	CALLEXECQ ColdReboot
 	CNOP 0,4
 rd_execute_whdload_slave_ok
-;ü	move.l	rd_demofile_path(a3),a0
 	rts
 
 
@@ -4246,18 +4235,6 @@ rd_stop_timer
 
 
 	CNOP 0,4
-rd_restore_current_dir
-	move.l	rd_current_dir_lock(a3),d1
-	CALLDOSQ CurrentDir
-
-
-	CNOP 0,4
-rd_unlock_demo_dir
-	move.l	rd_demofile_dir_lock(a3),d1
-	CALLDOSQ Unlock
-
-
-	CNOP 0,4
 rd_unload_demofile
 	move.l	rd_demofile_seglist(a3),d1
 	bne.s	rd_unload_demofile_ok
@@ -4276,10 +4253,10 @@ rd_free_fast_memory
 	CNOP 0,4
 rd_check_available_fast_memory
 	move.l	rd_available_fast_memory(a3),d2
-	bne.s	rd_turn_on_fast__memory
+	bne.s	rd_turn_on_fast_memory
 	rts
 	CNOP 0,4
-rd_turn_on_fast__memory
+rd_turn_on_fast_memory
 	move.l	_SysBase(pc),a6
 	move.l	d2,a2		
 turn_on_fast_memory_loop
@@ -4455,6 +4432,14 @@ rd_check_active_screen_priority
 rd_put_active_screen_to_front
 	move.l	rd_active_screen(a3),a0
 	CALLLIBQ ScreenToFront
+
+
+	CNOP 0,4
+rd_restore_current_dir
+	move.l	rd_old_current_dir_lock(a3),d1
+	CALLDOS CurrentDir
+	move.l	rd_demofile_dir_lock(a3),d1
+	CALLLIBQ Unlock
 
 
 ; Input
@@ -6037,7 +6022,7 @@ rd_error_text27_end
 	EVEN
 
 
-	DC.B "$VER: Amiga Demo Launcher 2.0 (30.7.24)",0
+	DC.B "$VER: Amiga Demo Launcher 2.0 (5.8.24)",0
 	EVEN
 
 
