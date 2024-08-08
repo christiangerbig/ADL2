@@ -218,6 +218,11 @@
 ; - Argumente-Check: Gesonderte Fehlerabfrage für Keywords ohne Wert entfernt,
 ;                    da dies schon von ReadArgs() übernommen wird und die Funktion
 ;                    eine Null zurückgibt
+; - Neue Logik Argument PRERUNSCRIPT in Verbindung mit einer eingespielten
+;   Playliste: Wenn kein Argument PRERUNSCRIPT angegeben wurde, dann wird ein
+;   eventuell per Playlist angegebenes Prerun-Scriptfile zum Demo ausgeführt.
+;   Im LOOP-Modus wird dann für jedes Demo ein separates Prerun-Scriptfile
+;   ausgeführt
 
 
 	SECTION code_and_variables,CODE
@@ -288,6 +293,9 @@ adl_lmbexit_code_enabled	EQU FALSE
 adl_demofile_path_length	EQU 124
 adl_prerunscript_path_length	EQU 64
 
+adl_seconds_max			EQU 59
+adl_minutes_max			EQU 99
+
 adl_baud			EQU 2400
 
 	IFEQ adl_lmbexit_code_enabled
@@ -305,9 +313,6 @@ dc_file_request_y_size		EQU 200
 
 
 ; **** Run-Demo ****
-rd_secondc_max			EQU 59
-rd_minutes_max			EQU 99
-
 rd_sprite_x_size		EQU 16
 rd_sprite_y_size		EQU 1
 rd_sprites_colors_number	EQU 16
@@ -565,7 +570,7 @@ pra_SECS			RS.L 1
 	IFEQ adl_lmbexit_code_enabled
 pra_LMBEXIT			RS.L 1
 	ENDC
-pra_prerunscript		RS.L 1
+pra_PRERUNSCRIPT		RS.L 1
 
 playlist_results_array_size	RS.B 1
 
@@ -1415,7 +1420,7 @@ rd_check_arg_secs
 	beq.s	rd_check_arg_mins
 	move.l	d0,a0
 	move.l	(a0),d0			; Sekundenwert
-	moveq	#rd_secondc_max,d2
+	moveq	#adl_seconds_max,d2
 	cmp.l	d2,d0
 	ble.s   rd_check_arg_mins
 	bsr	adl_print_cmd_usage
@@ -1429,7 +1434,7 @@ rd_check_arg_mins
 	beq.s	rd_calculate_playtime
 	move.l	d1,a0
 	move.l	(a0),d1			; Minutenwert
-	moveq	#rd_minutes_max,d2
+	moveq	#adl_minutes_max,d2
 	cmp.l	d2,d1
 	ble.s   rd_calculate_playtime
 	bsr	adl_print_cmd_usage
@@ -2133,7 +2138,7 @@ dc_parse_playlist_entry
 	IFEQ adl_lmbexit_code_enabled
 		move.l	d0,pra_LMBEXIT(a5)
         ENDC
-	move.l	d0,pra_prerunscript(a5)
+	move.l	d0,pra_PRERUNSCRIPT(a5)
 	lea	dc_playlist_template(pc),a0
 	move.l	a0,d1			; Zeiger auf Befelsschablone für Playlist-Argumente
 	move.l	a5,d2			; Zeiger auf Ergebnis-Felder für Playlist-Argumente
@@ -2205,7 +2210,7 @@ dc_check_arg_secs
 	beq.s	dc_check_arg_mins
 	move.l	d0,a0
 	move.l	(a0),d0			; Sekundenwert
-	moveq	#rd_secondc_max,d2
+	moveq	#adl_seconds_max,d2
 	cmp.l	d2,d0
 	ble.s   dc_check_arg_mins
 	bsr	dc_parse_playlist_entry_error
@@ -2218,7 +2223,7 @@ dc_check_arg_mins
 	beq.s	dc_calculate_playtime
 	move.l	d1,a0
 	move.l	(a0),d1			; Minutenwert
-	moveq	#rd_minutes_max,d2
+	moveq	#adl_minutes_max,d2
 	cmp.l	d2,d1
 	ble.s	dc_calculate_playtime
 	bsr	dc_parse_playlist_entry_error
@@ -2230,18 +2235,18 @@ dc_calculate_playtime
 	add.l	d0,d1			; + Sekundenwert = Gesamtwert Sekunden
 	MULUF.L 10,d1,d0		; Zählerwert in 100 ms
 	move.w	d1,pqe_playtime(a1)
-	IFEQ adl_lmbexit_code_enabled
-		bne.s	dc_check_arg_LMBEXIT
-	ELSE
-		bne.s	dc_check_arg_prerunscript
-	ENDC
-	bsr	dc_parse_playlist_entry_error
-	bra	dc_free_custom_arguments
+;	IFEQ adl_lmbexit_code_enabled
+;		bne.s	dc_check_arg_LMBEXIT
+;	ELSE
+;		bne.s	dc_check_arg_prerunscript
+;	ENDC
+;	bsr	dc_parse_playlist_entry_error
+;	bra	dc_free_custom_arguments
 
 	IFEQ adl_lmbexit_code_enabled
 ; ** Playlist-Argument LMBEXIT **
-		CNOP 0,4
-dc_check_arg_lmbexit
+;		CNOP 0,4
+;dc_check_arg_lmbexit
 		move.l	pra_LMBEXIT(a5),d0
 		beq.s	dc_check_arg_prerunscript
 		move.l	d0,a0
@@ -2267,9 +2272,9 @@ dc_arg_lmbexit_save_playtime
 		add.w	d0,pqe_playtime(a1)
 	ENDC
 
-; ** Playlist-Argument prerunscxript **
+; ** Playlist-Argument PRERUNSCRIPT **
 dc_check_arg_prerunscript
-	move.l	pra_prerunscript(a5),d0
+	move.l	pra_PRERUNSCRIPT(a5),d0
 	beq.s	dc_next_transmitted_entry
 	move.l	d0,a0			; Zeiger auf Dateiname des Scriptfiles
 	move.l	d6,a1			; Zeiger auf Eintrag im Puffer
@@ -4589,6 +4594,10 @@ rd_check_user_break_ok
 rd_reset_demofile_variables
 	moveq	#0,d0
 	move.l	d0,rd_demofile_seglist(a3)
+	tst.w	rd_arg_prerunscript_enabled(a3)
+	beq.s	rd_reset_demofile_variables_skip
+	move.l	d0,rd_prerunscript_path(a3)
+rd_reset_demofile_variables_skip
 	move.w	#FALSE,whdl_slave_enabled(a3)
 	move.w	rd_arg_fader_enabled(a3),sfo_active(a3)
 	move.w	rd_arg_fader_enabled(a3),sfi_active(a3)
@@ -5686,7 +5695,7 @@ dc_playlist_template
 	IFEQ adl_lmbexit_code_enabled
 		DC.B "LMBEXIT/K/N,"
         ENDC
-	DC.B "scriptfile",0
+	DC.B "PRERUNSCRIPT/K",0
 	EVEN
 
 
@@ -5698,14 +5707,14 @@ dc_parsing_result_text
 	DC.B "... done",ASCII_LINE_FEED
 	DC.B "Result: "
 dc_transmitted_entries
-	DC.B "  "
+	DC.B "   "
 	DC.B "of "
 dc_playlist_entries
-	DC.B "  "
+	DC.B "   "
 	DC.B "entries successfully transferred to playback queue",ASCII_LINE_FEED
 	DC.B "Playback queue has "
 dc_not_used_entries
-	DC.B "  "
+	DC.B "   "
 	DC.B "unused entries left for a transfer",ASCII_LINE_FEED
 dc_parsing_result_text_end
 	EVEN
