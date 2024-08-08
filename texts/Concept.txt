@@ -49,3 +49,11 @@ CPU:		68030
 OS:		3.0
 
 Turbokarten: 68030/040/060 mit MMU und Fast-Memory
+
+
+Änderungen/Anpassungen CreateDemoPlaylist
+
+- Zum Einspielen einer Playliste ist jetzt das Key-Wort "PLAYLIST" notwendig
+- Umbenennung der Startmodi-Argumente in "OCSVANILLA", "AGAVANILLA" und "TURBO"
+- Umbenennung der Gadgets in "OCS vanilla", "AGA vanilla" und "Turbo"
+
