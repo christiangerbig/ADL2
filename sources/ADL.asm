@@ -1,6 +1,6 @@
 ; AmigaDemoLauncher2
 ; Christian Gerbig
-; 08.08.2024
+; 09.08.2024
 ; V.2.0
 
 ; Requirements
@@ -223,6 +223,9 @@
 ;   eventuell per Playlist angegebenes Prerun-Scriptfile zum Demo ausgeführt.
 ;   Im LOOP-Modus wird dann für jedes Demo ein separates Prerun-Scriptfile
 ;   ausgeführt
+; - Abfrage des Arguments REMOVE vorverlegt
+; - Argument PLAYLIST: Nach dem Übertragen der Playlist in den Speicher wird
+;                      nun diePlayback-Queue ausgegeben
 
 
 	SECTION code_and_variables,CODE
@@ -287,7 +290,7 @@ RUNMODE_AGA_VANILLA		EQU $03
 ; **** Amiga-Demo-Launcher ****
 adl_drives_delay		EQU PAL_FPS*1 ; 1 Sekunde
 
-adl_level_7_code_enabled	EQU FALSE
+adl_restore_adl_code_enabled	EQU FALSE
 adl_lmbexit_code_enabled	EQU FALSE
 
 adl_demofile_path_length	EQU 124
@@ -356,36 +359,36 @@ sfi_fader_speed			EQU 10
 
 
 
-RP_POINTER_ENTRIES_NUMBER	MACRO
+POINTER_RESIDENT_ENTRIES_NUMBER	MACRO
 	trap	#0
 	ENDM
 
-RP_POINTER_ENTRIES_NUMBER_MAX	MACRO
+POINTER_RESIDENT_ENTRIES_NUMBER_MAX	MACRO
 	trap	#1
 	ENDM
 
-RP_POINTER_ENTRY_OFFSET		MACRO
+POINTER_RESIDENT_ENTRY_OFFSET		MACRO
 	trap	#2
 	ENDM
 
-RP_POINTER_ENTRIES_BUFFER	MACRO
+POINTER_RESIDENT_ENTRIES_BUFFER	MACRO
 	trap	#3
 	ENDM
 
-RP_POINTER_ENDLESS_ENABLED	MACRO
+POINTER_RESIDENT_ENDLESS_ENABLED	MACRO
 	trap	#4
 	ENDM
 
-RP_POINTER_CUSTOM_TRAP_VECTORS	MACRO
+POINTER_RESIDENT_CUSTOM_TRAP_VECTORS	MACRO
 	trap	#5
 	ENDM
 
-RP_REMOVE_RESET_PROGRAM		MACRO
+REMOVE_RESET_PROGRAM			MACRO
 	trap	#6
 	ENDM
 
-	IFEQ adl_level_7_code_enabled
-RP_POINTER_LEVEL_7_RESET_ACTIVE	MACRO
+	IFEQ adl_restore_adl_code_enabled
+SET_RESTORE_ADL_ACTIVE		MACRO
 		trap	#7
 		ENDM
 	ENDC
@@ -422,6 +425,7 @@ adl_dos_return_code		RS.L 1
 
 adl_read_arguments		RS.L 1
 adl_arg_help_enabled		RS.W 1
+adl_arg_remove_enabled		RS.W 1
 
 	RS_ALIGN_LONGWORD
 adl_entries_buffer		RS.L 1
@@ -460,7 +464,6 @@ rd_arg_endless_enabled		RS.W 1
 rd_arg_loop_enabled		RS.W 1
 rd_arg_fader_enabled		RS.W 1
 rd_arg_softreset_enabled	RS.W 1
-rd_arg_remove_enabled		RS.W 1
 
 	RS_ALIGN_LONGWORD
 rd_serial_message_port		RS.L 1
@@ -687,6 +690,7 @@ output_string_size		RS.B 0
 	lea	adl_variables(pc),a3
 	bsr	adl_init_variables
 	bsr	adl_init_structures
+
 	bsr	adl_open_dos_library
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_quit
@@ -708,10 +712,17 @@ output_string_size		RS.B 0
 	bsr	adl_check_cmd_line
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_read_arguments
+
 	tst.w	adl_arg_help_enabled(a3)
 	beq     adl_cleanup_intuition_library
+	tst.w	adl_arg_remove_enabled(a3)
+	beq	adl_cleanup_reset_program
+
 	bsr	adl_print_intro_message
+
 	tst.w	dc_arg_newentry_enabled(a3)
+	beq.s	dc_start
+	tst.w	dc_arg_playlist_enabled(a3)
 	beq.s	dc_start
 	tst.w	adl_reset_program_active(a3)
 	beq	rd_start
@@ -808,6 +819,8 @@ dc_cleanup_locked_playlist_file
 adl_cleanup_read_arguments
 	bsr	adl_free_read_arguments
 	bsr	adl_print_io_error
+adl_cleanup_reset_program
+	bsr	adl_remove_reset_program
 adl_cleanup_intuition_library
 	bsr	adl_close_intuition_library
 adl_cleanup_graphics_library
@@ -835,6 +848,7 @@ adl_init_variables
 	move.w	d1,adl_reset_program_active(a3)
 
 	move.w	d1,adl_arg_help_enabled(a3)
+	move.w	d1,adl_arg_remove_enabled(a3)
 
 	move.w	d0,adl_entries_number(a3)
 	move.w	#dc_entries_number_default_max,adl_entries_number_max(a3)
@@ -859,7 +873,6 @@ adl_init_variables
 	move.w	d1,rd_arg_loop_enabled(a3)
 	move.w	d1,rd_arg_fader_enabled(a3)
 	move.w	d1,rd_arg_softreset_enabled(a3)
-	move.w	d1,rd_arg_remove_enabled(a3)
 
 	move.w	d0,rd_timer_delay(a3)
 	move.w	d0,rd_play_duration(a3)
@@ -1265,15 +1278,15 @@ adl_check_cool_capture
 	rts
 	CNOP 0,4
 adl_update_variables
-	RP_POINTER_ENTRIES_NUMBER_MAX
+	POINTER_RESIDENT_ENTRIES_NUMBER_MAX
 	move.l	d0,a0
 	move.w	(a0),adl_entries_number_max(a3)
-	RP_POINTER_ENTRIES_NUMBER
+	POINTER_RESIDENT_ENTRIES_NUMBER
 	move.l	d0,a0
 	move.w	(a0),adl_entries_number(a3)
-	RP_POINTER_ENTRIES_BUFFER
+	POINTER_RESIDENT_ENTRIES_BUFFER
 	move.l	d0,adl_entries_buffer(a3)
-	RP_POINTER_ENTRY_OFFSET
+	POINTER_RESIDENT_ENTRY_OFFSET
 	move.l	d0,a0
 	move.w	(a0),rd_entry_offset(a3)
 	clr.w   adl_reset_program_active(a3)
@@ -1325,7 +1338,7 @@ adl_check_arg_remove
 	move.l	cra_REMOVE(a2),d0
 	beq.s	dc_check_arguments
 	not.w	d0
-	move.w	d0,rd_arg_remove_enabled(a3)
+	move.w	d0,adl_arg_remove_enabled(a3)
 	moveq	#RETURN_OK,d0
 	rts
 
@@ -1491,7 +1504,7 @@ rd_check_arg_random
 	tst.w	adl_reset_program_active(a3)
 	bne.s	rd_update_endless_enabled
 	move.l	d0,d2
-	RP_POINTER_ENDLESS_ENABLED
+	POINTER_RESIDENT_ENDLESS_ENABLED
 	move.l	d0,a0
 	move.w	d2,(a0)
 	bra.s	rd_check_arg_loop
@@ -1512,7 +1525,6 @@ rd_check_arg_loop
 	move.w	d0,rd_arg_fader_enabled(a3)
 
 ; ** Argument SOFTRESET **
-rd_check_arg_softreset
 	move.l	cra_SOFTRESET(a2),d0
 	beq.s	rd_check_arguments_ok
 	tst.w	rd_arg_loop_enabled(a3)
@@ -1921,10 +1933,10 @@ dc_copy_entries_buffer_loop
 	CALLLIBS Supervisor
 	tst.l	d0			; VBR = $000000 ?
 	beq.s	dc_update_entries_number ; Ja -> verzweige
-	RP_POINTER_CUSTOM_TRAP_VECTORS
+	POINTER_RESIDENT_CUSTOM_TRAP_VECTORS
 	move.l	d0,a0 			; Quelle
 	move.w	#TRAP_0_VECTOR,a1	; Ziel: Ab Trap0-Vektor im chip memory
-	IFEQ adl_level_7_code_enabled
+	IFEQ adl_restore_adl_code_enabled
   		moveq	#8-1,d7		; Anzahl der Trap-Vektoren
 	ELSE
 		moveq	#7-1,d7		; Anzahl der Trap-Vektoren
@@ -1934,7 +1946,7 @@ dc_copy_custom_trap_vectors_loop
 	dbf	d7,dc_copy_custom_trap_vectors_loop
 	CALLLIBS CacheClearU
 dc_update_entries_number
-	RP_POINTER_ENTRIES_NUMBER
+	POINTER_RESIDENT_ENTRIES_NUMBER
 	move.l	d0,a0
 	move.w	adl_entries_number(a3),(a0)
 	moveq	#RETURN_OK,d0
@@ -2321,14 +2333,16 @@ dc_parse_playlist_file_result
 	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
 	lea	dc_playlist_entries(pc),a0 ; Zeiger auf String
 	bsr	rp_dec_to_ascii
-	move.w	adl_entries_number_max(a3),d1
-	sub.w	adl_entries_number(a3),d1 ; Verbleibende Anzahl der zu ladenden Dateien ermitteln
-	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
-	lea	dc_not_used_entries(pc),a0 ; Stringadresse
-	bsr	rp_dec_to_ascii
+
+;	move.w	adl_entries_number_max(a3),d1
+;	sub.w	adl_entries_number(a3),d1 ; Verbleibende Anzahl der zu ladenden Dateien ermitteln
+;	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
+;	lea	dc_not_used_entries(pc),a0 ; Stringadresse
+;	bsr	rp_dec_to_ascii
 	lea	dc_parsing_result_text(pc),a0
 	move.l	#dc_parsing_result_text_end-dc_parsing_result_text,d0
-	bra	adl_print_text
+	bsr	adl_print_text
+	bra	rd_show_queue
 
 
 ; Input
@@ -2445,6 +2459,28 @@ adl_print_io_error_ok
 
 
 	CNOP 0,4
+adl_remove_reset_program
+	tst.w	adl_reset_program_active(a3)
+	beq.s	adl_check_arg_remove_enabled
+	rts
+	CNOP 0,4
+adl_check_arg_remove_enabled
+	tst.w	adl_arg_remove_enabled(a3)
+	beq.s	adl_free_reset_programm_memory
+	rts
+	CNOP 0,4
+adl_free_reset_programm_memory
+	REMOVE_RESET_PROGRAM
+	move.l	d0,a0
+	move.l	(a0)+,a1
+	move.l	(a0),d0
+	CALLEXEC FreeMem
+	lea	adl_message_text(pc),a0
+	moveq	#adl_message_text_end-adl_message_text,d0
+	bra	adl_print_text
+
+
+	CNOP 0,4
 adl_close_intuition_library
 	move.l	_IntuitionBase(pc),a1
 	CALLEXECQ CloseLibrary
@@ -2480,11 +2516,12 @@ adl_print_text
 rd_start
 	tst.w	rd_arg_resetloadpos_enabled(a3)
         beq	rd_quit
-	tst.w	rd_arg_remove_enabled(a3)
-	beq	rd_cleanup_reset_program
 	tst.w	rd_arg_showqueue_enabled(a3)
-	beq	rd_show_queue
-
+	bne.s	rd_start_skip
+	bsr	rd_show_queue
+	bra	rd_quit
+	CNOP 0,4
+rd_start_skip
 	bsr	rd_open_ciaa_resource
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_read_arguments
@@ -2526,6 +2563,10 @@ rd_start
 	bsr	sf_copy_active_screen_colors
 
 rd_play_loop
+	bsr	rd_check_demofile_tags
+	move.l	d0,adl_dos_return_code(a3)
+	bne	rd_cleanup_color_cache
+
 	bsr	rd_get_demofile_name
 	bsr	rd_print_demofile_start_message
 	bsr	rd_check_demofile_play_state
@@ -2651,9 +2692,6 @@ rd_cleanup_serial_message_port
 rd_cleanup_icon_library
 	bsr	rd_close_icon_library
 
-rd_cleanup_reset_program
-	bsr	rd_remove_reset_program
-
 rd_quit
 	bra	adl_cleanup_intuition_library
 
@@ -2731,9 +2769,8 @@ rd_tag_message_skip
 	bsr	rp_dec_to_ascii
 	lea	rd_message_text1(pc),a0
 	moveq	#rd_message_text1_end-rd_message_text1,d0
-	bsr	adl_print_text
-	bra	rd_cleanup_icon_library
-
+	bra	adl_print_text
+	
 
 ; Input
 ; Result
@@ -3011,7 +3048,7 @@ rd_demofile_name_ok
 	subq.w	#1,d0			; "/" oder ":" abziehen
 	move.l	d0,rd_demofile_name_length(a3)
 	addq.w	#1,rd_entry_offset(a3)
-	RP_POINTER_ENTRY_OFFSET
+	POINTER_RESIDENT_ENTRY_OFFSET
 	move.l	d0,a0
 	addq.w	#1,(a0)
 	moveq	#RETURN_OK,d0
@@ -3907,7 +3944,7 @@ rd_write_timer_ok
 
 	CNOP 0,4
 rd_save_custom_trap_vectors
-	RP_POINTER_CUSTOM_TRAP_VECTORS
+	POINTER_RESIDENT_CUSTOM_TRAP_VECTORS
 	move.l	d0,rd_custom_trap_vectors(a3)
 	rts
 
@@ -4055,7 +4092,7 @@ rd_set_ciab_crb1
 ; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 rd_run_demofile
-	IFEQ adl_level_7_code_enabled
+	IFEQ adl_restore_adl_code_enabled
 		RP_SET_LEVEL_7_RESET_STATE ; Reset-Level-7-Interrupt aktivieren
 	ENDC
 	tst.w	whdl_slave_enabled(a3)
@@ -4278,7 +4315,7 @@ rd_restore_only_chip_memory
 	CNOP 0,4
 rd_copy_custom_trap_vectors
 	move.l	rd_custom_trap_vectors(a3),a0
-	IFEQ adl_level_7_code_enabled
+	IFEQ adl_restore_adl_code_enabled
 		moveq	#8-1,d7		; Anzahl der Trap-Vektoren
 	ELSE
 		moveq	#7-1,d7		; Anzahl der Trap-Vektoren
@@ -4542,7 +4579,7 @@ rd_check_demofile_tags_ok
 	rts
 	CNOP 0,4
 rd_all_demofiles_played
-	clr.w	rd_arg_remove_enabled(a3)
+	clr.w	adl_arg_remove_enabled(a3)
 	lea	rd_message_text2(pc),a0
 	moveq	#rd_message_text2_end-rd_message_text2,d0
 	bsr	adl_print_text
@@ -4563,7 +4600,7 @@ rd_clear_tags_loop
 	add.l	d1,a0			; nächster Eintrag
 	dbf	d7,rd_clear_tags_loop
 	move.w	#1,rd_entry_offset(a3)
-	RP_POINTER_ENTRY_OFFSET
+	POINTER_RESIDENT_ENTRY_OFFSET
 	move.l	d0,a0
 	move.w	#1,(a0)
 	rts
@@ -4579,8 +4616,8 @@ rd_check_user_break
 	CALLEXEC SetSignal
 	btst	#SIGBREAKB_CTRL_C,d0
 	beq.s	rd_check_user_break_ok
-	lea	rd_message_text4(pc),a0
-	moveq	#rd_message_text4_end-rd_message_text4,d0
+	lea	rd_message_text3(pc),a0
+	moveq	#rd_message_text3_end-rd_message_text3,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -4656,28 +4693,6 @@ rd_delete_serial_message_port
 rd_close_icon_library
 	move.l	_IconBase(pc),a1
 	CALLEXECQ CloseLibrary
-
-
-	CNOP 0,4
-rd_remove_reset_program
-	tst.w	adl_reset_program_active(a3)
-	beq.s	rd_check_arg_remove_enabled2
-	rts
-	CNOP 0,4
-rd_check_arg_remove_enabled2
-	tst.w	rd_arg_remove_enabled(a3)
-	beq.s	rd_free_reset_programm_memory
-	rts
-	CNOP 0,4
-rd_free_reset_programm_memory
-	RP_REMOVE_RESET_PROGRAM
-	move.l	d0,a0
-	move.l	(a0)+,a1
-	move.l	(a0),d0
-	CALLEXEC FreeMem
-	lea	rd_message_text3(pc),a0
-	moveq	#rd_message_text3_end-rd_message_text3,d0
-	bra	adl_print_text
 
 
 ; **** Exception-Routinen ****
@@ -5221,8 +5236,8 @@ rp_init_custom_exceptions
 	lea	rp_read_vbr(pc),a5
 	CALLLIBS Supervisor
 	move.l	d0,a0
-	IFEQ adl_level_7_code_enabled
-		lea	rp_level_7_reset_active(pc),a1
+	IFEQ adl_restore_adl_code_enabled
+		lea	rp_restore_adl_active(pc),a1
 		move.w	#FALSE,(a1)	; Sicherheitshalber auf FALSE setzen
 		lea	rp_old_level_7_autovector(pc),a1
 		move.l	LEVEL_7_AUTOVECTOR(a0),(a1)
@@ -5263,20 +5278,20 @@ rp_init_custom_exceptions
 	move.l	a4,TRAP_5_VECTOR(a0)
 	move.l	a4,(a2)+
 
-	IFEQ adl_level_7_code_enabled
+	IFEQ adl_restore_adl_code_enabled
 		move.l	TRAP_6_VECTOR(a0),(a1)+
 	ELSE
 		move.l	TRAP_6_VECTOR(a0),(a1)
 	ENDC
 	lea	rp_trap_6_program(pc),a4
 	move.l	a4,TRAP_6_VECTOR(a0)
-	IFEQ adl_level_7_code_enabled
+	IFEQ adl_restore_adl_code_enabled
 		move.l	a4,(a2)+
 	ELSE
 		move.l	a4,(a2)
  	ENDC
 
-	IFEQ adl_level_7_code_enabled
+	IFEQ adl_restore_adl_code_enabled
 		move.l	TRAP_7_VECTOR(a0),(a1)
 		lea	rp_trap_7_program(pc),a4
 		move.l	a4,TRAP_7_VECTOR(a0)
@@ -5297,13 +5312,13 @@ rp_restore_old_exceptions
 	tst.l	d0			; VBR = $000000 ?
 	beq.s	rp_restore_chip_memory	; Ja -> verzweige
 	move.l	d0,a1
-	IFEQ adl_level_7_code_enabled
+	IFEQ adl_restore_adl_code_enabled
 		move.l	rp_old_level_7_autovector(pc),LEVEL_7_AUTOVECTOR(a1) ; Zeiger alte Level-7-Interrptprogramm eintragen
 	ENDC
 	add.w	#TRAP_0_VECTOR,a1	; Ab Trap0-Vektor
 	bsr.s	rp_copy_old_trap_vectors
 rp_restore_chip_memory
-	IFEQ adl_level_7_code_enabled
+	IFEQ adl_restore_adl_code_enabled
 		move.l	d0,a1
 		move.l	rp_old_level_7_autovector(pc),LEVEL_7_AUTOVECTOR(a1) ; Zeiger alte Level-7-Interrptprogramm eintragen
 	ENDC
@@ -5319,7 +5334,7 @@ rp_restore_chip_memory
 	CNOP 0,4
 rp_copy_old_trap_vectors
 	lea	rp_old_trap_0_vector(pc),a0
-	IFEQ adl_level_7_code_enabled
+	IFEQ adl_restore_adl_code_enabled
 		moveq	#8-1,d7		; Anzahl der Trap-Vektoren
 	ELSE
 		moveq	#7-1,d7		; Anzahl der Trap-Vektoren
@@ -5331,13 +5346,13 @@ rd_copy_old_trap_vectors_loop
 
 
 ; **** Exception-Routinen ****
-	IFEQ adl_level_7_code_enabled
+	IFEQ adl_restore_adl_code_enabled
 		CNOP 0,4
 rp_level_7_program
 		movem.l d0-d1/a0-a1/a6,-(a7)
-		move.w	rp_level_7_reset_active(pc),d0
+		move.w	rp_restore_adl_active(pc),d0
 		bne.s	rp_no_reset
-		move.l	_SysBase(pc),a6
+		move.l	exec_base.w,a6
 		move.l	rp_reset_program_memory(pc),CoolCapture(a6)
 		moveq	#0,d0
 		move.l	d0,WarmCapture(a6)
@@ -5352,7 +5367,7 @@ rp_no_reset
 	ENDC
 
 
-; RP_POINTER_ENTRIES_NUMBER
+; POINTER_RESIDENT_ENTRIES_NUMBER
 ; Input
 ; Result
 ; d0.l	... Rückgabewert: Zeiger auf Variable
@@ -5364,7 +5379,7 @@ rp_trap_0_program
 	rte
 
 
-; RP_POINTER_ENTRIES_NUMBER_MAX
+; POINTER_RESIDENT_ENTRIES_NUMBER_MAX
 ; Input
 ; Result
 ; d0.l	... Rückgabewert: Zeiger auf Variable
@@ -5376,7 +5391,7 @@ rp_trap_1_program
 	rte
 
 
-; RP_POINTER_ENTRY_OFFSET
+; POINTER_RESIDENT_ENTRY_OFFSET
 ; Input
 ; Result
 ; d0.l	... Rückgabewert: Zeiger auf Variable
@@ -5388,7 +5403,7 @@ rp_trap_2_program
 	rte
 
 
-; RP_POINTER_ENTRIES_BUFFER
+; POINTER_RESIDENT_ENTRIES_BUFFER
 ; Input
 ; Result
 ; d0.l	... Rückgabewert: Zeiger auf Puffer
@@ -5400,7 +5415,7 @@ rp_trap_3_program
 	rte
 
 
-; RP_POINTER_ENDLESS_ENABLED
+; POINTER_RESIDENT_ENDLESS_ENABLED
 ; Input
 ; Result
 ; d0.l	... Rückgabewert: Zeiger auf Variable
@@ -5412,7 +5427,7 @@ rp_trap_4_program
 	rte
 
 
-; RP_POINTER_CUSTOM_VECTORS
+; POINTER_RESIDENT_CUSTOM_VECTORS
 ; Input
 ; Result
 ; d0.l	... Rückgabewert: Zeiger auf eigene Trap-Vektoren
@@ -5424,7 +5439,7 @@ rp_trap_5_program
 	rte
 
 
-; RP_REMOVE_RESET_PROGRAM
+; REMOVE_RESET_PROGRAM
 ; Input
 ; Result
 ; d0.l	... Rückgabewert: Größe des Reset-Programms mit Puffer
@@ -5441,11 +5456,11 @@ rp_trap_6_program
 	rte
 
 
-	IFEQ adl_level_7_code_enabled
-; RP_SET_LEVEL_7_RESET_ACTIVE
+	IFEQ adl_restore_adl_code_enabled
+; SET_RESTORE_ADL_ACTIVE
 		CNOP 0,4
 rp_trap_7_program
-		lea	rp_level_7_reset_active(pc),a0
+		lea	rp_restore_adl_active(pc),a0
 		clr.w	(a0)
 		nop
 		rte
@@ -5471,7 +5486,7 @@ rp_dec_table
 rp_reset_program_memory		DC.L 0
 rp_reset_program_size		DC.L 0
 
-	IFEQ adl_level_7_code_enabled
+	IFEQ adl_restore_adl_code_enabled
 rp_old_level_7_autovector	DC.L 0
 	ENDC
 rp_old_trap_0_vector		DC.L 0
@@ -5481,7 +5496,7 @@ rp_old_trap_3_vector		DC.L 0
 rp_old_trap_4_vector		DC.L 0
 rp_old_trap_5_vector		DC.L 0
 rp_old_trap_6_vector		DC.L 0
-	IFEQ adl_level_7_code_enabled
+	IFEQ adl_restore_adl_code_enabled
 rp_old_trap_7_vector		DC.L 0
 	ENDC
 rp_custom_trap_0_vector		DC.L 0
@@ -5491,9 +5506,9 @@ rp_custom_trap_3_vector		DC.L 0
 rp_custom_trap_4_vector		DC.L 0
 rp_custom_trap_5_vector		DC.L 0
 rp_custom_trap_6_vector		DC.L 0
-	IFEQ adl_level_7_code_enabled
+	IFEQ adl_restore_adl_code_enabled
 rp_custom_trap_7_vector		DC.L 0
-rp_level_7_reset_active		DC.W 0
+rp_restore_adl_active		DC.W 0
 	ENDC
 
 rp_old_adkcon			DC.W 0
@@ -5642,25 +5657,29 @@ adl_error_header
 	DC.B " ",0
 	EVEN
 
+adl_message_text
+	DC.B ASCII_LINE_FEED,"Amiga Demo Launcher now removed from memory",ASCII_LINE_FEED,ASCII_LINE_FEED
+adl_message_text_end
+	EVEN
 
 adl_error_text1
-	DC.B "Couldnt open graphics.library",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldnt open graphics.library",ASCII_LINE_FEED
 adl_error_text1_end
 	EVEN
 adl_error_text2
-	DC.B "OS 3.0 or better required",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"OS 3.0 or better required",ASCII_LINE_FEED
 adl_error_text2_end
 	EVEN
 adl_error_text3
-	DC.B "68020 or better required",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"68020 or better required",ASCII_LINE_FEED
 adl_error_text3_end
 	EVEN
 adl_error_text4
-	DC.B "AGA chipset required",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"AGA chipset required",ASCII_LINE_FEED
 adl_error_text4_end
 	EVEN
 adl_error_text5
-	DC.B "Couldn't open intuition.library",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't open intuition.library",ASCII_LINE_FEED
 adl_error_text5_end
 	EVEN
 
@@ -5700,11 +5719,11 @@ dc_playlist_template
 
 
 dc_parsing_begin_text
-	DC.B "Parsing and transferring playlist to playback queue...",ASCII_LINE_FEED,0
+	DC.B ASCII_LINE_FEED,"Parsing and transferring playlist to playback queue......"
 dc_parsing_begin_text_end
 	EVEN
 dc_parsing_result_text
-	DC.B "... done",ASCII_LINE_FEED
+	DC.B "done",ASCII_LINE_FEED,ASCII_LINE_FEED
 	DC.B "Result: "
 dc_transmitted_entries
 	DC.B "   "
@@ -5712,16 +5731,13 @@ dc_transmitted_entries
 dc_playlist_entries
 	DC.B "   "
 	DC.B "entries successfully transferred to playback queue",ASCII_LINE_FEED
-	DC.B "Playback queue has "
-dc_not_used_entries
-	DC.B "   "
-	DC.B "unused entries left for a transfer",ASCII_LINE_FEED
 dc_parsing_result_text_end
 	EVEN
 
 
 dc_current_dir_name
 	DS.B adl_demofile_path_length
+	EVEN
 
 
 dc_file_request_title
@@ -5766,83 +5782,83 @@ dc_runmode_request_gadgets
 
 
 dc_note_text
-	DC.B "Maximum number of entries in playback queue already reached",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Maximum number of entries in playback queue already reached",ASCII_LINE_FEED,ASCII_LINE_FEED
 dc_note_text_end
 	EVEN
 
 dc_error_text1
-	DC.B "Couldn't allocate entries/playback queue buffer"
+	DC.B ASCII_LINE_FEED,"Couldn't allocate entries/playback queue buffer"
 dc_error_text1_end
 	EVEN
 dc_error_text2
-	DC.B "Couldn't find playlist file",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't find playlist file",ASCII_LINE_FEED
 dc_error_text2_end
 	EVEN
 dc_error_text3
-	DC.B "Couldn't allocate file info block structure"
+	DC.B ASCII_LINE_FEED,"Couldn't allocate file info block structure"
 dc_error_text3_end
 	EVEN
 dc_error_text4
-	DC.B "Couldn't examine playlist file",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't examine playlist file",ASCII_LINE_FEED
 dc_error_text4_end
 	EVEN
 dc_error_text5
-	DC.B "Couldn't allocate memory for playlist file"
+	DC.B ASCII_LINE_FEED,"Couldn't allocate memory for playlist file"
 dc_error_text5_end
 	EVEN
 dc_error_text6
-	DC.B "Couldn't open playlist file",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't open playlist file",ASCII_LINE_FEED
 dc_error_text6_end
 	EVEN
 dc_error_text7
-	DC.B "Playlist file read error",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Playlist file read error",ASCII_LINE_FEED
 dc_error_text7_end
 	EVEN
 dc_error_text8
-	DC.B "Couldn't allocate dos object",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't allocate dos object",ASCII_LINE_FEED
 dc_error_text8_end
 	EVEN
 dc_error_text9
-	DC.B "Entry "
+	DC.B ASCII_LINE_FEED,"Entry "
 dc_entries_string
-	DC.B "	"
-	DC.B "could not be transferred. Playlist arguments syntax error",ASCII_LINE_FEED
+	DC.B "	  "
+	DC.B "could not be transferred. Playlist arguments syntax error",ASCII_LINE_FEED,ASCII_LINE_FEED
 dc_error_text9_end
 	EVEN
 dc_error_text10
-	DC.B "Couldn't open asl.library",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't open asl.library",ASCII_LINE_FEED
 dc_error_text10_end
 	EVEN
 dc_error_text11
-	DC.B "Couldn't find program directory",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't find program directory",ASCII_LINE_FEED
 dc_error_text11_end
 	EVEN
 dc_error_text12
-	DC.B "Couldn't get program directory name"
+	DC.B ASCII_LINE_FEED,"Couldn't get program directory name"
 dc_error_text12_end
 	EVEN
 dc_error_text13
-	DC.B "Couldn't initialize file requester structure",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't initialize file requester structure",ASCII_LINE_FEED
 dc_error_text13_end
 	EVEN
 dc_error_text14
-	DC.B "Directory not found"
+	DC.B ASCII_LINE_FEED,"Directory not found"
 dc_error_text14_end
 	EVEN
 dc_error_text15
-	DC.B "No demo file selected"
+	DC.B ASCII_LINE_FEED,"No demo file selected"
 dc_error_text15_end
 	EVEN
 dc_error_text16
-	DC.B "Demo filepath is longer than 123 characters"
+	DC.B ASCII_LINE_FEED,"Demo filepath is longer than 123 characters"
 dc_error_text16_end
 	EVEN
 dc_error_text17
-	DC.B "Demo file not found"
+	DC.B ASCII_LINE_FEED,"Demo file not found"
 dc_error_text17_end
 	EVEN
 dc_error_text18
-	DC.B "Couldn't allocate memory for resident program"
+	DC.B ASCII_LINE_FEED,"Couldn't allocate memory for resident program"
 dc_error_text18_end
 	EVEN
 
@@ -5888,7 +5904,7 @@ rd_custom_window_name		DC.B "Amiga Demo Launcher 2",0
 rd_demo_dir_path		DS.B adl_demofile_path_length
 
 rd_demofile_name_header
-	DC.B "Playing ",34
+	DC.B ASCII_LINE_FEED,"Playing ",34
 rd_demofile_name_header_end
 	EVEN
 rd_demofile_name_tail
@@ -5898,7 +5914,7 @@ rd_demofile_name_tail_end
 
 
 rd_show_entry_header
-	DC.B "Nr."
+	DC.B ASCII_LINE_FEED,"Nr."
 rd_show_entry_string
 	DC.B "   ",34
 rd_show_entry_string_end
@@ -5908,36 +5924,31 @@ rd_show_entry_space
 rd_show_entry_space_end
 	EVEN
 rd_tag_active_text1
-	DC.B " [played]",ASCII_LINE_FEED
+	DC.B " [played]"
 rd_tag_active_text1_end
 	EVEN
 rd_tag_active_text2
-	DC.B " [not played]",ASCII_LINE_FEED
+	DC.B " [not played]"
 rd_tag_active_text2_end
 	EVEN
 
 
 rd_message_text1
-	DC.B "Playback queue has "
+	DC.B ASCII_LINE_FEED,ASCII_LINE_FEED,"Playback queue has "
 rd_not_used_entries_string
 	DC.B "   "
-	DC.B "unused entries left",ASCII_LINE_FEED
+	DC.B "unused entries left",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_message_text1_end
 	EVEN
 
 rd_message_text2
-	DC.B "No more demos left to play",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"No more demos left to play",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_message_text2_end
 	EVEN
 
 rd_message_text3
-	DC.B "Amiga Demo Launcher now removed from memory",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Replay loop stopped",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_message_text3_end
-	EVEN
-
-rd_message_text4
-	DC.B "Replay loop stopped",ASCII_LINE_FEED
-rd_message_text4_end
 	EVEN
 
 
@@ -5961,111 +5972,111 @@ rd_note_end
 	EVEN
 
 rd_error_text1
-	DC.B "Couldn't open ciaa.resource",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't open ciaa.resource",ASCII_LINE_FEED
 rd_error_text1_end
 	EVEN
 rd_error_text2
-	DC.B "Couldn't open ciab.resource",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't open ciab.resource",ASCII_LINE_FEED
 rd_error_text2_end
 	EVEN
 rd_error_text3
-	DC.B "Couldn't open icon.library",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't open icon.library",ASCII_LINE_FEED
 rd_error_text3_end
 	EVEN
 rd_error_text4
-	DC.B "Couldn't create serial message port",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't create serial message port",ASCII_LINE_FEED
 rd_error_text4_end
 	EVEN
 rd_error_text5
-	DC.B "Couldn't open serial.device",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't open serial.device",ASCII_LINE_FEED
 rd_error_text5_end
 	EVEN
 rd_error_text6
-	DC.B "Couldnt allocate sprite data structure"
+	DC.B ASCII_LINE_FEED,"Couldnt allocate sprite data structure"
 rd_error_text6_end
 	EVEN
 rd_error_text7
-	DC.B "Couldnt allocate colour values table"
+	DC.B ASCII_LINE_FEED,"Couldnt allocate colour values table"
 rd_error_text7_end
 	EVEN
 rd_error_text8
-	DC.B "Couldnt allocate colour cache"
+	DC.B ASCII_LINE_FEED,"Couldnt allocate colour cache"
 rd_error_text8_end
 	EVEN
 rd_error_text9
-	DC.B "Demo already played",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Demo already played",ASCII_LINE_FEED
 rd_error_text9_end
 	EVEN
 rd_error_text10
-	DC.B "Couldn't open demo file",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't open demo file",ASCII_LINE_FEED
 rd_error_text10_end
 	EVEN
 rd_error_text11
-	DC.B "No executable demo file"
+	DC.B ASCII_LINE_FEED,"No executable demo file"
 rd_error_text11_end
 	EVEN
 rd_error_text12
-	DC.B "Prerun script filepath is longer than 63 characters"
+	DC.B ASCII_LINE_FEED,"Prerun script filepath is longer than 63 characters"
 rd_error_text12_end
 	EVEN
 rd_error_text13
-	DC.B "Couldn't execute prerun script file",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't execute prerun script file",ASCII_LINE_FEED
 rd_error_text13_end
 	EVEN
 rd_error_text14
-	DC.B "Couldn't load demo file",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't load demo file",ASCII_LINE_FEED
 rd_error_text14_end
 	EVEN
 rd_error_text15
-	DC.B "Couldn't open WHDLoad .info file",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't open WHDLoad .info file",ASCII_LINE_FEED
 rd_error_text15_end
 	EVEN
 rd_error_text16
-	DC.B "Couldn't find demo directory",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't find demo directory",ASCII_LINE_FEED
 rd_error_text16_end
 	EVEN
 rd_error_text17
-	DC.B "Couldn't get active screen",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't get active screen",ASCII_LINE_FEED
 rd_error_text17_end
 	EVEN
 rd_error_text18
-	DC.B "Invalid monitor ID",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Invalid monitor ID",ASCII_LINE_FEED
 rd_error_text18_end
 	EVEN
 rd_error_text19
-	DC.B "Couldn't open custom screen",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't open custom screen",ASCII_LINE_FEED
 rd_error_text19_end
 	EVEN
 rd_error_text20
-	DC.B "Couldn't open custom window",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't open custom window",ASCII_LINE_FEED
 rd_error_text20_end
 	EVEN
 rd_error_text21
-	DC.B "Serial device in use",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Serial device in use",ASCII_LINE_FEED
 rd_error_text21_end
 	EVEN
 rd_error_text22
-	DC.B "Baud rate not supported by hardware",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Baud rate not supported by hardware",ASCII_LINE_FEED
 rd_error_text22_end
 	EVEN
 rd_error_text23
-	DC.B "Bad parameter",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Bad parameter",ASCII_LINE_FEED
 rd_error_text23_end
 	EVEN
 rd_error_text24
-	DC.B "Hardware data overrun",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Hardware data overrun",ASCII_LINE_FEED
 rd_error_text24_end
 	EVEN
 rd_error_text25
-	DC.B "No data set ready",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"No data set ready",ASCII_LINE_FEED
 rd_error_text25_end
 	EVEN
 rd_error_text26
-	DC.B "Write to serial port failed",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Write to serial port failed",ASCII_LINE_FEED
 rd_error_text26_end
 	EVEN
 rd_error_text27
-	DC.B "Couldn't execute WHDLoad slave file",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't execute WHDLoad slave file",ASCII_LINE_FEED
 rd_error_text27_end
 	EVEN
 
@@ -6093,7 +6104,7 @@ whdl_slave_cmd_line_path
 
 
 ; **** Main ****
-	DC.B "$VER: Amiga Demo Launcher 2.0 (8.8.24)",0
+	DC.B "$VER: Amiga Demo Launcher 2.0 (9.8.24)",0
 	EVEN
 
 

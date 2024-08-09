@@ -51,6 +51,17 @@ OS:		3.0
 Turbokarten: 68030/040/060 mit MMU und Fast-Memory
 
 
+Fragen an 4pLaY
+
+- amigalif.org Forum immer noch aktiv?
+
+
+Introtext
+
+78x12 Character für PETSCII
+
+
+
 Änderungen/Anpassungen CreateDemoPlaylist
 
 - Zum Einspielen einer Playliste ist jetzt das Key-Wort "PLAYLIST" notwendig

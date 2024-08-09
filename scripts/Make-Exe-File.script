@@ -1,3 +1,3 @@
 CD Daten:Asm-Sources.AGA/projects/ADL/sources
-Programme:Programmieren/OMA_2.05/OMA adl.asm -o Programme:RSE-ADL -c c -m >RAM:make-output.txt
+Programme:Programmieren/OMA_2.05/OMA ADL.asm -o Programme:RSE-ADL2 -c c -m >RAM:make-output.txt
 CD /
