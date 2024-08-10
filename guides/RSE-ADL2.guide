@@ -205,7 +205,7 @@ When the playback queue is empty, the command from  above will not affect the no
 
 All arguments are optional. If no arguments are given, a file requester will open for a file selection and the entries maximum of 10 files will be used as default if there is no existing playback queue in memory.
 
-If there is already an existing playback queue, the first entry of the playback queue is played . If called again, the ADL2 will play the next sequential entry if no @{"RANDOM" LINK Chapter-1-5-10} argument was used.
+If there is already an existing playback queue, the first entry of the playback queue is played . If called again, the ADL2 will play the next sequential entry if no @{"RANDOM" LINK Chapter-1-5-12} argument was used.
 
 The ADL2 consists of a main, a demo charger and a demo player part.
 
@@ -225,29 +225,31 @@ Arguments of the demo charger:
 
   @{" PLAYLIST " LINK Chapter-1-5-5}
 
+  @{" CLEARQUEUE " LINK Chapter-1-5-6}
+
 
 
 Arguments of the demo player:
 
-  @{" SHOWQUEUE " LINK Chapter-1-5-6}
+  @{" SHOWQUEUE " LINK Chapter-1-5-7}
 
-  @{" PLAYENTRY " LINK Chapter-1-5-7}
+  @{" PLAYENTRY " LINK Chapter-1-5-8}
 
-  @{" RESETLOADPOS " LINK Chapter-1-5-8}
+  @{" RESETQUEUEPOS " LINK Chapter-1-5-9}
 
-  @{" PRERUNSCRIPT " LINK Chapter-1-5-9}
+  @{" PRERUNSCRIPT " LINK Chapter-1-5-10}
 
-  @{" MINS/SECS " LINK Chapter-1-5-10}
+  @{" MINS/SECS " LINK Chapter-1-5-11}
 
-  @{" RANDOM " LINK Chapter-1-5-11}
+  @{" RANDOM " LINK Chapter-1-5-12}
 
-  @{" ENDLESS " LINK Chapter-1-5-12}
+  @{" ENDLESS " LINK Chapter-1-5-13}
 
-  @{" LOOP " LINK Chapter-1-5-13}
+  @{" LOOP " LINK Chapter-1-5-14}
 
-  @{" FADER " LINK Chapter-1-5-14}
+  @{" FADER " LINK Chapter-1-5-15}
 
-  @{" SOFTRESET " LINK Chapter-1-5-15}
+  @{" SOFTRESET " LINK Chapter-1-5-16}
 @ENDNODE
 
 
@@ -290,7 +292,14 @@ The argument PLAYLIST needs a full file path from where to find the playlist  wh
 @ENDNODE
 
 
-@NODE Chapter-1-5-6 "ADL2: List of arguments / SHOWQUEUE"
+@NODE Chapter-1-5-6 "ADL2: List of arguments / CLEARQUEUE"
+@{B}CLEARQUEUE@{UB}
+
+The argument CLEARQUEUE clears the content of the playback queue.
+@ENDNODE
+
+
+@NODE Chapter-1-5-7 "ADL2: List of arguments / SHOWQUEUE"
 @{B}SHOWQUEUE@{UB}
 
 The argument SHOWQUEUE prints the content of the playback queue by
@@ -301,21 +310,21 @@ and informs about the free number of entries left in the playback queue.
 @ENDNODE
 
 
-@NODE Chapter-1-5-7 "ADL2: List of arguments / PLAYENTRY"
+@NODE Chapter-1-5-8 "ADL2: List of arguments / PLAYENTRY"
 @{B}PLAYENTRY @{I}@{B}number@{UI}@{UB}
 
 With this argument a certain demo out of the playback queue can be played. The number ranges from 1 to 10 for a default maximum value or from 1 till @{I}numberr@{UI} if set by the argument @{"MAXENTRIES" LINK Chapter-1-5-3}.
 @ENDNODE
 
 
-@NODE Chapter-1-5-8 "ADL2: List of arguments / RESETLOADPOS"
-@{B}RESETLOADPOS@{UB}
+@NODE Chapter-1-5-9 "ADL2: List of arguments / RESETQUEUEPOS"
+@{B}RESETQUEUEPOS@{UB}
 
-The argument RESETLOADPOS resets the entry pointer of the playback queue to zero and all entry tags are cleared.
+The argument RESETQUEUEPOS resets the entry pointer of the playback queue to zero and all entry tags are cleared.
 @ENDNODE
 
 
-@NODE Chapter-1-5-9 "ADL2: List of arguments / PRERUNSCRIPT"
+@NODE Chapter-1-5-10 "ADL2: List of arguments / PRERUNSCRIPT"
 @{B}PRERUNSCRIPT @{I}file path@{UI}@{UB}
 
 A prerun Amiga DOS script file can be run before the demo starts. The full file path where to find the script is needed and can't be longer than 63 characters. The keyword PRERUNSCRIPT must be given.
@@ -326,7 +335,7 @@ This argument has priority over an argument from the playback queue.
 @ENDNODE
 
 
-@NODE Chapter-1-5-10 "ADL2: List of arguments / MINS/SECS"
+@NODE Chapter-1-5-11 "ADL2: List of arguments / MINS/SECS"
 @{B}MIN/MINS @{I}number@{UI}@{UB}
 @{B}SEC/SECS @{I}number@{UI}@{UB}
 
@@ -347,14 +356,14 @@ The maximum playtime is 99 minutes and 59 seconds.
 @ENDNODE
 
 
-@NODE Chapter-1-5-11 "ADL2: List of arguments / RANDOM"
+@NODE Chapter-1-5-12 "ADL2: List of arguments / RANDOM"
 @{B}RANDOM@{UB}
 
 The argument RANDOM uses a random function to select an entry out of the playback queue. Because of the fact that all played demos will be tagged, no demo will be played twice.
 @ENDNODE
 
 
-@NODE Chapter-1-5-12 "ADL2: List of arguments / ENDLESS"
+@NODE Chapter-1-5-13 "ADL2: List of arguments / ENDLESS"
 @{B}ENDLESS@{UB}
 
 The argument ENDLESS prevents that the playback queue and all resident routines of the ADL2 are removed out of memory if there are no more demos left to play.
@@ -363,18 +372,18 @@ The ADL2 will clear all tags of the demos in the playback queue and restart with
 @ENDNODE
 
 
-@NODE Chapter-1-5-13 "ADL2: List of arguments / LOOP"
+@NODE Chapter-1-5-14 "ADL2: List of arguments / LOOP"
 @{B}LOOP@{UB}
 
 The argument LOOP prevents that the ADL2 returns to the Shell/Workbench after the demo is quit and will automatically select the next entry out of the playback queue. Normally this will be the sequential entry.
 
-Combined with the argument @{"RANDOM" LINK Chapter-1-5-11} this will be a random entry.
+Combined with the argument @{"RANDOM" LINK Chapter-1-5-12} this will be a random entry.
 
 You can always break a loop with the keys CTRL-C.
 @ENDNODE
 
 
-@NODE Chapter-1-5-14 "ADL2: List of arguments / FADER"
+@NODE Chapter-1-5-15 "ADL2: List of arguments / FADER"
 @{B}FADER@{UB}
 
 The argument FADER fades out the active screen to black before the demo starts.
@@ -385,7 +394,7 @@ After the demo is quit by the user the active screen is faded in from black to t
 @ENDNODE
 
 
-@NODE Chapter-1-5-15 "Amiga Demo Launcher Version  2: List of the ADL2 arguments / SOFTRESET"
+@NODE Chapter-1-5-16 "Amiga Demo Launcher Version  2: List of the ADL2 arguments / SOFTRESET"
 @{B}SOFTRESET@{UB}
 
 The argument SOFTRESET does an automatic software reset after the running demo was quit manually regardless of any timer settings of the @{"reset device" LINK Chapter-2-3-14}.
@@ -415,7 +424,7 @@ There are 15 entries left and you could load and transfer a second playlist "DH0
 
 To get an overview of all the entries in the playback queue you type in:
 
-1> RSE-ADL2 @{"SHOWQUEUE" LINK Chapter-1-5-6}
+1> RSE-ADL2 @{"SHOWQUEUE" LINK Chapter-1-5-7}
 
 
 Or you want to add a single entry in the playback queue:
@@ -432,37 +441,37 @@ Just to play one demo:
 
 Or if you want to play entry number 3 you could do this:
 
-1> RSE-ADL2 @{"PLAYENTRY" LINK Chapter-1-5-7} 3
+1> RSE-ADL2 @{"PLAYENTRY" LINK Chapter-1-5-8} 3
 
 
 Or if you didn't select any playtime values while you created the playlist with @{"Create Demo Playlist" LINK Chapter-2}, call all demos in a loop:
 
-1> RSE-ADL2 @{"LOOP" LINK Chapter-1-5-13}
+1> RSE-ADL2 @{"LOOP" LINK Chapter-1-5-14}
 
 
 Or you decide to play the demos randomly:
 
-1> RSE-ADL2 @{"RANDOM" LINK Chapter-1-5-11}
+1> RSE-ADL2 @{"RANDOM" LINK Chapter-1-5-12}
 
 
 Or if you didn't select any playtime values while you created the playlist with Create Demo Playlist, play all demos in a loop randomly:
 
-1> RSE-ADL2 @{"LOOP" LINK Chapter-1-5-13} @{"RANDOM" LINK Chapter-1-5-11}
+1> RSE-ADL2 @{"LOOP" LINK Chapter-1-5-14} @{"RANDOM" LINK Chapter-1-5-12}
 
 
 Or you want to play the demos endlessly that after the last demo is played and restart with the first entry:
 
-1> RSE-ADL2 @{"ENDLESS" LINK Chapter-1-5-12}
+1> RSE-ADL2 @{"ENDLESS" LINK Chapter-1-5-13}
 
 
 Or if you didn't select any playtime values while you created the playlist with @{"Create Demo Playlist" LINK Chapter-2}, play all demos in a loop endlessly:
 
-1> RSE-ADL2 @{"LOOP" LINK Chapter-1-5-13} @{"ENDLESS" LINK Chapter-1-5-12}
+1> RSE-ADL2 @{"LOOP" LINK Chapter-1-5-14} @{"ENDLESS" LINK Chapter-1-5-13}
 
 
 Or if you didn't select any playtime values while you created the playlist with Create Demo Playlist, call all demos in a loop randomly and endlessly:
 
-1> RSE-ADL2 @{"LOOP" LINK Chapter-1-5-13} @{"RANDOM" LINK Chapter-1-5-11} @{"ENDLESS" LINK Chapter-1-5-12}
+1> RSE-ADL2 @{"LOOP" LINK Chapter-1-5-14} @{"RANDOM" LINK Chapter-1-5-12} @{"ENDLESS" LINK Chapter-1-5-13}
 
 
 Or you want to remove the ADL2 out of memory before all demos are played:
