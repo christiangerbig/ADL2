@@ -1,6 +1,6 @@
 ; AmigaDemoLauncher2
 ; Christian Gerbig
-; 09.08.2024
+; 10.08.2024
 ; V.2.0
 
 ; Requirements
@@ -226,6 +226,8 @@
 ; - Abfrage des Arguments REMOVE vorverlegt
 ; - Argument PLAYLIST: Nach dem Übertragen der Playlist in den Speicher wird
 ;                      nun diePlayback-Queue ausgegeben
+; - Neues Argument CLEARQUEUE: Löschen der kompletten Playback-Liste im Speicher
+; - Argument RESETLOADPOS in RESETQUEUEPOS umbenannt
 
 
 	SECTION code_and_variables,CODE
@@ -359,31 +361,31 @@ sfi_fader_speed			EQU 10
 
 
 
-POINTER_RESIDENT_ENTRIES_NUMBER	MACRO
+GET_RESIDENT_ENTRIES_NUMBER	MACRO
 	trap	#0
 	ENDM
 
-POINTER_RESIDENT_ENTRIES_NUMBER_MAX	MACRO
+GET_RESIDENT_ENTRIES_NUMBER_MAX	MACRO
 	trap	#1
 	ENDM
 
-POINTER_RESIDENT_ENTRY_OFFSET		MACRO
+GET_RESIDENT_ENTRY_OFFSET	MACRO
 	trap	#2
 	ENDM
 
-POINTER_RESIDENT_ENTRIES_BUFFER	MACRO
+GET_RESIDENT_ENTRIES_BUFFER	MACRO
 	trap	#3
 	ENDM
 
-POINTER_RESIDENT_ENDLESS_ENABLED	MACRO
+GET_RESIDENT_ENDLESS_ENABLED	MACRO
 	trap	#4
 	ENDM
 
-POINTER_RESIDENT_CUSTOM_TRAP_VECTORS	MACRO
+GET_CUSTOM_TRAP_VECTORS		MACRO
 	trap	#5
 	ENDM
 
-REMOVE_RESET_PROGRAM			MACRO
+REMOVE_RESET_PROGRAM		MACRO
 	trap	#6
 	ENDM
 
@@ -438,6 +440,7 @@ adl_reset_program_active	RS.W 1
 ; **** Demo-Charger ****
 dc_arg_newentry_enabled		RS.W 1
 dc_arg_playlist_enabled		RS.W 1
+dc_arg_clearqueue_enabled       RS.W 1
 
 	RS_ALIGN_LONGWORD
 dc_playlist_file_name		RS.L 1
@@ -456,9 +459,9 @@ dc_multiselect_entries_number	RS.W 1
 
 
 ; **** Run-Demo ****
-rd_arg_prerunscript_enabled	RS.W 1
 rd_arg_showqueue_enabled	RS.W 1
-rd_arg_resetloadpos_enabled	RS.W 1
+rd_arg_resetqueuepos_enabled	RS.W 1
+rd_arg_prerunscript_enabled	RS.W 1
 rd_arg_random_enabled		RS.W 1
 rd_arg_endless_enabled		RS.W 1
 rd_arg_loop_enabled		RS.W 1
@@ -541,10 +544,11 @@ cra_REMOVE			RS.L 1
 cra_MAXENTRIES			RS.L 1
 cra_NEWENTRY			RS.L 1
 cra_PLAYLIST			RS.L 1
+cra_CLEARQUEUE			RS.L 1
 ; **** Run-Demo ****
 cra_SHOWQUEUE			RS.L 1
 cra_PLAYENTRY			RS.L 1
-cra_RESETLOADPOS		RS.L 1
+cra_RESETQUEUEPOS		RS.L 1
 cra_PRERUNSCRIPT		RS.L 1
 cra_MINS			RS.L 1
 cra_SECS			RS.L 1
@@ -714,24 +718,43 @@ output_string_size		RS.B 0
 	bne	adl_cleanup_read_arguments
 
 	tst.w	adl_arg_help_enabled(a3)
-	beq     adl_cleanup_intuition_library
+	beq     adl_cleanup_read_arguments
+
 	tst.w	adl_arg_remove_enabled(a3)
-	beq	adl_cleanup_reset_program
+	beq	adl_cleanup_read_arguments
+
+	tst.w	dc_arg_clearqueue_enabled(a3)
+	beq     adl_cleanup_read_arguments
 
 	bsr	adl_print_intro_message
 
+	tst.w	rd_arg_showqueue_enabled(a3)
+	bne.s	rd_start_skip
+	bsr	rd_show_queue
+	bra	adl_cleanup_read_arguments
+	CNOP 0,4
+rd_start_skip
+
+	bsr	rd_check_queue
+	tst.l	d0
+	bne	dc_start
+
 	tst.w	dc_arg_newentry_enabled(a3)
 	beq.s	dc_start
+
 	tst.w	dc_arg_playlist_enabled(a3)
 	beq.s	dc_start
+
 	tst.w	adl_reset_program_active(a3)
 	beq	rd_start
+
 
 ; **** Demo-Charger ****
 dc_start
  	bsr	dc_alloc_entries_buffer
 	move.l	d0,adl_dos_return_code(a3)
-	bne	adl_cleanup_read_arguments
+	bne	adl_cleanup_reset_program
+
 	tst.w	dc_arg_playlist_enabled(a3)
 	beq	dc_check_playlist
 
@@ -856,18 +879,19 @@ adl_init_variables
 
 ; **** Demo-Charger ****
 	move.w	d1,dc_arg_newentry_enabled(a3)
+	move.w	d1,dc_arg_playlist_enabled(a3)
+	move.w	d1,dc_arg_clearqueue_enabled(a3)
 
 	move.w  d0,dc_multiselect_entries_number(a3)
 
-	move.w	d1,dc_arg_playlist_enabled(a3)
 	move.w	d0,dc_playlist_entries_number(a3)
 	move.w	d0,dc_transmitted_entries_number(a3)
 
 
 ; **** Run-Demo ****
-	move.w	d1,rd_arg_prerunscript_enabled(a3)
 	move.w	d1,rd_arg_showqueue_enabled(a3)
-	move.w	d1,rd_arg_resetloadpos_enabled(a3)
+	move.w	d1,rd_arg_resetqueuepos_enabled(a3)
+	move.w	d1,rd_arg_prerunscript_enabled(a3)
 	move.w	d1,rd_arg_random_enabled(a3)
 	move.w	d1,rd_arg_endless_enabled(a3)
 	move.w	d1,rd_arg_loop_enabled(a3)
@@ -1278,15 +1302,15 @@ adl_check_cool_capture
 	rts
 	CNOP 0,4
 adl_update_variables
-	POINTER_RESIDENT_ENTRIES_NUMBER_MAX
+	GET_RESIDENT_ENTRIES_NUMBER_MAX
 	move.l	d0,a0
 	move.w	(a0),adl_entries_number_max(a3)
-	POINTER_RESIDENT_ENTRIES_NUMBER
+	GET_RESIDENT_ENTRIES_NUMBER
 	move.l	d0,a0
 	move.w	(a0),adl_entries_number(a3)
-	POINTER_RESIDENT_ENTRIES_BUFFER
+	GET_RESIDENT_ENTRIES_BUFFER
 	move.l	d0,adl_entries_buffer(a3)
-	POINTER_RESIDENT_ENTRY_OFFSET
+	GET_RESIDENT_ENTRY_OFFSET
 	move.l	d0,a0
 	move.w	(a0),rd_entry_offset(a3)
 	clr.w   adl_reset_program_active(a3)
@@ -1315,30 +1339,12 @@ adl_check_cmd_line
 	CALLDOS ReadArgs
 	move.l	d0,adl_read_arguments(a3)
 	bne.s   adl_check_arg_help
-	bsr	adl_print_cmd_usage
+adl_check_cmd_line_fail
+	bsr.s	adl_print_cmd_usage
 	moveq	#RETURN_FAIL,d0
 	rts
-
-
-; **** Amiga-Demo-Launcher-Argumente ****
-; ** Argument HELP ***
 	CNOP 0,4
-adl_check_arg_help
-	move.l	cra_HELP(a2),d0
-	beq.s	adl_check_arg_remove
-	not.w	d0
-	move.w	d0,adl_arg_help_enabled(a3)
-	bsr.s	adl_print_cmd_usage
-	moveq	#RETURN_OK,d0
-	rts
-
-; ** Argument REMOVE **
-	CNOP 0,4
-adl_check_arg_remove
-	move.l	cra_REMOVE(a2),d0
-	beq.s	dc_check_arguments
-	not.w	d0
-	move.w	d0,adl_arg_remove_enabled(a3)
+adl_check_cmd_line_ok
 	moveq	#RETURN_OK,d0
 	rts
 
@@ -1350,12 +1356,32 @@ adl_print_cmd_usage
 	bra	adl_print_text
 
 
-; **** Demo-Charger-Argumente ****
+; **** Amiga-Demo-Launcher-Argumente ****
+; ** Argument HELP ***
 	CNOP 0,4
-dc_check_arguments
-	moveq	#TRUE,d3
+adl_check_arg_help
+	move.l	cra_HELP(a2),d0
+	beq.s	adl_check_arg_remove
+	not.w	d0
+	move.w	d0,adl_arg_help_enabled(a3)
+	bsr.s	adl_print_cmd_usage
+	bra.s	adl_check_cmd_line_ok
+
+; ** Argument REMOVE **
+	CNOP 0,4
+adl_check_arg_remove
+	move.l	cra_REMOVE(a2),d0
+	beq.s	dc_check_arg_maxentries
+	not.w	d0
+	move.w	d0,adl_arg_remove_enabled(a3)
+	bra.s	adl_check_cmd_line_ok
+
+
+; **** Demo-Charger-Argumente ****
 
 ; ** Argument MAXENTRIES **
+	CNOP 0,4
+dc_check_arg_maxentries
 	move.l	cra_MAXENTRIES(a2),d0
 	beq.s	dc_check_arg_newentry
 	tst.w	adl_reset_program_active(a3)
@@ -1364,9 +1390,7 @@ dc_check_arguments
 	move.l	(a0),d0			;  Anzahl
 	cmp.w	#dc_entries_number_max,d0
 	ble.s   dc_update_entries_number_max
-	bsr.s	adl_print_cmd_usage
-	moveq	#RETURN_FAIL,d0
-	rts
+	bra.s	adl_check_cmd_line_fail
 	CNOP 0,4
 dc_update_entries_number_max
 	move.w	d0,adl_entries_number_max(a3)
@@ -1383,49 +1407,62 @@ dc_check_arg_newentry
 	CNOP 0,4
 dc_check_arg_playlist
 	move.l	cra_PLAYLIST(a2),dc_playlist_file_name(a3)
-	beq.s	rd_check_arguments
-	move.w	d3,dc_arg_playlist_enabled(a3)
+	beq.s	dc_check_arg_clearqueue
+	clr.w	dc_arg_playlist_enabled(a3)
+	bra	adl_check_cmd_line_ok
+
+; ** Argument CLEARQUEUE **
+	CNOP 0,4
+dc_check_arg_clearqueue
+	move.l	cra_CLEARQUEUE(a2),d0
+	beq.s	rd_check_arg_showqueue
+	not.w	d0
+	move.w	d0,dc_arg_clearqueue_enabled(a3)
+	bsr	dc_clear_queue
+	bra	adl_check_cmd_line_ok
 
 
 ; **** Run-Demo-Argumente ****
-rd_check_arguments
 
 ; ** Argument SHOWQUEUE **
+	CNOP 0,4
+rd_check_arg_showqueue
 	move.l	cra_SHOWQUEUE(a2),d0
 	not.w	d0
 	move.w	d0,rd_arg_showqueue_enabled(a3)
 
 ; ** Argument PLAYENTRY **
 	move.l	cra_PLAYENTRY(a2),d0
-	beq.s	dc_check_arg_resetloadpos
+	beq.s	dc_check_arg_resetqueuepos
 	move.l	d0,a0
 	move.l	(a0),d0		; Entry-Nummer
 	cmp.w	adl_entries_number(a3),d0
 	ble.s   rd_check_arg_playentry_set
-	bsr	adl_print_cmd_usage
-	moveq	#RETURN_FAIL,d0
-	rts
+	bra	adl_check_cmd_line_fail
 	CNOP 0,4
 rd_check_arg_playentry_set
 	move.w	d0,rd_entry_offset(a3)
+	bra	adl_check_cmd_line_ok
 
-; ** Argument RESETLOADPOS **
-dc_check_arg_resetloadpos
-	move.l	cra_RESETLOADPOS(a2),d0
+; ** Argument RESETQUEUEPOS **
+	CNOP 0,4
+dc_check_arg_resetqueuepos
+	move.l	cra_RESETQUEUEPOS(a2),d0
 	beq.s	rd_check_arg_prerunscript
 	not.w	d0
-	move.w	d0,rd_arg_resetloadpos_enabled(a3)
-	move.w	#1,rd_entry_offset
+	move.w	d0,rd_arg_resetqueuepos_enabled(a3)
+	move.w	#1,rd_entry_offset(a3)
 	bsr	rd_clear_tags
 	lea	rd_note(pc),a0
 	moveq	#rd_note_end-rd_note,d0
-	bra	adl_print_text
+	bsr	adl_print_text
+	bra	adl_check_cmd_line_ok
 
 ; ** Argument PRERUNSCRIPT **
 rd_check_arg_prerunscript
 	move.l	cra_PRERUNSCRIPT(a2),rd_prerunscript_path(a3)
 	beq.s	rd_check_arg_secs
-	move.w	d3,rd_arg_prerunscript_enabled(a3)
+	clr.w	rd_arg_prerunscript_enabled(a3)
 
 ; ** Argument SECS **
 rd_check_arg_secs
@@ -1436,9 +1473,7 @@ rd_check_arg_secs
 	moveq	#adl_seconds_max,d2
 	cmp.l	d2,d0
 	ble.s   rd_check_arg_mins
-	bsr	adl_print_cmd_usage
-	moveq	#RETURN_FAIL,d0
-	rts
+	bra	adl_check_cmd_line_fail
 
 ; ** Argument MINS **
 	CNOP 0,4
@@ -1450,9 +1485,8 @@ rd_check_arg_mins
 	moveq	#adl_minutes_max,d2
 	cmp.l	d2,d1
 	ble.s   rd_calculate_playtime
-	bsr	adl_print_cmd_usage
-	moveq	#RETURN_FAIL,d0
-	rts
+	bra	adl_check_cmd_line_fail
+
 	CNOP 0,4
 rd_calculate_playtime
 	MULUF.L 60,d1,d2		; Umrechnung Minuten in Sekunden
@@ -1466,25 +1500,19 @@ rd_calculate_playtime
 		beq.s   rd_check_arg_random
 		tst.w	rd_play_duration(a3)
 		bne.s   rd_check_arg_lmbexit_ok
-		bsr	adl_print_cmd_usage
-		moveq	#RETURN_FAIL,d0
-		rts
+		bra	adl_check_cmd_line_fail
 		CNOP 0,4
 rd_check_arg_lmbexit_ok
 		move.l	d0,a0		; Zeiger auf String
 		move.l	(a0),d0		; Anzahl der Demoteile
 		cmp.w	#adl_lmbexit_parts_number_min,d0
 		bge.s   rd_check_demo_parts_number_max
-		bsr     adl_print_cmd_usage
-		moveq	#RETURN_FAIL,d0
-		rts
+		bra	adl_check_cmd_line_fail
 		CNOP 0,4
 rd_check_demo_parts_number_max
 		cmp.w	#adl_lmbexit_parts_number_max,d0
 		ble.s   rd_arg_lmbexit_set_play_duration
-		bsr     adl_print_cmd_usage
-		moveq	#RETURN_FAIL,d0
-		rts
+		bra	adl_check_cmd_line_fail
 		CNOP 0,4
 rd_arg_lmbexit_set_play_duration
 		subq.w	#1,d0		; Wert anpassen, da intern 1..9 übergeben wird
@@ -1504,7 +1532,7 @@ rd_check_arg_random
 	tst.w	adl_reset_program_active(a3)
 	bne.s	rd_update_endless_enabled
 	move.l	d0,d2
-	POINTER_RESIDENT_ENDLESS_ENABLED
+	GET_RESIDENT_ENDLESS_ENABLED
 	move.l	d0,a0
 	move.w	d2,(a0)
 	bra.s	rd_check_arg_loop
@@ -1526,15 +1554,13 @@ rd_check_arg_loop
 
 ; ** Argument SOFTRESET **
 	move.l	cra_SOFTRESET(a2),d0
-	beq.s	rd_check_arguments_ok
+	beq.s	rd_check_argument_softreset_ok
 	tst.w	rd_arg_loop_enabled(a3)
-	beq.s	rd_check_arguments_ok
+	beq.s	rd_check_argument_softreset_ok
 	not.w	d0
 	move.w	d0,rd_arg_softreset_enabled(a3)
-
-rd_check_arguments_ok
-	moveq	#RETURN_OK,d0
-	rts
+rd_check_argument_softreset_ok
+	bra	adl_check_cmd_line_ok
 
 
 	CNOP 0,4
@@ -1871,8 +1897,8 @@ dc_check_entries_number_max_ok
 
 	CNOP 0,4
 dc_print_entries_max_message
-	lea     dc_note_text(pc),a0
-	moveq   #dc_note_text_end-dc_note_text,d0
+	lea     dc_note3(pc),a0
+	moveq   #dc_note3_end-dc_note3,d0
 	bra     adl_print_text
 
 
@@ -1933,7 +1959,7 @@ dc_copy_entries_buffer_loop
 	CALLLIBS Supervisor
 	tst.l	d0			; VBR = $000000 ?
 	beq.s	dc_update_entries_number ; Ja -> verzweige
-	POINTER_RESIDENT_CUSTOM_TRAP_VECTORS
+	GET_CUSTOM_TRAP_VECTORS
 	move.l	d0,a0 			; Quelle
 	move.w	#TRAP_0_VECTOR,a1	; Ziel: Ab Trap0-Vektor im chip memory
 	IFEQ adl_restore_adl_code_enabled
@@ -1946,7 +1972,7 @@ dc_copy_custom_trap_vectors_loop
 	dbf	d7,dc_copy_custom_trap_vectors_loop
 	CALLLIBS CacheClearU
 dc_update_entries_number
-	POINTER_RESIDENT_ENTRIES_NUMBER
+	GET_RESIDENT_ENTRIES_NUMBER
 	move.l	d0,a0
 	move.w	adl_entries_number(a3),(a0)
 	moveq	#RETURN_OK,d0
@@ -2247,13 +2273,6 @@ dc_calculate_playtime
 	add.l	d0,d1			; + Sekundenwert = Gesamtwert Sekunden
 	MULUF.L 10,d1,d0		; Zählerwert in 100 ms
 	move.w	d1,pqe_playtime(a1)
-;	IFEQ adl_lmbexit_code_enabled
-;		bne.s	dc_check_arg_LMBEXIT
-;	ELSE
-;		bne.s	dc_check_arg_prerunscript
-;	ENDC
-;	bsr	dc_parse_playlist_entry_error
-;	bra	dc_free_custom_arguments
 
 	IFEQ adl_lmbexit_code_enabled
 ; ** Playlist-Argument LMBEXIT **
@@ -2333,12 +2352,6 @@ dc_parse_playlist_file_result
 	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
 	lea	dc_playlist_entries(pc),a0 ; Zeiger auf String
 	bsr	rp_dec_to_ascii
-
-;	move.w	adl_entries_number_max(a3),d1
-;	sub.w	adl_entries_number(a3),d1 ; Verbleibende Anzahl der zu ladenden Dateien ermitteln
-;	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
-;	lea	dc_not_used_entries(pc),a0 ; Stringadresse
-;	bsr	rp_dec_to_ascii
 	lea	dc_parsing_result_text(pc),a0
 	move.l	#dc_parsing_result_text_end-dc_parsing_result_text,d0
 	bsr	adl_print_text
@@ -2380,6 +2393,37 @@ dc_parse_entry_syntax_error
 	move.w	d4,d7			; Schleifenzähler wieder herstellen
 	lea	dc_error_text9(pc),a0
 	moveq	#dc_error_text9_end-dc_error_text9,d0
+	bra	adl_print_text
+
+
+	CNOP 0,4
+dc_clear_queue
+	move.l	adl_entries_buffer(a3),a0
+	tst.b	(a0)
+	beq.s   dc_clear_queue_exit
+	move.w	adl_entries_number(a3),d7
+	subq.w	#1,d7			; wegen dbf
+dc_clear_queue_loop
+	bsr.s	dc_clear_playlist_entry
+	dbf	d7,dc_clear_queue_loop
+	clr.w	adl_entries_number(a3)
+	move.w	#1,rd_entry_offset(a3)
+	tst.w	adl_reset_program_active(a3)
+	bne.s	dc_clear_queue_ok
+	GET_RESIDENT_ENTRIES_NUMBER
+	move.l	d0,a0
+	clr.w	(a0)
+	GET_RESIDENT_ENTRY_OFFSET
+	move.l	d0,a0
+	move.w	#1,(a0)
+dc_clear_queue_ok
+	lea	dc_note1(pc),a0
+	moveq	#dc_note1_end-dc_note1,d0
+	bra	adl_print_text
+	CNOP 0,4
+dc_clear_queue_exit
+	lea	dc_note2(pc),a0
+	moveq	#dc_note2_end-dc_note2,d0
 	bra	adl_print_text
 
 
@@ -2441,7 +2485,11 @@ dc_do_free_entries_buffer
 	CNOP 0,4
 adl_free_read_arguments
 	move.l	adl_read_arguments(a3),d1
+	beq.s	adl_free_read_arguments_skip
 	CALLDOSQ FreeArgs
+	CNOP 0,4
+adl_free_read_arguments_skip
+	rts
 
 
 	CNOP 0,4
@@ -2462,7 +2510,9 @@ adl_print_io_error_ok
 adl_remove_reset_program
 	tst.w	adl_reset_program_active(a3)
 	beq.s	adl_check_arg_remove_enabled
-	rts
+	lea	adl_message2(pc),a0
+	moveq	#adl_message2_end-adl_message2,d0
+	bra	adl_print_text
 	CNOP 0,4
 adl_check_arg_remove_enabled
 	tst.w	adl_arg_remove_enabled(a3)
@@ -2475,8 +2525,8 @@ adl_free_reset_programm_memory
 	move.l	(a0)+,a1
 	move.l	(a0),d0
 	CALLEXEC FreeMem
-	lea	adl_message_text(pc),a0
-	moveq	#adl_message_text_end-adl_message_text,d0
+	lea	adl_message1(pc),a0
+	moveq	#adl_message1_end-adl_message1,d0
 	bra	adl_print_text
 
 
@@ -2514,14 +2564,8 @@ adl_print_text
 ; **** Run-Demo ****
 	CNOP 0,4
 rd_start
-	tst.w	rd_arg_resetloadpos_enabled(a3)
+	tst.w	rd_arg_resetqueuepos_enabled(a3)
         beq	rd_quit
-	tst.w	rd_arg_showqueue_enabled(a3)
-	bne.s	rd_start_skip
-	bsr	rd_show_queue
-	bra	rd_quit
-	CNOP 0,4
-rd_start_skip
 	bsr	rd_open_ciaa_resource
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_read_arguments
@@ -2693,14 +2737,21 @@ rd_cleanup_icon_library
 	bsr	rd_close_icon_library
 
 rd_quit
-	bra	adl_cleanup_intuition_library
+	bra	adl_cleanup_read_arguments
 
 
 	CNOP 0,4
 rd_show_queue
-	moveq	#1,d5			; Zähler für Einträge
 	move.l	adl_entries_buffer(a3),a2
+	tst.b	(a2)
+	bne.s	rd_show_queue_ok
+        lea	rd_message4(pc),a0
+	moveq	#rd_message4_end-rd_message4,d0
+	bra	adl_print_text
+	CNOP 0,4
+rd_show_queue_ok
 	move.w	#playback_queue_entry_size,a4
+	moveq	#1,d5			; Zähler für Einträge
 	move.w	adl_entries_number(a3),d7
 	subq.w	#1,d7			; wegen dbf
 rd_show_queue_loop
@@ -2767,9 +2818,22 @@ rd_tag_message_skip
 	sub.w	adl_entries_number(a3),d1 ; Verbleibende Anzahl der zu ladenden Dateien ermitteln
 	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
 	bsr	rp_dec_to_ascii
-	lea	rd_message_text1(pc),a0
-	moveq	#rd_message_text1_end-rd_message_text1,d0
+	lea	rd_message1(pc),a0
+	moveq	#rd_message1_end-rd_message1,d0
 	bra	adl_print_text
+
+
+	CNOP 0,4
+rd_check_queue
+	move.l	adl_entries_buffer(a3),a2
+	tst.b	(a2)
+	bne.s	rd_check_queue_ok
+	moveq	#RETURN_FAIL,d0
+	rts
+	CNOP 0,4
+rd_check_queue_ok
+	moveq	#RETURN_OK,d0
+	rts
 	
 
 ; Input
@@ -3048,7 +3112,7 @@ rd_demofile_name_ok
 	subq.w	#1,d0			; "/" oder ":" abziehen
 	move.l	d0,rd_demofile_name_length(a3)
 	addq.w	#1,rd_entry_offset(a3)
-	POINTER_RESIDENT_ENTRY_OFFSET
+	GET_RESIDENT_ENTRY_OFFSET
 	move.l	d0,a0
 	addq.w	#1,(a0)
 	moveq	#RETURN_OK,d0
@@ -3944,7 +4008,7 @@ rd_write_timer_ok
 
 	CNOP 0,4
 rd_save_custom_trap_vectors
-	POINTER_RESIDENT_CUSTOM_TRAP_VECTORS
+	GET_CUSTOM_TRAP_VECTORS
 	move.l	d0,rd_custom_trap_vectors(a3)
 	rts
 
@@ -4561,9 +4625,9 @@ rd_restore_current_dir
 ; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
 rd_check_demofile_tags
-	MOVEF.L	playback_queue_entry_size,d0
 	move.l	adl_entries_buffer(a3),a0
 	ADDF.W	pqe_tag_active,a0
+	MOVEF.L	playback_queue_entry_size,d0
 	move.w	adl_entries_number(a3),d7
 	subq.w 	#1,d7			; wegen dbf
 rd_check_demofile_tags_loop
@@ -4580,8 +4644,8 @@ rd_check_demofile_tags_ok
 	CNOP 0,4
 rd_all_demofiles_played
 	clr.w	adl_arg_remove_enabled(a3)
-	lea	rd_message_text2(pc),a0
-	moveq	#rd_message_text2_end-rd_message_text2,d0
+	lea	rd_message2(pc),a0
+	moveq	#rd_message2_end-rd_message2,d0
 	bsr	adl_print_text
 	moveq	#RETURN_WARN,d0
 	rts
@@ -4600,7 +4664,7 @@ rd_clear_tags_loop
 	add.l	d1,a0			; nächster Eintrag
 	dbf	d7,rd_clear_tags_loop
 	move.w	#1,rd_entry_offset(a3)
-	POINTER_RESIDENT_ENTRY_OFFSET
+	GET_RESIDENT_ENTRY_OFFSET
 	move.l	d0,a0
 	move.w	#1,(a0)
 	rts
@@ -4616,8 +4680,8 @@ rd_check_user_break
 	CALLEXEC SetSignal
 	btst	#SIGBREAKB_CTRL_C,d0
 	beq.s	rd_check_user_break_ok
-	lea	rd_message_text3(pc),a0
-	moveq	#rd_message_text3_end-rd_message_text3,d0
+	lea	rd_message3(pc),a0
+	moveq	#rd_message3_end-rd_message3,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -5367,7 +5431,7 @@ rp_no_reset
 	ENDC
 
 
-; POINTER_RESIDENT_ENTRIES_NUMBER
+; GET_RESIDENT_ENTRIES_NUMBER
 ; Input
 ; Result
 ; d0.l	... Rückgabewert: Zeiger auf Variable
@@ -5379,7 +5443,7 @@ rp_trap_0_program
 	rte
 
 
-; POINTER_RESIDENT_ENTRIES_NUMBER_MAX
+; GET_RESIDENT_ENTRIES_NUMBER_MAX
 ; Input
 ; Result
 ; d0.l	... Rückgabewert: Zeiger auf Variable
@@ -5391,7 +5455,7 @@ rp_trap_1_program
 	rte
 
 
-; POINTER_RESIDENT_ENTRY_OFFSET
+; GET_RESIDENT_ENTRY_OFFSET
 ; Input
 ; Result
 ; d0.l	... Rückgabewert: Zeiger auf Variable
@@ -5403,7 +5467,7 @@ rp_trap_2_program
 	rte
 
 
-; POINTER_RESIDENT_ENTRIES_BUFFER
+; GET_RESIDENT_ENTRIES_BUFFER
 ; Input
 ; Result
 ; d0.l	... Rückgabewert: Zeiger auf Puffer
@@ -5415,7 +5479,7 @@ rp_trap_3_program
 	rte
 
 
-; POINTER_RESIDENT_ENDLESS_ENABLED
+; GET_RESIDENT_ENDLESS_ENABLED
 ; Input
 ; Result
 ; d0.l	... Rückgabewert: Zeiger auf Variable
@@ -5427,7 +5491,7 @@ rp_trap_4_program
 	rte
 
 
-; POINTER_RESIDENT_CUSTOM_VECTORS
+; GET_RESIDENT_CUSTOM_VECTORS
 ; Input
 ; Result
 ; d0.l	... Rückgabewert: Zeiger auf eigene Trap-Vektoren
@@ -5592,10 +5656,11 @@ adl_cmd_template
 	DC.B "MAXENTRIES/K/N,"
 	DC.B "NEWENTRY/S,"
 	DC.B "PLAYLIST/K,"
+	DC.B "CLEARQUEUE/S,"
 ; ** Run-Demo **
 	DC.B "SHOWQUEUE/S,"
 	DC.B "PLAYENTRY/K/N,"
-	DC.B "RESETLOADPOS/S,"
+	DC.B "RESETQUEUEPOS/S,"
 	DC.B "PRERUNSCRIPT/K,"
 	DC.B "MIN=MINS/K/N,"
 	DC.B "SEC=SECS/K/N,"
@@ -5633,10 +5698,11 @@ adl_cmd_usage_text
 	DC.B "MAXENTRIES ",155,"3",109,"number ",155,"0",109,"     Set maximum entries number of playback queue",ASCII_LINE_FEED
 	DC.B "NEWENTRY               Create new entry in playback queue",ASCII_LINE_FEED
 	DC.B "PLAYLIST ",155,"3",109,"file path ",155,"0",109,"    Load and transfer external playlist script file",ASCII_LINE_FEED
+	DC.B "CLEARQUEUE             Clear the whole playback queue with all its entries",ASCII_LINE_FEED
 ; ** Run-Demo **
 	DC.B "SHOWQUEUE              Show content of playback queue",ASCII_LINE_FEED
 	DC.B "PLAYENTRY ",155,"3",109,"number ",155,"0",109,"      Play certain entry of playback queue",ASCII_LINE_FEED
-	DC.B "RESETLOADPOS           Reset entry offset of playback queue to zero",ASCII_LINE_FEED
+	DC.B "RESETQUEUEPOS           Reset entry offset of playback queue to zero",ASCII_LINE_FEED
 	DC.B "PRERUNSCRIPT ",155,"3",109,"file path ",155,"0",109,"Execute prerrun script file before demo is played",ASCII_LINE_FEED
 	DC.B "MIN/MINS ",155,"3",109,"number ",155,"0",109,"       Playtime in minutes (reset device needed)",ASCII_LINE_FEED
 	DC.B "SEC/SECS ",155,"3",109,"number ",155,"0",109,"       Playtime in seconds (reset device needed)",ASCII_LINE_FEED
@@ -5657,10 +5723,16 @@ adl_error_header
 	DC.B " ",0
 	EVEN
 
-adl_message_text
+adl_message1
 	DC.B ASCII_LINE_FEED,"Amiga Demo Launcher now removed from memory",ASCII_LINE_FEED,ASCII_LINE_FEED
-adl_message_text_end
+adl_message1_end
 	EVEN
+
+adl_message2
+	DC.B ASCII_LINE_FEED,"Amiga Demo Launcher not found",ASCII_LINE_FEED,ASCII_LINE_FEED
+adl_message2_end
+	EVEN
+
 
 adl_error_text1
 	DC.B ASCII_LINE_FEED,"Couldnt open graphics.library",ASCII_LINE_FEED
@@ -5781,9 +5853,19 @@ dc_runmode_request_gadgets
 	EVEN
 
 
-dc_note_text
+dc_note1
+	DC.B ASCII_LINE_FEED,"Playback queue entries cleared",ASCII_LINE_FEED,ASCII_LINE_FEED
+dc_note1_end
+	EVEN
+
+dc_note2
+	DC.B ASCII_LINE_FEED,"No playback queue entries to clear",ASCII_LINE_FEED,ASCII_LINE_FEED
+dc_note2_end
+	EVEN
+
+dc_note3
 	DC.B ASCII_LINE_FEED,"Maximum number of entries in playback queue already reached",ASCII_LINE_FEED,ASCII_LINE_FEED
-dc_note_text_end
+dc_note3_end
 	EVEN
 
 dc_error_text1
@@ -5933,22 +6015,27 @@ rd_tag_active_text2_end
 	EVEN
 
 
-rd_message_text1
+rd_message1
 	DC.B ASCII_LINE_FEED,ASCII_LINE_FEED,"Playback queue has "
 rd_not_used_entries_string
 	DC.B "   "
 	DC.B "unused entries left",ASCII_LINE_FEED,ASCII_LINE_FEED
-rd_message_text1_end
+rd_message1_end
 	EVEN
 
-rd_message_text2
+rd_message2
 	DC.B ASCII_LINE_FEED,"No more demos left to play",ASCII_LINE_FEED,ASCII_LINE_FEED
-rd_message_text2_end
+rd_message2_end
 	EVEN
 
-rd_message_text3
+rd_message3
 	DC.B ASCII_LINE_FEED,"Replay loop stopped",ASCII_LINE_FEED,ASCII_LINE_FEED
-rd_message_text3_end
+rd_message3_end
+	EVEN
+
+rd_message4
+	DC.B ASCII_LINE_FEED,"Playback queue is empty",ASCII_LINE_FEED,ASCII_LINE_FEED
+rd_message4_end
 	EVEN
 
 
@@ -5967,9 +6054,10 @@ rd_shell_cmd_line_end
 
 
 rd_note
-	DC.B "Load position set back to first entry. All demo play states cleared.",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Queue position set back to first entry. All demo play states cleared",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_note_end
 	EVEN
+
 
 rd_error_text1
 	DC.B ASCII_LINE_FEED,"Couldn't open ciaa.resource",ASCII_LINE_FEED
@@ -6104,7 +6192,7 @@ whdl_slave_cmd_line_path
 
 
 ; **** Main ****
-	DC.B "$VER: Amiga Demo Launcher 2.0 (9.8.24)",0
+	DC.B "$VER: Amiga Demo Launcher 2.0 (10.8.24)",0
 	EVEN
 
 

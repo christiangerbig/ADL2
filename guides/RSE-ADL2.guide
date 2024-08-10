@@ -9,7 +9,7 @@
 @FONT topaz.font 8
 
 
-@NODE Main "Amiga Demo Launcher Version 2 (ADL2) Package"
+@NODE Main "Amiga Demo Launcher Package"
 
 
                          @{B}Amiga Demo Launcher Package@{UB}
@@ -749,102 +749,126 @@ Next, a requester is shown that contains the main menu.
 @NODE Chapter-2-3-3 "Create Demo Playlist: How to use the Arexx script / The script main menu"
 @{B}2-3-3 The script main menu@{UB}
 
-Function:     Description:
 
-CREATE/       Define a new playlist, or select an existing playlist to
-APPEND:       append new entries to. The user will then be taken through
-              the process of selecting demo executable(s) for the playlist,
-              and then configure the runmode, playmode, and prerun modes
-              for each of them. If demo configuration files have been
-              detected and loaded, the user can choose to use the loaded
-              settings for the current or all selected demo executables
-              instead of configuring them himself.
+CREATE/APPEND
 
-TRANSFER:     Transfer an existing playlist to the @{"ADL2" LINK Chapter-1} playback queue, and
-              then notify the user of the result.
+Define a new playlist, or select an existing playlist to append new entries to.
+The user will then be taken through the process of selecting demo executable(s) for the playlist, and then configure the runmode, playmode, and prerun modes for each of them.
+If demo configuration files have been detected and loaded, the user can choose to use the loaded settings for the current or all selected demo executables instead of configuring them himself.
 
-SHOW:         Show the status of the current ADL2 playback queue.
 
-CFG1/CFG2:    Show the script configuration menu. From here the user may
-              change the global script settings. This menu has been split
-              in 2 because of the limitation in the length of the
-              @{I}RequestChoice@{UI} arguments.
+TRANSFER
 
-QUIT:         Quit the script
+Transfer an existing playlist to the @{"ADL2" LINK Chapter-1} playback queue, and then notify the user of the result.
+
+
+SHOW
+
+Show the status of the current ADL2 playback queue.
+
+
+CFG1/CFG2
+
+Show the script configuration menu. From here the user may change the global script settings. This menu has been split in 2 because of the limitation in the length of the @{I}RequestChoice@{UI} arguments.
+
+
+QUIT
+
+Quit the script
 @ENDNODE
 
 
 @NODE Chapter-2-3-4 "Create Demo Playlist: How to use the Arexx script / The script configuration menu 1"
 @{B}2-3-4 The script configuration menu 1@{UB}
 
-Function:    Description:
 
-DCF:         Enable automatic creation of a demo a configuration file each
-             time the user has set up the runmode, playmode and prerun
-             modes for a demo. This configuration file will be updated /
-             rewritten at a later stage only if the user configures the
-             same demo over again with different settings.
+DCF
 
-!DCF:        Disable automatic creation of demo configuration files.
-             Please note that a demo configuration file will still be
-             detected and loaded if its corresponding demo is used in an
-             @{"ADL2" LINK Chapter-1} playlist.
+Enable automatic creation of a demo a configuration file each time the user has set up the runmode, playmode and prerun modes for a demo.
+This configuration file will be updated / rewritten at a later stage only if the user configures the same demo over again with different settings.
 
-CFP:         Save the individual demo configuration files in a user defined
-             global directory. Please note that if, during the creation of
-             a playlist, a spesific demo configuration file is not found at
-             this location, the script will also look for it in the demo
-             executable`s home directory. Also worth noting is that if the
-             demo configuration is loaded from the demo home directory, AND
-             automatic creation of demo configuration files is enabled AND
-             the user uses the ALLCFG function, all the settings from the
-             configuration files in the demo home directory will be re-
-             written to new configuration files in the user defined global
-             demo configuration directory.
- 
-!CFP:        Save the individual demo configuration files into the demo
-             executable`s home directory.
 
-RSQ:         When transferring a playlist to the @{"ADL2" LINK Chapter-1} playback queue, the
-             entries will be inserted at the top of the queue, overwriting
-             any previous content.
+!DCF
 
-!RSQ:        When transferring a playlist to the ADL2 playback queue, the
-             entries will be added to the bottom of the queue, keeping any
-             previous content.
+Disable automatic creation of demo configuration files. Please note that a demo configuration file will still be detected and loaded if its corresponding demo is used in an @{"ADL2" LINK Chapter-1} playlist.
 
-SAVE:        Return to the main menu. The current settings are saved, and
-             will be used.
 
-USE:         Return to the main menu. The current settings will be used.
+CFP
 
-EXIT:        Return to the main menu. The previous settings will be used
-             (undo changes).
+Save the individual demo configuration files in a user defined global directory.
+Please note that if, during the creation of a playlist, a specific demo configuration file is not found at this location, the script will also look for it in the demo executable`s home directory.
+Also worth noting is this special case: The demo configuration is loaded from the demo home directory, the automatic creation of demo configuration files is enabled and the user uses the ALLCFG function.
+In this case all the settings from the configuration files in the demo home directory will be rewritten to new configuration files in the user defined global demo configuration directory.
 
-QUIT:        Quit the script.
+
+!CFP
+
+Save the individual demo configuration files into the demo executable`s home directory.
+
+
+RSQ
+
+When transferring a playlist to the @{"ADL2" LINK Chapter-1} playback queue, the entries will be inserted at the top of the queue, overwriting any previous content.
+
+
+!RSQ
+
+When transferring a playlist to the ADL2 playback queue, the entries will be added to the bottom of the queue, keeping any previous content.
+
+
+SAVE
+
+Return to the main menu. The current settings are saved, and will be used.
+
+
+USE
+
+Return to the main menu. The current settings will be used.
+
+
+EXIT
+
+Return to the main menu. The previous settings will be used (undo changes).
+
+
+QUIT
+
+Quit the script.
 @ENDNODE
 
 
 @NODE Chapter-2-3-5 "Create Demo Playlist: How to use the Arexx script / The script configuration menu 2"
 @{B}The script configuration menu 2@{UB}
 
-Function:    Description:
 
-+10:         Add 10 to the maximum number of entries in the @{"ADL2" LINK Chapter-1} playback
-             queue.
++10
 
-+1:          Add 1 to the maximum number of entries in the ADL2 playback
-             queue.
+Add 10 to the maximum number of entries in the @{"ADL2" LINK Chapter-1} playback queue.
 
-SAVE:        Return to the main menu. The current settings are saved, and
-             will be used.
 
-USE:         Return to the main menu. The current settings will be used.
++1
 
-EXIT:        Return to the main menu. The previous settings will be used
-             (undo changes).
+Add 1 to the maximum number of entries in the ADL2 playback queue.
 
-QUIT:        Quit the script.
+
+SAVE
+
+Return to the main menu. The current settings are saved, and will be used.
+
+
+USE
+
+Return to the main menu. The current settings will be used.
+
+
+EXIT
+
+Return to the main menu. The previous settings will be used (undo changes).
+
+
+QUIT
+
+Quit the script.
 @ENDNODE
 
 
