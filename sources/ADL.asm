@@ -2700,7 +2700,6 @@ rd_cleanup_current_dir
 
 rd_cleanup_io_error
 	move.l	rd_demofile_path(a3),a0
-	move.b	#FALSE,pqe_tag_active(a0) ; Demo wurde abgespielt
 	bsr	adl_print_io_error
 
 	bsr	rd_check_demofile_tags
@@ -3172,7 +3171,9 @@ rd_get_random_entry
 ; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
 rd_open_demofile
-	move.l	rd_demofile_path(a3),d1
+	move.l	rd_demofile_path(a3),a0
+	move.b	#FALSE,pqe_tag_active(a0) ; Demo wurde abgespielt
+	move.l	a0,d1
 	MOVEF.L	MODE_OLDFILE,d2
 	CALLDOS Open
 	move.l	d0,rd_demofile_handle(a3)
@@ -4169,7 +4170,6 @@ rd_run_demofile_loop
 	tst.w	rd_arg_softreset_enabled(a3)
 	bne.s   rd_run_demofile_ok
 	move.l	rd_demofile_path(a3),a0
-	move.b	#FALSE,pqe_tag_active(a0) ; Demo wurde abgespielt
 	CALLEXECQ ColdReboot
 	CNOP 0,4
 rd_run_demofile_ok
@@ -4198,7 +4198,6 @@ rd_check_arg_softreset_enabled
 	tst.w	rd_arg_softreset_enabled(a3)
 	bne.s	rd_execute_whdload_slave_ok
 	move.l	rd_demofile_path(a3),a0
-	move.b	#FALSE,pqe_tag_active(a0) ; Demo wurde abgespielt
 	CALLEXECQ ColdReboot
 	CNOP 0,4
 rd_execute_whdload_slave_ok
