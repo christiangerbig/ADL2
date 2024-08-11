@@ -144,6 +144,7 @@ You can use a pattern filter to display only files with a certain extension like
 
 .bin
 .dat
+.data
 .diz
 .info
 .nfo

@@ -5790,6 +5790,7 @@ dc_character_s
 dc_file_request_pattern
 	DC.B "~(#?.bin|"
 	DC.B "#?.dat|"
+	DC.B "#?.data|"
 	DC.B "#?.diz|"
 	DC.B "#?.info|"
 	DC.B "#?.nfo|"
