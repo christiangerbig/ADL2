@@ -231,6 +231,7 @@
 ; - Argument RESETLOADPOS in RESETQUEUEPOS umbenannt
 ; - Wenn alle Demos aus der Liste gespielt wurden wird der ADL nicht mehr
 ;   automtisch aus dem Speicher entfernt
+; - File-Requester: Der Filter berücksichtigt jetzt auch die Endung ".data"
 
 
 	SECTION code_and_variables,CODE
@@ -714,47 +715,46 @@ output_string_size		RS.B 0
 	bsr	adl_check_cool_capture
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_intuition_library
+
 	bsr	adl_check_cmd_line
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_read_arguments
 
 	tst.w	adl_arg_help_enabled(a3)
 	beq     adl_cleanup_read_arguments
-
 	tst.w	adl_arg_remove_enabled(a3)
 	beq	adl_cleanup_read_arguments
-
 	tst.w	dc_arg_clearqueue_enabled(a3)
 	beq     adl_cleanup_read_arguments
-
 	tst.w	rd_arg_showqueue_enabled(a3)
-	bne.s	rd_start_skip
+	bne.s	adl_start_skip
 	bsr	rd_show_queue
 	bra	adl_cleanup_read_arguments
 	CNOP 0,4
-rd_start_skip
+adl_start_skip
 
 	bsr	adl_print_intro_message_text
 
-	bsr	rd_check_queue
+	bsr	rd_check_queue_empty
 	tst.l	d0
 	bne	dc_start
-
 	tst.w	dc_arg_newentry_enabled(a3)
 	beq.s	dc_start
-
 	tst.w	dc_arg_playlist_enabled(a3)
 	beq.s	dc_start
-
 	tst.w	adl_reset_program_active(a3)
 	beq	rd_start
 
 
 ; **** Demo-Charger ****
 dc_start
+	bsr	dc_check_entries_number_max
+	move.l	d0,adl_dos_return_code(a3)
+	bne	adl_cleanup_read_arguments
+
  	bsr	dc_alloc_entries_buffer
 	move.l	d0,adl_dos_return_code(a3)
-	bne	adl_cleanup_reset_program
+	bne	adl_cleanup_read_arguments
 
 	tst.w	dc_arg_playlist_enabled(a3)
 	beq	dc_check_playlist
@@ -771,7 +771,6 @@ dc_demo_charge_loop
 	bsr	dc_make_file_request
 	move.l	d0,adl_dos_return_code(a3)
 	bne.s	dc_cleanup_asl_library
-
 	bsr	dc_display_file_request
 	move.l	d0,adl_dos_return_code(a3)
 	bne.s	dc_cleanup_file_request
@@ -2819,14 +2818,14 @@ rd_tag_message_text_skip
 
 
 	CNOP 0,4
-rd_check_queue
+rd_check_queue_empty
 	move.l	adl_entries_buffer(a3),a2
 	tst.b	(a2)
-	bne.s	rd_check_queue_ok
+	bne.s	rd_check_queue_empty_ok
 	moveq	#RETURN_WARN,d0
 	rts
 	CNOP 0,4
-rd_check_queue_ok
+rd_check_queue_empty_ok
 	moveq	#RETURN_OK,d0
 	rts
 	
