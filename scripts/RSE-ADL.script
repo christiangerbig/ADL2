@@ -1,0 +1,6 @@
+FAILAT 6             ;Abort script execution if error number >= 6
+LAB ADL_loop         ;Loop-label
+RSE-ADL >NIL:        ;No output
+IF NOT WARN          ;If ADL return value <> WARN(5),
+  SKIP ADL_loop BACK ;then loop
+ENDIF

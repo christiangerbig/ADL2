@@ -50,9 +50,11 @@
 
                        What is the Amiga Demo Launcher?
 
-The Amiga Demo Launcher Version 2 (ADL2) is an application to replay executable file demos, or WHDLoad slave files from a playback queue which was created with the tool @{"Create Demo Playlist" LINK Chapter-2}. So both programs work hand in hand.
+The Amiga Demo Launcher Version 2 (ADL2) is an app to replay file demos, or WHDLoad slave files from a playback queue which was created with the tool @{"Create Demo Playlist" LINK Chapter-2}. 
 
 With the ADL2 single playback queue entries can be also created directly.
+
+So both programs work hand in hand.
 
 The ADL2 makes it possible for you to even replay many old OCS file demos on an AGA Amiga with a 68060 CPU, because it downgrades the machine if desired.
 
@@ -77,7 +79,6 @@ Additional thanks go to Yulquen74 creating the tool @{"Create Demo Playlist" LIN
 And of course all members of Resistance.
 
 Further greetings fly to Bytebreaker, Bifat, StingRay, mnemo, novel and ross).
-
 @ENDNODE
 
 
@@ -180,14 +181,10 @@ The default values of the ADL2 called without any arguments are unlimited playti
 The entries of the playback queue are created via the file requester.
 More details can be found @{"here" LINK Chapter-1-4-1}.
 
-You can call the ADL2 in a loop of a script like in this @{"example" LINK RSE-ADL2.script/main}.
-
-The return value will be 0(OK) if the demo could be played or 5(WARN) if there are no more demos left to play or a demo was already played.
-
 
 The intended implementation of ADL2 when used with the tool @{"Create Demo Playlist" LINK Chapter-2} is executing it from the startup-sequence like this:
 
-C:RSE-ADL2 QUIET SOFTRESET >NIL:
+C:RSE-ADL2 SOFTRESET >NIL:
 
 The line from above should be inserted after the Setpatch command, because it is important, that SetPatch is run before to enlighten the AGA possibilities and initializing the 68040/060 properly.
 The ADL2 relies on these enabled AGA 68040/060 possibilities. Don't try to run the ADL2 without the SetPatch command executed before. Even on an AGA machine, the ADL2 would not detect it as such one and fail with an error message.
@@ -485,13 +482,34 @@ Or you want to remove the ADL2 out of memory before all demos are played:
 
 For those who are more interested in background information, here are some technical details about the ADL2.
 
-    @{" How the ADL2 is nested in memory " LINK Chapter-1-7-1}
+    @{" ADL2 return values " LINK Chapter-1-7-1}
 
-    @{" Start modes " LINK Chapter-1-7-2}
+    @{" How the ADL2 is nested in memory " LINK Chapter-1-7-2}
+
+    @{" Start modes " LINK Chapter-1-7-3}
 @ENDNODE
 
 
-@NODE Chapter-1-7-1 "ADL2: Technical details / How the ADL2 is nested in memory"
+@NODE Chapter-1-7-1 "ADL2: Technical details / ADL2 return values"
+@{B}ADL2 return values@{UB}
+
+If you use the RSE-ADL2 in a script you get these return values:
+
+0 (OK)
+Just what it says. Everything's fine.
+
+5 (WARN)
+- No more demos left to play from the playback queue
+- A demo was already played from the playlist queue
+- Playback queue is empty
+- Maximum entries for the playback queue reached
+
+10 (FAIL)
+Any error that prevents an execution of the RSE-ADL2.
+@ENDNODE
+
+
+@NODE Chapter-1-7-2 "ADL2: Technical details / How the ADL2 is nested in memory"
 @{B}How the ADL2 is nested in memory@{UB}
 
 The ADL2 is always nested in the upper space of chip memory. With this technique the ADL2 is safe and can't be overwritten by old nasty OCS demos which do not expect that there are more than 512KB or 1MB chip memory.
@@ -502,25 +520,23 @@ If there's a different program already using this vector, the ADL2 notices this 
 @ENDNODE
 
 
-@NODE Chapter-1-7-2 "ADL2: Technical details / Start modes"
+@NODE Chapter-1-7-3 "ADL2: Technical details / Start modes"
 @{B}Start modes@{UB}
 
-The ADL2 has three start modes:
-
-  @{" OCS vanilla " LINK Chapter-1-7-2-1}
-
-  @{" AGA vanilla " LINK Chapter-1-7-2-2}
-
-  @{" Turbo " LINK Chapter-1-7-2-3}
-
-The modes "OCS vanilla" and "AGA vanilla" work like a degrader. "Turbo" leaves everything untouched.
+The ADL2 has three start modes. "OCS vanilla" and "AGA vanilla" work like a degrader. Start mode "Turbo" leaves everything untouched.
 
 For every start mode all important CUSTOM/CIA chip registers will be saved before the demo is played and restored after the demo returns.
 This ensures that demos which don't restore these registers properly will not freeze the system.
+
+  @{" OCS vanilla " LINK Chapter-1-7-3-1}
+
+  @{" AGA vanilla " LINK Chapter-1-7-3-2}
+
+  @{" Turbo " LINK Chapter-1-7-3-3}
 @ENDNODE
 
 
-@NODE Chapter-1-7-2-1 "ADL2: Technical details / start modes / OCS vanilla"
+@NODE Chapter-1-7-3-1 "ADL2: Technical details / start modes / OCS vanilla"
 @{B}OCS vanilla@{UB}
 
 This mode is for old OCS demos mainly written for OCS machines like the Amiga 500 (late eighties/early nineties) ignoring the common programming guidelines:
@@ -568,7 +584,7 @@ These specific characteristics of 680x0 processors are disabled:
 @ENDNODE
 
 
-@NODE Chapter-1-7-2-2 "ADL2: Technical details / start modes / AGA vanilla"
+@NODE Chapter-1-7-3-2 "ADL2: Technical details / start modes / AGA vanilla"
 @{B}AGA vanilla@{UB}
 
 This mode is for early AGA demos mainly written for vanilla AGA machines like the Amiga 1200 ignoring the common programming guidelines:
@@ -611,7 +627,7 @@ These specific characteristics of the processors are disabled:
 @ENDNODE
 
 
-@NODE Chapter-1-7-2-3 "ADL2: Technical details / start modes / Turbo"
+@NODE Chapter-1-7-3-3 "ADL2: Technical details / start modes / Turbo"
 @{B}Turbo@{UB}
 
 This mode is for OCS/ECS/AGA file demos, which don't have any problems with faster CPUs or available fast memory and observed common programming guidelines:
@@ -758,7 +774,6 @@ Next, a requester is shown that contains the main menu.
 @NODE Chapter-2-3-3 "Create Demo Playlist: How to use the Arexx script / The script main menu"
 @{B}2-3-3 The script main menu@{UB}
 
-
 CREATE/APPEND
 
 Define a new playlist, or select an existing playlist to append new entries to.
@@ -789,7 +804,6 @@ Quit the script
 
 @NODE Chapter-2-3-4 "Create Demo Playlist: How to use the Arexx script / The script configuration menu 1"
 @{B}2-3-4 The script configuration menu 1@{UB}
-
 
 DCF
 
@@ -848,7 +862,6 @@ Quit the script.
 
 @NODE Chapter-2-3-5 "Create Demo Playlist: How to use the Arexx script / The script configuration menu 2"
 @{B}The script configuration menu 2@{UB}
-
 
 +10
 
