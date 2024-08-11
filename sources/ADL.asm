@@ -1,6 +1,6 @@
 ; AmigaDemoLauncher2
 ; Christian Gerbig
-; 10.08.2024
+; 11.08.2024
 ; V.2.0
 
 ; Requirements
@@ -228,6 +228,8 @@
 ;                      nun diePlayback-Queue ausgegeben
 ; - Neues Argument CLEARQUEUE: Löschen der kompletten Playback-Liste im Speicher
 ; - Argument RESETLOADPOS in RESETQUEUEPOS umbenannt
+; - Wenn alle Demos aus der Liste gespielt wurden wird der ADL nicht mehr
+;   automtisch aus dem Speicher entfernt
 
 
 	SECTION code_and_variables,CODE
@@ -290,7 +292,7 @@ RUNMODE_OCS_VANILLA		EQU $02
 RUNMODE_AGA_VANILLA		EQU $03
 
 ; **** Amiga-Demo-Launcher ****
-adl_drives_delay		EQU PAL_FPS*1 ; 1 Sekunde
+adl_drives_motor_delay		EQU PAL_FPS*1 ; 1 Sekunde
 
 adl_restore_adl_code_enabled	EQU FALSE
 adl_lmbexit_code_enabled	EQU FALSE
@@ -469,7 +471,7 @@ rd_arg_fader_enabled		RS.W 1
 rd_arg_softreset_enabled	RS.W 1
 
 	RS_ALIGN_LONGWORD
-rd_serial_message_port		RS.L 1
+rd_serial_message_text_port		RS.L 1
 rd_timer_delay			RS.W 1
 
 rd_play_duration		RS.W 1
@@ -726,14 +728,14 @@ output_string_size		RS.B 0
 	tst.w	dc_arg_clearqueue_enabled(a3)
 	beq     adl_cleanup_read_arguments
 
-	bsr	adl_print_intro_message
-
 	tst.w	rd_arg_showqueue_enabled(a3)
 	bne.s	rd_start_skip
 	bsr	rd_show_queue
 	bra	adl_cleanup_read_arguments
 	CNOP 0,4
 rd_start_skip
+
+	bsr	adl_print_intro_message_text
 
 	bsr	rd_check_queue
 	tst.l	d0
@@ -1404,8 +1406,6 @@ dc_check_arg_newentry
 	move.w	d0,dc_arg_newentry_enabled(a3)
 
 ; ** Argument PLAYLIST **
-	CNOP 0,4
-dc_check_arg_playlist
 	move.l	cra_PLAYLIST(a2),dc_playlist_file_name(a3)
 	beq.s	dc_check_arg_clearqueue
 	clr.w	dc_arg_playlist_enabled(a3)
@@ -1453,12 +1453,13 @@ dc_check_arg_resetqueuepos
 	move.w	d0,rd_arg_resetqueuepos_enabled(a3)
 	move.w	#1,rd_entry_offset(a3)
 	bsr	rd_clear_tags
-	lea	rd_note(pc),a0
-	moveq	#rd_note_end-rd_note,d0
+	lea	rd_message_text5(pc),a0
+	moveq	#rd_message_text5_end-rd_message_text5,d0
 	bsr	adl_print_text
 	bra	adl_check_cmd_line_ok
 
 ; ** Argument PRERUNSCRIPT **
+	CNOP 0,4
 rd_check_arg_prerunscript
 	move.l	cra_PRERUNSCRIPT(a2),rd_prerunscript_path(a3)
 	beq.s	rd_check_arg_secs
@@ -1564,19 +1565,19 @@ rd_check_argument_softreset_ok
 
 
 	CNOP 0,4
-adl_print_intro_message
+adl_print_intro_message_text
 	tst.w	adl_reset_program_active(a3)
 	bne.s	adl_check_arg_playlist_enabled
 	rts
 	CNOP 0,4
 adl_check_arg_playlist_enabled
 	tst.w	dc_arg_playlist_enabled(a3)
-	bne.s   adl_print_intro_message_ok
+	bne.s   adl_print_intro_message_text_ok
 	rts
 	CNOP 0,4
-adl_print_intro_message_ok
-	lea	adl_intro_message(pc),a0
-	move.l	#adl_intro_message_end-adl_intro_message,d0
+adl_print_intro_message_text_ok
+	lea	adl_intro_message_text(pc),a0
+	move.l	#adl_intro_message_text_end-adl_intro_message_text,d0
 	bra	adl_print_text
 
 
@@ -1886,7 +1887,7 @@ dc_check_entries_number_max
 	move.w  adl_entries_number(a3),d0
 	cmp.w   adl_entries_number_max(a3),d0
 	bne.s	dc_check_entries_number_max_ok
-	bsr.s	dc_print_entries_max_message
+	bsr.s	dc_print_entries_max_message_text
 	moveq   #RETURN_WARN,d0
 	rts
 	CNOP 0,4
@@ -1896,9 +1897,9 @@ dc_check_entries_number_max_ok
 
 
 	CNOP 0,4
-dc_print_entries_max_message
-	lea     dc_note3(pc),a0
-	moveq   #dc_note3_end-dc_note3,d0
+dc_print_entries_max_message_text
+	lea     dc_message_text3(pc),a0
+	moveq   #dc_message_text3_end-dc_message_text3,d0
 	bra     adl_print_text
 
 
@@ -2328,7 +2329,7 @@ dc_next_transmitted_entry
 	cmp.w	adl_entries_number(a3),d0
 	bne.s	dc_next_playlist_cmd_line
 	bsr.s	dc_parse_playlist_file_result
-	bra	dc_print_entries_max_message
+	bra	dc_print_entries_max_message_text
 	CNOP 0,4
 dc_next_playlist_cmd_line
 	add.l	#playback_queue_entry_size,d6 ; nächster Eintrag
@@ -2417,13 +2418,13 @@ dc_clear_queue_loop
 	move.l	d0,a0
 	move.w	#1,(a0)
 dc_clear_queue_ok
-	lea	dc_note1(pc),a0
-	moveq	#dc_note1_end-dc_note1,d0
+	lea	dc_message_text1(pc),a0
+	moveq	#dc_message_text1_end-dc_message_text1,d0
 	bra	adl_print_text
 	CNOP 0,4
 dc_clear_queue_exit
-	lea	dc_note2(pc),a0
-	moveq	#dc_note2_end-dc_note2,d0
+	lea	dc_message_text2(pc),a0
+	moveq	#dc_message_text2_end-dc_message_text2,d0
 	bra	adl_print_text
 
 
@@ -2508,16 +2509,16 @@ adl_print_io_error_ok
 
 	CNOP 0,4
 adl_remove_reset_program
-	tst.w	adl_reset_program_active(a3)
-	beq.s	adl_check_arg_remove_enabled
-	lea	adl_message2(pc),a0
-	moveq	#adl_message2_end-adl_message2,d0
-	bra	adl_print_text
-	CNOP 0,4
-adl_check_arg_remove_enabled
 	tst.w	adl_arg_remove_enabled(a3)
-	beq.s	adl_free_reset_programm_memory
+	beq.s	adl_check_reset_program_active2
 	rts
+	CNOP 0,4
+adl_check_reset_program_active2
+	tst.w	adl_reset_program_active(a3)
+	beq.s	adl_free_reset_programm_memory
+	lea	adl_message_text2(pc),a0
+	moveq	#adl_message_text2_end-adl_message_text2,d0
+	bra	adl_print_text
 	CNOP 0,4
 adl_free_reset_programm_memory
 	REMOVE_RESET_PROGRAM
@@ -2525,8 +2526,8 @@ adl_free_reset_programm_memory
 	move.l	(a0)+,a1
 	move.l	(a0),d0
 	CALLEXEC FreeMem
-	lea	adl_message1(pc),a0
-	moveq	#adl_message1_end-adl_message1,d0
+	lea	adl_message_text1(pc),a0
+	moveq	#adl_message_text1_end-adl_message_text1,d0
 	bra	adl_print_text
 
 
@@ -2577,13 +2578,13 @@ rd_start
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_read_arguments
 
-	bsr	rd_create_serial_message_port
+	bsr	rd_create_serial_message_text_port
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_icon_library
 	bsr	rd_init_serial_io
 	bsr	rd_open_serial_device
 	move.l	d0,adl_dos_return_code(a3)
-	bne	rd_cleanup_serial_message_port
+	bne	rd_cleanup_serial_message_text_port
 
 	bsr	rd_alloc_sprite_data
 	move.l	d0,adl_dos_return_code(a3)
@@ -2612,7 +2613,7 @@ rd_play_loop
 	bne	rd_cleanup_color_cache
 
 	bsr	rd_get_demofile_name
-	bsr	rd_print_demofile_start_message
+	bsr	rd_print_demofile_start_message_text
 	bsr	rd_check_demofile_play_state
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_io_error
@@ -2658,7 +2659,7 @@ rd_play_loop
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_demofile
 
-	bsr	adl_wait_drives
+	bsr	adl_wait_drives_motor
 
 	bsr	rd_init_timer_start
 	bsr	rd_start_timer
@@ -2730,8 +2731,8 @@ rd_cleanup_sprite_data
 
 rd_cleanup_serial_device
 	bsr	rd_close_serial_device
-rd_cleanup_serial_message_port
-	bsr	rd_delete_serial_message_port
+rd_cleanup_serial_message_text_port
+	bsr	rd_delete_serial_message_text_port
 
 rd_cleanup_icon_library
 	bsr	rd_close_icon_library
@@ -2745,8 +2746,8 @@ rd_show_queue
 	move.l	adl_entries_buffer(a3),a2
 	tst.b	(a2)
 	bne.s	rd_show_queue_ok
-        lea	rd_message4(pc),a0
-	moveq	#rd_message4_end-rd_message4,d0
+        lea	rd_message_text4(pc),a0
+	moveq	#rd_message_text4_end-rd_message_text4,d0
 	bra	adl_print_text
 	CNOP 0,4
 rd_show_queue_ok
@@ -2803,13 +2804,13 @@ rd_print_positive_tag_msg
 	lea	rd_tag_active_text1(pc),a0
 	moveq	#rd_tag_active_text1_end-rd_tag_active_text1,d0
 	bsr	adl_print_text
-	bra.s	rd_tag_message_skip
+	bra.s	rd_tag_message_text_skip
 	CNOP 0,4
 rd_print_negative_tag_msg
 	lea	rd_tag_active_text2(pc),a0
 	moveq	#rd_tag_active_text2_end-rd_tag_active_text2,d0
 	bsr	adl_print_text
-rd_tag_message_skip
+rd_tag_message_text_skip
 	add.l	a4,a2			; nächster Eintrag in Playback Queue
 	addq.w	#1,d5
 	dbf	d7,rd_show_queue_loop
@@ -2818,8 +2819,8 @@ rd_tag_message_skip
 	sub.w	adl_entries_number(a3),d1 ; Verbleibende Anzahl der zu ladenden Dateien ermitteln
 	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
 	bsr	rp_dec_to_ascii
-	lea	rd_message1(pc),a0
-	moveq	#rd_message1_end-rd_message1,d0
+	lea	rd_message_text1(pc),a0
+	moveq	#rd_message_text1_end-rd_message_text1,d0
 	bra	adl_print_text
 
 
@@ -2912,17 +2913,17 @@ rd_open_icon_library_ok
 ; Result
 ; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
-rd_create_serial_message_port
+rd_create_serial_message_text_port
 	CALLEXEC CreateMsgPort
-	move.l	d0,rd_serial_message_port(a3)
-	bne.s	rd_create_serial_message_port_ok
+	move.l	d0,rd_serial_message_text_port(a3)
+	bne.s	rd_create_serial_message_text_port_ok
 	lea	rd_error_text4(pc),a0
 	moveq	#rd_error_text4_end-rd_error_text4,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
-rd_create_serial_message_port_ok
+rd_create_serial_message_text_port_ok
 	moveq	#RETURN_OK,d0
 	rts
 
@@ -2930,7 +2931,7 @@ rd_create_serial_message_port_ok
 	CNOP 0,4
 rd_init_serial_io
 	lea	rd_serial_io(pc),a0
-	move.l	rd_serial_message_port(a3),MN_ReplyPort(a0)
+	move.l	rd_serial_message_text_port(a3),MN_ReplyPort(a0)
 	moveq	#0,d0
 	move.b	d0,LN_Type(a0)
 	move.b	d0,LN_Pri(a0)
@@ -3120,7 +3121,7 @@ rd_demofile_name_ok
 
 
 	CNOP 0,4
-rd_print_demofile_start_message
+rd_print_demofile_start_message_text
 	lea	rd_demofile_name_header(pc),a0
 	moveq	#rd_demofile_name_header_end-rd_demofile_name_header,d0
 	bsr	adl_print_text
@@ -3882,8 +3883,8 @@ rd_ascii_to_hex_ok
 
 
 	CNOP 0,4
-adl_wait_drives
-	MOVEF.L	adl_drives_delay,d1
+adl_wait_drives_motor
+	MOVEF.L	adl_drives_motor_delay,d1
 	CALLDOSQ Delay
 
 
@@ -4157,7 +4158,7 @@ rd_set_ciab_crb1
 	CNOP 0,4
 rd_run_demofile
 	IFEQ adl_restore_adl_code_enabled
-		RP_SET_LEVEL_7_RESET_STATE ; Reset-Level-7-Interrupt aktivieren
+		SET_RESTORE_ADL_ACTIVE ; Reset-Level-7-Interrupt aktivieren
 	ENDC
 	tst.w	whdl_slave_enabled(a3)
 	beq.s	rd_execute_whdload_slave
@@ -4643,9 +4644,8 @@ rd_check_demofile_tags_ok
 	rts
 	CNOP 0,4
 rd_all_demofiles_played
-	clr.w	adl_arg_remove_enabled(a3)
-	lea	rd_message2(pc),a0
-	moveq	#rd_message2_end-rd_message2,d0
+	lea	rd_message_text2(pc),a0
+	moveq	#rd_message_text2_end-rd_message_text2,d0
 	bsr	adl_print_text
 	moveq	#RETURN_WARN,d0
 	rts
@@ -4680,8 +4680,8 @@ rd_check_user_break
 	CALLEXEC SetSignal
 	btst	#SIGBREAKB_CTRL_C,d0
 	beq.s	rd_check_user_break_ok
-	lea	rd_message3(pc),a0
-	moveq	#rd_message3_end-rd_message3,d0
+	lea	rd_message_text3(pc),a0
+	moveq	#rd_message_text3_end-rd_message_text3,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -4748,8 +4748,8 @@ rd_close_serial_device
 
 
 	CNOP 0,4
-rd_delete_serial_message_port
-	move.l	rd_serial_message_port(a3),a0
+rd_delete_serial_message_text_port
+	move.l	rd_serial_message_text_port(a3),a0
 	CALLEXECQ DeleteMsgPort
 
 
@@ -4983,7 +4983,7 @@ rp_reset_program_skip
 	movem.l d0-d7/a0-a6,-(a7)
 	move.l	#_CUSTOM,a5
 	move.l	exec_base.w,a6
-	move.w	#%0000111100000000,POTGO(a5) ; Standart-Wert
+	move.w	#POTGOF_OUTLY+POTGOF_DATLY+POTGOF_OUTLX+POTGOF_DATLX,POTGO(a5) ; Standart-Wert
 	moveq	#rp_rasterlines_delay,d7 ; ~320 µs warten
 	bsr	rp_wait_rasterline
 	btst	#POTINPB_DATLY-8,POTINP(a5) ; Wurde die rechte Maustaste gedrückt ?
@@ -5420,7 +5420,7 @@ rp_level_7_program
 		move.l	rp_reset_program_memory(pc),CoolCapture(a6)
 		moveq	#0,d0
 		move.l	d0,WarmCapture(a6)
-		bsr.s   rp_update_exec_checksum
+		bsr	rp_update_exec_checksum
 		CALLLIBS CacheClearU
 		CALLLIBQ ColdReboot
 		CNOP 0,4
@@ -5584,7 +5584,7 @@ rp_endless_enabled		DC.W 0
 
 rp_output_string		DS.B output_string_size
 
-rp_entries_buffer
+rp_entries_buffer			; Größe wirdn erst später berechnet
 
 
 ; **** Main ****
@@ -5596,6 +5596,7 @@ _IntuitionBase			DC.L 0
 _ASLBase			DC.L 0
 _IconBase			DC.L 0
 _CIABase			DC.L 0
+
 
 dos_library_name		DC.B "dos.library",0
 	EVEN
@@ -5630,8 +5631,17 @@ adl_cmd_results
 	DS.B cmd_results_array_size
 
 
-adl_cmd_line			DC.B ASCII_LINE_FEED
-adl_cmd_line_end
+adl_intro_message_text
+	DC.B ASCII_LINE_FEED
+	DC.B "    /|  |--\     |      ----+",ASCII_LINE_FEED
+	DC.B "   / |  |   \    |         / ",ASCII_LINE_FEED
+	DC.B "  /--|  |    \   |        /  ",ASCII_LINE_FEED
+	DC.B " /   |  |-----\  |----   +-- ",ASCII_LINE_FEED
+	DC.B "                             ",ASCII_LINE_FEED
+	DC.B "  B Y   R E S I S T A N C E  ",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"For more information about the usage use the argument HELP",ASCII_LINE_FEED,ASCII_LINE_FEED
+adl_intro_message_text_end
 	EVEN
 
 
@@ -5645,47 +5655,6 @@ adl_cool_capture_request_body
 	EVEN
 adl_cool_capture_request_gadgets
 	DC.B "Proceed|Quit",0
-	EVEN
-
-
-adl_cmd_template
-; ** Amiga-Demo-Launcher **
-	DC.B "HELP/S,"
-	DC.B "REMOVE/S,"
-; ** Demo-Charger **
-	DC.B "MAXENTRIES/K/N,"
-	DC.B "NEWENTRY/S,"
-	DC.B "PLAYLIST/K,"
-	DC.B "CLEARQUEUE/S,"
-; ** Run-Demo **
-	DC.B "SHOWQUEUE/S,"
-	DC.B "PLAYENTRY/K/N,"
-	DC.B "RESETQUEUEPOS/S,"
-	DC.B "PRERUNSCRIPT/K,"
-	DC.B "MIN=MINS/K/N,"
-	DC.B "SEC=SECS/K/N,"
-	IFEQ adl_lmbexit_code_enabled
-		DC.B "LMBEXIT/K/N,"
-        ENDC
-	DC.B "RANDOM/S,"
-	DC.B "ENDLESS/S,"
-	DC.B "LOOP/S,"
-	DC.B "FADER/S,"
-	DC.B "SOFTRESET/S",0
-	EVEN
-
-
-adl_intro_message
-	DC.B ASCII_LINE_FEED
-	DC.B "    /|  |--\     |      ----+",ASCII_LINE_FEED
-	DC.B "   / |  |   \    |         / ",ASCII_LINE_FEED
-	DC.B "  /--|  |    \   |        /  ",ASCII_LINE_FEED
-	DC.B " /   |  |-----\  |----   +-- ",ASCII_LINE_FEED
-	DC.B "                             ",ASCII_LINE_FEED
-	DC.B "  B Y   R E S I S T A N C E  ",ASCII_LINE_FEED
-	DC.B ASCII_LINE_FEED
-	DC.B ASCII_LINE_FEED,"For more information about the usage use the argument HELP",ASCII_LINE_FEED,ASCII_LINE_FEED
-adl_intro_message_end
 	EVEN
 
 
@@ -5718,21 +5687,48 @@ adl_cmd_usage_text_end
 	EVEN
 
 
+adl_cmd_template
+; ** Amiga-Demo-Launcher **
+	DC.B "HELP/S,"
+	DC.B "REMOVE/S,"
+; ** Demo-Charger **
+	DC.B "MAXENTRIES/K/N,"
+	DC.B "NEWENTRY/S,"
+	DC.B "PLAYLIST/K,"
+	DC.B "CLEARQUEUE/S,"
+; ** Run-Demo **
+	DC.B "SHOWQUEUE/S,"
+	DC.B "PLAYENTRY/K/N,"
+	DC.B "RESETQUEUEPOS/S,"
+	DC.B "PRERUNSCRIPT/K,"
+	DC.B "MIN=MINS/K/N,"
+	DC.B "SEC=SECS/K/N,"
+	IFEQ adl_lmbexit_code_enabled
+		DC.B "LMBEXIT/K/N,"
+        ENDC
+	DC.B "RANDOM/S,"
+	DC.B "ENDLESS/S,"
+	DC.B "LOOP/S,"
+	DC.B "FADER/S,"
+	DC.B "SOFTRESET/S",0
+	EVEN
+
+
+adl_message_text1
+	DC.B ASCII_LINE_FEED,"Amiga Demo Launcher now removed from memory",ASCII_LINE_FEED,ASCII_LINE_FEED
+adl_message_text1_end
+	EVEN
+
+adl_message_text2
+	DC.B ASCII_LINE_FEED,"Amiga Demo Launcher not found",ASCII_LINE_FEED,ASCII_LINE_FEED
+adl_message_text2_end
+	EVEN
+
+
 ; ** Header für PrintFault() **
 adl_error_header
 	DC.B " ",0
 	EVEN
-
-adl_message1
-	DC.B ASCII_LINE_FEED,"Amiga Demo Launcher now removed from memory",ASCII_LINE_FEED,ASCII_LINE_FEED
-adl_message1_end
-	EVEN
-
-adl_message2
-	DC.B ASCII_LINE_FEED,"Amiga Demo Launcher not found",ASCII_LINE_FEED,ASCII_LINE_FEED
-adl_message2_end
-	EVEN
-
 
 adl_error_text1
 	DC.B ASCII_LINE_FEED,"Couldnt open graphics.library",ASCII_LINE_FEED
@@ -5853,20 +5849,21 @@ dc_runmode_request_gadgets
 	EVEN
 
 
-dc_note1
+dc_message_text1
 	DC.B ASCII_LINE_FEED,"Playback queue entries cleared",ASCII_LINE_FEED,ASCII_LINE_FEED
-dc_note1_end
+dc_message_text1_end
 	EVEN
 
-dc_note2
+dc_message_text2
 	DC.B ASCII_LINE_FEED,"No playback queue entries to clear",ASCII_LINE_FEED,ASCII_LINE_FEED
-dc_note2_end
+dc_message_text2_end
 	EVEN
 
-dc_note3
+dc_message_text3
 	DC.B ASCII_LINE_FEED,"Maximum number of entries in playback queue already reached",ASCII_LINE_FEED,ASCII_LINE_FEED
-dc_note3_end
+dc_message_text3_end
 	EVEN
+
 
 dc_error_text1
 	DC.B ASCII_LINE_FEED,"Couldn't allocate entries/playback queue buffer"
@@ -5985,6 +5982,7 @@ rd_custom_window_name		DC.B "Amiga Demo Launcher 2",0
 
 rd_demo_dir_path		DS.B adl_demofile_path_length
 
+
 rd_demofile_name_header
 	DC.B ASCII_LINE_FEED,"Playing ",34
 rd_demofile_name_header_end
@@ -6015,30 +6013,6 @@ rd_tag_active_text2_end
 	EVEN
 
 
-rd_message1
-	DC.B ASCII_LINE_FEED,ASCII_LINE_FEED,"Playback queue has "
-rd_not_used_entries_string
-	DC.B "   "
-	DC.B "unused entries left",ASCII_LINE_FEED,ASCII_LINE_FEED
-rd_message1_end
-	EVEN
-
-rd_message2
-	DC.B ASCII_LINE_FEED,"No more demos left to play",ASCII_LINE_FEED,ASCII_LINE_FEED
-rd_message2_end
-	EVEN
-
-rd_message3
-	DC.B ASCII_LINE_FEED,"Replay loop stopped",ASCII_LINE_FEED,ASCII_LINE_FEED
-rd_message3_end
-	EVEN
-
-rd_message4
-	DC.B ASCII_LINE_FEED,"Playback queue is empty",ASCII_LINE_FEED,ASCII_LINE_FEED
-rd_message4_end
-	EVEN
-
-
 rd_prerunscript_cmd_line
 	DC.B "Execute "
 rd_prerunscript_cmd_line_path
@@ -6053,9 +6027,32 @@ rd_shell_cmd_line_end
 	EVEN
 
 
-rd_note
+rd_message_text1
+	DC.B ASCII_LINE_FEED,ASCII_LINE_FEED,"Playback queue has "
+rd_not_used_entries_string
+	DC.B "   "
+	DC.B "unused entries left",ASCII_LINE_FEED,ASCII_LINE_FEED
+rd_message_text1_end
+	EVEN
+
+rd_message_text2
+	DC.B ASCII_LINE_FEED,"No more demos left to play",ASCII_LINE_FEED,ASCII_LINE_FEED
+rd_message_text2_end
+	EVEN
+
+rd_message_text3
+	DC.B ASCII_LINE_FEED,"Replay loop stopped",ASCII_LINE_FEED,ASCII_LINE_FEED
+rd_message_text3_end
+	EVEN
+
+rd_message_text4
+	DC.B ASCII_LINE_FEED,"Playback queue is empty",ASCII_LINE_FEED,ASCII_LINE_FEED
+rd_message_text4_end
+	EVEN
+
+rd_message_text5
 	DC.B ASCII_LINE_FEED,"Queue position set back to first entry. All demo play states cleared",ASCII_LINE_FEED,ASCII_LINE_FEED
-rd_note_end
+rd_message_text5_end
 	EVEN
 
 
@@ -6180,6 +6177,7 @@ whdl_icon_path
 	DS.B whdl_icon_path_length
 	EVEN
 
+
 ; ** Befehlszeile für Ausführung der Slave-Datei **
 whdl_slave_cmd_line
 	DC.B "WHDLoad slave "
@@ -6192,7 +6190,7 @@ whdl_slave_cmd_line_path
 
 
 ; **** Main ****
-	DC.B "$VER: Amiga Demo Launcher 2.0 (10.8.24)",0
+	DC.B "$VER: Amiga Demo Launcher 2.0 (11.8.24)",0
 	EVEN
 
 
