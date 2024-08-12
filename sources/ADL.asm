@@ -498,9 +498,7 @@ rd_custom_screen		RS.L 1
 rd_custom_window		RS.L 1
 rd_sprite_pointer_data		RS.L 1
 rd_old_sprite_resolution	RS.L 1
-rd_old_bandwidth		RS.W 1
 
-	RS_ALIGN_LONGWORD
 rd_available_fast_memory_size	RS.L 1
 rd_available_fast_memory	RS.L 1
 
@@ -3530,13 +3528,6 @@ sf_set_new_colors_skip
 ; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 rd_open_custom_screen
-	move.l	rd_demofile_path(a3),a0
-	cmp.b	#RUNMODE_OCS_VANILLA,pqe_runmode(a0)
-	bne.s	rd_open_custom_screen_skip
-	move.l	_GfxBase(pc),a0
-	move.b	gb_MemType(a0),rd_old_bandwidth(a3)
-	move.b	#BANDWIDTH_1X,gb_MemType(a0)
-rd_open_custom_screen_skip
 	lea	rd_custom_screen_tag_list(pc),a1
 	sub.l	a0,a0			; Keine NewScreen-Struktur
 	CALLINT OpenScreenTagList
@@ -3623,7 +3614,8 @@ rd_blank_display
 	move.l	rd_demofile_path(a3),a0
 	cmp.b	#RUNMODE_OCS_VANILLA,pqe_runmode(a0)
 	bne.s	rd_blank_display_skip
-	move.b	rd_old_bandwidth(a3),gb_MemType(a6)
+	moveq	#0,d0
+	move.l	d0,_CUSTOM+BPL1MOD
 rd_blank_display_skip
 	rts
 
