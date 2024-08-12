@@ -228,7 +228,7 @@
 ; - Argument PLAYLIST: Nach dem Übertragen der Playlist in den Speicher wird
 ;                      nun diePlayback-Queue ausgegeben
 ; - Neues Argument CLEARQUEUE: Löschen der kompletten Playback-Liste im Speicher
-; - Argument RESETLOADPOS in RESETQUEUEPOS umbenannt
+; - Argument RESETLOADPOS in RESETQUEUE umbenannt
 ; - Wenn alle Demos aus der Liste gespielt wurden wird der ADL nicht mehr
 ;   automtisch aus dem Speicher entfernt
 ; - File-Requester: Der Filter berücksichtigt jetzt auch die Endung ".data"
