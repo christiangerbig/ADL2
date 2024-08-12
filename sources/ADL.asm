@@ -325,16 +325,16 @@ dc_file_request_y_size		EQU 200
 rd_sprite_x_size		EQU 16
 rd_sprite_y_size		EQU 1
 rd_sprites_colors_number	EQU 16
-rd_custom_screen_left		EQU 0
-rd_custom_screen_top		EQU 0
-rd_custom_screen_x_size		EQU 2
-rd_custom_screen_y_size		EQU 2
-rd_custom_screen_depth		EQU 1
-rd_custom_screen_colors_number	EQU 2
-rd_custom_window_left		EQU 0
-rd_custom_window_top		EQU 0
-rd_custom_window_x_size		EQU rd_custom_screen_x_size
-rd_custom_window_y_size		EQU rd_custom_screen_y_size
+rd_degrader_screen_left		EQU 0
+rd_degrader_screen_top		EQU 0
+rd_degrader_screen_x_size		EQU 2
+rd_degrader_screen_y_size		EQU 2
+rd_degrader_screen_depth		EQU 1
+rd_degrader_screen_colors_number	EQU 2
+rd_degrader_window_left		EQU 0
+rd_degrader_window_top		EQU 0
+rd_degrader_window_x_size		EQU rd_degrader_screen_x_size
+rd_degrader_window_y_size		EQU rd_degrader_screen_y_size
 rd_switch_delay			EQU PAL_FPS*3 ; 3 Sekunden
 
 
@@ -464,7 +464,7 @@ dc_multiselect_entries_number	RS.W 1
 
 ; **** Run-Demo ****
 rd_arg_showqueue_enabled	RS.W 1
-rd_arg_resetqueuepos_enabled	RS.W 1
+rd_arg_RESETQUEUE_enabled	RS.W 1
 rd_arg_prerunscript_enabled	RS.W 1
 rd_arg_random_enabled		RS.W 1
 rd_arg_endless_enabled		RS.W 1
@@ -494,8 +494,8 @@ rd_prerunscript_path		RS.L 1
 	RS_ALIGN_LONGWORD
 rd_active_screen		RS.L 1
 rd_monitor_id			RS.L 1
-rd_custom_screen		RS.L 1
-rd_custom_window		RS.L 1
+rd_degrader_screen		RS.L 1
+rd_degrader_window		RS.L 1
 rd_sprite_pointer_data		RS.L 1
 rd_old_sprite_resolution	RS.L 1
 
@@ -548,7 +548,7 @@ cra_CLEARQUEUE			RS.L 1
 ; **** Run-Demo ****
 cra_SHOWQUEUE			RS.L 1
 cra_PLAYENTRY			RS.L 1
-cra_RESETQUEUEPOS		RS.L 1
+cra_RESETQUEUE		RS.L 1
 cra_PRERUNSCRIPT		RS.L 1
 cra_MINS			RS.L 1
 cra_SECS			RS.L 1
@@ -621,7 +621,7 @@ sprite_pointer_data_size	RS.B 0
 
 	RSRESET
 
-custom_screen_colors		RS.B 0
+degrader_screen_colors		RS.B 0
 
 csc_colors_number		RS.W 1
 csc_start_color			RS.W 1
@@ -629,7 +629,7 @@ csc_color00			RS.L 3
 csc_color01			RS.L 3
 csc_end				RS.L 1
 
-custom_screen_colors_size	RS.B 0
+degrader_screen_colors_size	RS.B 0
 
 
 	RSRESET
@@ -888,7 +888,7 @@ adl_init_variables
 
 ; **** Run-Demo ****
 	move.w	d1,rd_arg_showqueue_enabled(a3)
-	move.w	d1,rd_arg_resetqueuepos_enabled(a3)
+	move.w	d1,rd_arg_RESETQUEUE_enabled(a3)
 	move.w	d1,rd_arg_prerunscript_enabled(a3)
 	move.w	d1,rd_arg_random_enabled(a3)
 	move.w	d1,rd_arg_endless_enabled(a3)
@@ -937,9 +937,9 @@ adl_init_structures
 	bsr	adl_init_output_string
 	bsr     dc_init_runmode_request
 	bsr	dc_init_file_request_tag_lists
-	bsr	rd_init_custom_screen_colors
-	bsr	rd_init_custom_screen_tag_list
-	bsr	rd_init_custom_window_tag_list
+	bsr	rd_init_degrader_screen_colors
+	bsr	rd_init_degrader_screen_tag_list
+	bsr	rd_init_degrader_window_tag_list
 	bra	rd_init_video_control_tag_list
 
 
@@ -1028,9 +1028,9 @@ dc_init_file_request_tag_lists
 
 
 	CNOP 0,4
-rd_init_custom_screen_colors
-	lea	rd_custom_screen_colors(pc),a0
-	move.w	#rd_custom_screen_colors_number,(a0)+
+rd_init_degrader_screen_colors
+	lea	rd_degrader_screen_colors(pc),a0
+	move.w	#rd_degrader_screen_colors_number,(a0)+
 	moveq	#0,d0
 	move.w	d0,(a0)+		; Erste Farbe COLOR00
 	move.l	d0,(a0)+		; COLOR00 32-Bit Rotwert
@@ -1044,22 +1044,22 @@ rd_init_custom_screen_colors
 
 
 	CNOP 0,4
-rd_init_custom_screen_tag_list
-	lea	rd_custom_screen_tag_list(pc),a0
+rd_init_degrader_screen_tag_list
+	lea	rd_degrader_screen_tag_list(pc),a0
 	move.l	#SA_Left,(a0)+
-     	moveq	#rd_custom_screen_left,d2
+     	moveq	#rd_degrader_screen_left,d2
 	move.l	d2,(a0)+
 	move.l	#SA_Top,(a0)+
-     	moveq	#rd_custom_screen_top,d2
+     	moveq	#rd_degrader_screen_top,d2
 	move.l	d2,(a0)+
 	move.l	#SA_Width,(a0)+
-	moveq	#rd_custom_screen_x_size,d2
+	moveq	#rd_degrader_screen_x_size,d2
 	move.l	d2,(a0)+
 	move.l	#SA_Height,(a0)+
-	moveq	#rd_custom_screen_y_size,d2
+	moveq	#rd_degrader_screen_y_size,d2
 	move.l	d2,(a0)+
 	move.l	#SA_Depth,(a0)+
-	moveq	#rd_custom_screen_depth,d2
+	moveq	#rd_degrader_screen_depth,d2
 	move.l	d2,(a0)+
 	move.l	#SA_DisplayID,(a0)+
 	move.l	#PAL_MONITOR_ID|LORES_KEY,(a0)+
@@ -1069,10 +1069,10 @@ rd_init_custom_screen_tag_list
 	move.l	#SA_BlockPen,(a0)+
 	move.l	d0,(a0)+
 	move.l	#SA_Title,(a0)+
-	lea	rd_custom_screen_name(pc),a1
+	lea	rd_degrader_screen_name(pc),a1
 	move.l	a1,(a0)+
 	move.l	#SA_Colors32,(a0)+
-	lea	rd_custom_screen_colors(pc),a1
+	lea	rd_degrader_screen_colors(pc),a1
 	move.l	a1,(a0)+
 	move.l	#SA_Font,(a0)+
 	move.l	d0,(a0)+
@@ -1098,19 +1098,19 @@ rd_init_custom_screen_tag_list
 
 
 	CNOP 0,4
-rd_init_custom_window_tag_list
-	lea	rd_custom_window_tag_list(pc),a0
+rd_init_degrader_window_tag_list
+	lea	rd_degrader_window_tag_list(pc),a0
 	move.l	#WA_Left,(a0)+
-	moveq	#rd_custom_window_left,d2
+	moveq	#rd_degrader_window_left,d2
 	move.l	d2,(a0)+
 	move.l	#WA_Top,(a0)+
-	moveq	#rd_custom_window_top,d2
+	moveq	#rd_degrader_window_top,d2
 	move.l	d2,(a0)+
 	move.l	#WA_Width,(a0)+
-	moveq	#rd_custom_window_x_size,d2
+	moveq	#rd_degrader_window_x_size,d2
 	move.l	d2,(a0)+
 	move.l	#WA_Height,(a0)+
-	moveq	#rd_custom_window_y_size,d2
+	moveq	#rd_degrader_window_y_size,d2
 	move.l	d2,(a0)+
 	move.l	#WA_DetailPen,(a0)+
 	moveq	#0,d0
@@ -1120,7 +1120,7 @@ rd_init_custom_window_tag_list
 	move.l	#WA_IDCMP,(a0)+
 	move.l	d0,(a0)+
 	move.l	#WA_Title,(a0)+
-	lea	rd_custom_window_name(pc),a1
+	lea	rd_degrader_window_name(pc),a1
 	move.l	a1,(a0)+
 	move.l	#WA_CustomScreen,(a0)+
 	move.l	d0,(a0)+		; Zeiger wird später initialisiert
@@ -1429,7 +1429,7 @@ rd_check_arg_showqueue
 
 ; ** Argument PLAYENTRY **
 	move.l	cra_PLAYENTRY(a2),d0
-	beq.s	dc_check_arg_resetqueuepos
+	beq.s	dc_check_arg_RESETQUEUE
 	move.l	d0,a0
 	move.l	(a0),d0		; Entry-Nummer
 	cmp.w	adl_entries_number(a3),d0
@@ -1440,13 +1440,13 @@ rd_check_arg_playentry_set
 	move.w	d0,rd_entry_offset(a3)
 	bra	adl_check_cmd_line_ok
 
-; ** Argument RESETQUEUEPOS **
+; ** Argument RESETQUEUE **
 	CNOP 0,4
-dc_check_arg_resetqueuepos
-	move.l	cra_RESETQUEUEPOS(a2),d0
+dc_check_arg_RESETQUEUE
+	move.l	cra_RESETQUEUE(a2),d0
 	beq.s	rd_check_arg_prerunscript
 	not.w	d0
-	move.w	d0,rd_arg_resetqueuepos_enabled(a3)
+	move.w	d0,rd_arg_RESETQUEUE_enabled(a3)
 	move.w	#1,rd_entry_offset(a3)
 	bsr	rd_clear_tags
 	lea	rd_message_text5(pc),a0
@@ -2561,7 +2561,7 @@ adl_print_text
 ; **** Run-Demo ****
 	CNOP 0,4
 rd_start
-	tst.w	rd_arg_resetqueuepos_enabled(a3)
+	tst.w	rd_arg_RESETQUEUE_enabled(a3)
         beq	rd_quit
 	bsr	rd_open_ciaa_resource
 	move.l	d0,adl_dos_return_code(a3)
@@ -2632,12 +2632,12 @@ rd_play_loop
 	bne	rd_cleanup_current_dir
 
 	bsr	sf_fade_out_active_screen
-	bsr	rd_open_custom_screen
+	bsr	rd_open_degrader_screen
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_active_screen_colors
-	bsr	rd_open_custom_window
+	bsr	rd_open_degrader_window
 	move.l	d0,adl_dos_return_code(a3)
-	bne	rd_cleanup_custom_screen
+	bne	rd_cleanup_degrader_screen
 	bsr	rd_clear_mousepointer
 	bsr	rd_get_sprite_resolution
 	bsr	rd_set_ocs_sprite_resolution
@@ -2684,10 +2684,10 @@ rd_cleanup_fast_memory
 rd_cleanup_display
 	bsr	rd_restore_sprite_resolution
 	bsr	rd_check_monitor_switch
-rd_cleanup_custom_window
-	bsr	rd_close_custom_window
-rd_cleanup_custom_screen
-	bsr	rd_close_custom_screen
+rd_cleanup_degrader_window
+	bsr	rd_close_degrader_window
+rd_cleanup_degrader_screen
+	bsr	rd_close_degrader_screen
 rd_cleanup_active_screen_colors
 	bsr	sf_fade_in_screen
 	bsr	rd_check_screen_priority
@@ -3527,19 +3527,19 @@ sf_set_new_colors_skip
 ; Result
 ; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
-rd_open_custom_screen
-	lea	rd_custom_screen_tag_list(pc),a1
+rd_open_degrader_screen
+	lea	rd_degrader_screen_tag_list(pc),a1
 	sub.l	a0,a0			; Keine NewScreen-Struktur
 	CALLINT OpenScreenTagList
-	move.l	d0,rd_custom_screen(a3)
-	bne.s	rd_open_custom_screen_ok
+	move.l	d0,rd_degrader_screen(a3)
+	bne.s	rd_open_degrader_screen_ok
 	lea	rd_error_text16(pc),a0
 	moveq	#rd_error_text16_end-rd_error_text16,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
-rd_open_custom_screen_ok
+rd_open_degrader_screen_ok
 	moveq	#RETURN_OK,d0
 	rts
 
@@ -3548,27 +3548,27 @@ rd_open_custom_screen_ok
 ; Result
 ; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
-rd_open_custom_window
+rd_open_degrader_window
 	sub.l	a0,a0			; Keine NewWindow-Struktur
-	lea	rd_custom_window_tag_list(pc),a1
-	move.l	rd_custom_screen(a3),wtl_WA_CustomScreen+ti_data(a1)
+	lea	rd_degrader_window_tag_list(pc),a1
+	move.l	rd_degrader_screen(a3),wtl_WA_CustomScreen+ti_data(a1)
 	CALLINT OpenWindowTagList
-	move.l	d0,rd_custom_window(a3)
-	bne.s	rd_open_custom_window_ok
+	move.l	d0,rd_degrader_window(a3)
+	bne.s	rd_open_degrader_window_ok
 	lea	rd_error_text17(pc),a0
 	moveq	#rd_error_text17_end-rd_error_text17,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
-rd_open_custom_window_ok
+rd_open_degrader_window_ok
 	moveq	#RETURN_OK,d0
 	rts
 
 
 	CNOP 0,4
 rd_clear_mousepointer
-	move.l	rd_custom_window(a3),a0
+	move.l	rd_degrader_window(a3),a0
 	move.l	rd_sprite_pointer_data(a3),a1
 	moveq	#rd_sprite_y_size,d0
 	moveq	#rd_sprite_x_size,d1
@@ -3579,7 +3579,7 @@ rd_clear_mousepointer
 
 	CNOP 0,4
 rd_get_sprite_resolution
-	move.l	rd_custom_screen(a3),a0
+	move.l	rd_degrader_screen(a3),a0
 	move.l  sc_ViewPort+vp_ColorMap(a0),a0
 	lea	rd_video_control_tag_list(pc),a1
 	move.l	#VTAG_SPRITERESN_GET,vctl_VTAG_SPRITERESN+ti_tag(a1)
@@ -3592,7 +3592,7 @@ rd_get_sprite_resolution
 
 	CNOP 0,4
 rd_set_ocs_sprite_resolution
-	move.l	rd_custom_screen(a3),a2
+	move.l	rd_degrader_screen(a3),a2
 	move.l	sc_ViewPort+vp_ColorMap(a2),a0
 	lea	rd_video_control_tag_list(pc),a1
 	move.l	#VTAG_SPRITERESN_SET,+vctl_VTAG_SPRITERESN+ti_tag(a1)
@@ -4435,7 +4435,7 @@ rd_free_first_memory_block
 
 	CNOP 0,4
 rd_restore_sprite_resolution
-	move.l	rd_custom_screen(a3),a2
+	move.l	rd_degrader_screen(a3),a2
 	move.l	sc_ViewPort+vp_ColorMap(a2),a0
 	lea	rd_video_control_tag_list(pc),a1
 	move.l	#VTAG_SPRITERESN_SET,vctl_VTAG_SPRITERESN+ti_tag(a1)
@@ -4447,14 +4447,14 @@ rd_restore_sprite_resolution
 
 
 	CNOP 0,4
-rd_close_custom_window
-	move.l	rd_custom_window(a3),a0
+rd_close_degrader_window
+	move.l	rd_degrader_window(a3),a0
 	CALLINTQ CloseWindow
 
 
 	CNOP 0,4
-rd_close_custom_screen
-	move.l	rd_custom_screen(a3),a0
+rd_close_degrader_screen
+	move.l	rd_degrader_screen(a3),a0
 	CALLINTQ CloseScreen
 
 
@@ -5630,7 +5630,7 @@ adl_cmd_usage_text
 ; ** Run-Demo **
 	DC.B "SHOWQUEUE              Show content of playback queue",ASCII_LINE_FEED
 	DC.B "PLAYENTRY ",155,"3",109,"number ",155,"0",109,"      Play certain entry of playback queue",ASCII_LINE_FEED
-	DC.B "RESETQUEUEPOS           Reset entry offset of playback queue to zero",ASCII_LINE_FEED
+	DC.B "RESETQUEUE           Reset entry offset of playback queue to zero",ASCII_LINE_FEED
 	DC.B "PRERUNSCRIPT ",155,"3",109,"file path ",155,"0",109,"Execute prerrun script file before demo is played",ASCII_LINE_FEED
 	DC.B "MIN/MINS ",155,"3",109,"number ",155,"0",109,"       Playtime in minutes (reset device needed)",ASCII_LINE_FEED
 	DC.B "SEC/SECS ",155,"3",109,"number ",155,"0",109,"       Playtime in seconds (reset device needed)",ASCII_LINE_FEED
@@ -5658,7 +5658,7 @@ adl_cmd_template
 ; ** Run-Demo **
 	DC.B "SHOWQUEUE/S,"
 	DC.B "PLAYENTRY/K/N,"
-	DC.B "RESETQUEUEPOS/S,"
+	DC.B "RESETQUEUE/S,"
 	DC.B "PRERUNSCRIPT/K,"
 	DC.B "MIN=MINS/K/N,"
 	DC.B "SEC=SECS/K/N,"
@@ -5909,15 +5909,15 @@ rd_serial_io
 
 
 	CNOP 0,4
-rd_custom_screen_colors
-	DS.B custom_screen_colors_size
+rd_degrader_screen_colors
+	DS.B degrader_screen_colors_size
 
 	CNOP 0,4
-rd_custom_screen_tag_list
+rd_degrader_screen_tag_list
 	DS.B screen_tag_list_size
 
 	CNOP 0,4
-rd_custom_window_tag_list
+rd_degrader_window_tag_list
 	DS.B window_tag_list_size
 
 	CNOP 0,4
@@ -5935,9 +5935,9 @@ rd_old_chips_registers
 	DS.B old_chips_registers_size
 
 
-rd_custom_screen_name		DC.B "Amiga Demo Launcher 2",0
+rd_degrader_screen_name		DC.B "Amiga Demo Launcher 2",0
 	EVEN
-rd_custom_window_name		DC.B "Amiga Demo Launcher 2",0
+rd_degrader_window_name		DC.B "Amiga Demo Launcher 2",0
 	EVEN
 
 rd_demo_dir_path		DS.B adl_demofile_path_length
