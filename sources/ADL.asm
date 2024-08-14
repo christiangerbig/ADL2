@@ -2504,14 +2504,13 @@ dc_do_free_entries_buffer
 qh_show_queue
 	move.l	adl_entries_buffer(a3),a2
 	tst.b	(a2)
-	bne.s	qh_show_queue_skip
+	bne.s	qh_show_queue_ok
         lea	qh_message_text1(pc),a0
 	moveq	#qh_message_text1_end-qh_message_text1,d0
 	bra	adl_print_text
 	CNOP 0,4
-qh_show_queue_skip
-	move.w	#playback_queue_entry_size,a4
-	moveq	#1,d5			; Zähler für Einträge
+qh_show_queue_ok
+	moveq	#1,d5			; Laufende Nummer für Einträge
 	move.w	adl_entries_number(a3),d7
 	subq.w	#1,d7			; wegen dbf
 qh_show_queue_loop
@@ -2527,51 +2526,9 @@ qh_show_queue_loop
 	lea	qh_show_entry_string(pc),a0
 	moveq	#qh_show_entry_string_end-qh_show_entry_string,d0
 	bsr	adl_print_text
-	move.l	a2,a0			; Zeiger auf Eintrag in Playback-Queue
-	moveq	#adl_demofile_path_length-1,d6
-	moveq	#0,d0			; Zähler für Demo-Dateinamen-Länge
-	add.l	d6,a0			; Zeiger auf letztes Zeichen (Nullbyte)
-	moveq	#"/",d2
-	moveq	#":",d3
-qh_get_entry_filename_loop
-	tst.b	(a0)
-	beq.s	qh_get_entry_filename_skip
-	addq.w	#1,d0
-qh_get_entry_filename_skip
-	cmp.b	(a0),d2			; "/" gefunden ?
-	beq.s	qh_entry_filename_skip 	; Ja -> verzweige
-	cmp.b	(a0),d3			; ":" gefunden ?
-	beq.s	qh_entry_filename_skip 	; Ja -> verzweige
-	subq.w	#1,a0			; vorgeriges Zeichen in Dateipfad
-	dbf	d6,qh_get_entry_filename_loop
-qh_entry_filename_skip
-	subq.w	#1,d0			; "/" oder ":" abziehen
-	addq.w	#1,a0			; "/" oder ":" überspringen
-	cmp.w	#qh_show_entry_space_end-qh_show_entry_space-1,d0 ; Länge des Dateinamens <= Füllzeile ?
-	ble.s	qh_filename_length_skip	; Ja -> verzweige
-	moveq	#qh_show_entry_space_end-qh_show_entry_space-1,d0 ; Textlänge = Länge Füllzeile
-qh_filename_length_skip
-	move.w	d0,d4			; Länge des Dateinamens
-	bsr	adl_print_text
-	lea	qh_show_entry_space(pc),a0 ; Zeiger auf ".."-String
-	moveq	#qh_show_entry_space_end-qh_show_entry_space-1,d0 ; Textlänge der Füllzeile
-	sub.w	d4,d0			; Abzüglich Länge des Dateinamens
-	bsr	adl_print_text
-	tst.b	pqe_tag_active(a2)
-	beq.s	qh_print_negative_tag_msg
-qh_print_positive_tag_msg
-	lea	qh_tag_active_text1(pc),a0
-	moveq	#qh_tag_active_text1_end-qh_tag_active_text1,d0
-	bsr	adl_print_text
-	bra.s	qh_tag_message_text_skip
-	CNOP 0,4
-qh_print_negative_tag_msg
-	lea	qh_tag_active_text2(pc),a0
-	moveq	#qh_tag_active_text2_end-qh_tag_active_text2,d0
-	bsr	adl_print_text
-qh_tag_message_text_skip
-	add.l	a4,a2			; nächster Eintrag in Playback Queue
-	addq.w	#1,d5
+	bsr.s   qh_get_entry_filename
+	ADDF.W	playback_queue_entry_size,a2 ; nächster Eintrag in Playback Queue
+	addq.w	#1,d5			; laufende Nummer erhöhen
 	dbf	d7,qh_show_queue_loop
 	lea	qh_not_used_entries_string(pc),a0
 	move.w	adl_entries_number_max(a3),d1
@@ -2580,6 +2537,55 @@ qh_tag_message_text_skip
 	bsr	rp_dec_to_ascii
 	lea	qh_message_text2(pc),a0
 	moveq	#qh_message_text2_end-qh_message_text2,d0
+	bra	adl_print_text
+
+
+; Input
+; a2 ... Zeiger auf 1. Eintrag in Playback-Queue
+; Result
+; d0 ... kein Rückgabewert
+	CNOP 0,4
+qh_get_entry_filename
+	move.l	a2,a0
+	moveq	#adl_demofile_path_length-1,d6
+	moveq	#0,d0			; Zähler für Demo-Dateinamen-Länge
+	add.l	d6,a0			; Zeiger auf letztes Zeichen (Nullbyte)
+	moveq	#"/",d2
+	moveq	#":",d3
+qh_get_entry_filename_loop
+	tst.b	(a0)
+	beq.s	qh_get_entry_filename_skip1
+	addq.w	#1,d0
+qh_get_entry_filename_skip1
+	cmp.b	(a0),d2			; "/" gefunden ?
+	beq.s	qh_get_entry_filename_skip2 ; Ja -> verzweige
+	cmp.b	(a0),d3			; ":" gefunden ?
+	beq.s	qh_get_entry_filename_skip2 ; Ja -> verzweige
+	subq.w	#1,a0			; vorgeriges Zeichen in Dateipfad
+	dbf	d6,qh_get_entry_filename_loop
+qh_get_entry_filename_skip2
+	subq.w	#1,d0			; "/" oder ":" abziehen
+	addq.w	#1,a0			; "/" oder ":" überspringen
+	cmp.w	#qh_show_entry_space_end-qh_show_entry_space-1,d0 ; Länge des Dateinamens <= Füllzeile ?
+	ble.s	qh_get_entry_filename_skip3 ; Ja -> verzweige
+	moveq	#qh_show_entry_space_end-qh_show_entry_space-1,d0 ; Textlänge = Länge Füllzeile
+qh_get_entry_filename_skip3
+	move.w	d0,d4			; Länge des Dateinamens
+	bsr	adl_print_text
+	lea	qh_show_entry_space(pc),a0 ; Zeiger auf "...."-String
+	moveq	#qh_show_entry_space_end-qh_show_entry_space-1,d0 ; Textlänge der Füllzeile
+	sub.w	d4,d0			; Abzüglich Länge des Dateinamens
+	bsr	adl_print_text
+	tst.b	pqe_tag_active(a2)
+	beq.s	qh_print_negative_tag_msg
+qh_print_positive_tag_msg
+	lea	qh_tag_active_text1(pc),a0
+	moveq	#qh_tag_active_text1_end-qh_tag_active_text1,d0
+	bra	adl_print_text
+	CNOP 0,4
+qh_print_negative_tag_msg
+	lea	qh_tag_active_text2(pc),a0
+	moveq	#qh_tag_active_text2_end-qh_tag_active_text2,d0
 	bra	adl_print_text
 
 
@@ -5997,9 +6003,9 @@ dc_error_text18_end
 ; **** Queue-Handler ****
 qh_show_entry_header
 	DC.B ASCII_LINE_FEED,"Nr."
-qh_show_entry_string
+qh_show_entry_current_number
 	DC.B "   ",34
-qh_show_entry_string_end
+;qh_show_entry_string_end
 	EVEN
 qh_show_entry_space
 	DC.B 34," ................................................"
