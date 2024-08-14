@@ -2592,7 +2592,12 @@ qh_edit_queue
 qh_clear_queue
 	move.l	adl_entries_buffer(a3),a0
 	tst.b	(a0)
-	beq.s   qh_clear_queue_exit
+	bne.s   qh_clear_queue_ok
+	lea	qh_message_text3(pc),a0
+	moveq	#qh_message_text3_end-qh_message_text3,d0
+	bra	adl_print_text
+	CNOP 0,4
+qh_clear_queue_ok
 	move.w	adl_entries_number(a3),d7
 	subq.w	#1,d7			; wegen dbf
 qh_clear_queue_loop
@@ -2609,14 +2614,10 @@ qh_clear_queue_loop
 	move.l	d0,a0
 	move.w	#1,(a0)
 qh_clear_queue_skip
-	lea	qh_message_text3(pc),a0
-	moveq	#qh_message_text3_end-qh_message_text3,d0
-	bra	adl_print_text
-	CNOP 0,4
-qh_clear_queue_exit
 	lea	qh_message_text4(pc),a0
 	moveq	#qh_message_text4_end-qh_message_text4,d0
 	bra	adl_print_text
+
 
 
 	CNOP 0,4
