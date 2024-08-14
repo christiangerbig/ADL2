@@ -2515,16 +2515,16 @@ qh_show_queue_ok
 	subq.w	#1,d7			; wegen dbf
 qh_show_queue_loop
 	lea	qh_show_entry_header(pc),a0
-	moveq	#qh_show_entry_string-qh_show_entry_header,d0
+	moveq	#qh_show_entry_current_number-qh_show_entry_header,d0
 	bsr	adl_print_text
 	move.w	d5,d1			; Wert zum Umwandeln
-	lea	qh_show_entry_string(pc),a0 ; Zeiger auf ASCII-Wert
+	lea	qh_show_entry_current_number(pc),a0 ; Zeiger auf ASCII-Wert
 	move.w	d7,-(a7)
 	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
 	bsr	rp_dec_to_ascii
 	move.w	(a7)+,d7
-	lea	qh_show_entry_string(pc),a0
-	moveq	#qh_show_entry_string_end-qh_show_entry_string,d0
+	lea	qh_show_entry_current_number(pc),a0
+	moveq	#qh_show_entry_current_number_end-qh_show_entry_current_number,d0
 	bsr	adl_print_text
 	bsr.s   qh_get_entry_filename
 	ADDF.W	playback_queue_entry_size,a2 ; nächster Eintrag in Playback Queue
@@ -6005,7 +6005,7 @@ qh_show_entry_header
 	DC.B ASCII_LINE_FEED,"Nr."
 qh_show_entry_current_number
 	DC.B "   ",34
-;qh_show_entry_string_end
+qh_show_entry_current_number_end
 	EVEN
 qh_show_entry_space
 	DC.B 34," ................................................"
