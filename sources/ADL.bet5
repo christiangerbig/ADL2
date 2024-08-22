@@ -332,21 +332,26 @@ qh_edit_window_top		EQU 0
 qh_edit_window_x_size		EQU 400
 qh_edit_window_y_size		EQU 130
 
+
+qh_integer_entry_x_size		EQU 40
+qh_integer_entry_y_size		EQU 12
+qh_integer_entry_x_position	EQU 40
+qh_integer_entry_y_position	EQU 20
+qh_integer_entry_id		EQU 1
+
+qh_text_display_x_size		EQU 120
+qh_text_display_y_size		EQU 12
+qh_text_display_x_position	EQU 100
+qh_text_display_y_position	EQU 20
+
 qh_button_x_size		EQU 70
 qh_button_y_size		EQU 12
-
-
-qh_number_entry_x_position	EQU 40
-qh_number_entry_y_position	EQU 20
-
-qh_negative_button_x_position	EQU 10
-qh_negative_button_y_position	EQU 100
-qh_negative_button_id		EQU 2
-
-qh_positive_button_x_position	EQU 320
+qh_positive_button_x_position	EQU 10
 qh_positive_button_y_position	EQU 100
-qh_positive_button_id		EQU 1
-
+qh_positive_button_id		EQU 2
+qh_negative_button_x_position	EQU 320
+qh_negative_button_y_position	EQU 100
+qh_negative_button_id		EQU 3
 
 ; **** Run-Demo ****
 rd_cleared_sprite_x_size	EQU 16
@@ -498,8 +503,7 @@ qh_arg_resetqueue_enabled	RS.W 1
 qh_screen_visual_info		RS.L 1
 qh_workbench_screen		RS.L 1
 qh_context_gadget		RS.L 1
-qh_positive_button_gadget	RS.L 1
-qh_negative_button_gadget	RS.L 1
+qh_text_display_gadget		RS.L 1
 qh_edit_window			RS.L 1
 qh_check_window_events_active	RS.W 1
 
@@ -1057,6 +1061,7 @@ adl_init_structures
 	bsr	dc_init_file_request_tags
 	bsr	qh_init_get_visual_info_tags
 	bsr	qh_init_edit_window_tags
+	bsr	qh_init_tag_lists
 	bsr	qh_init_gadgets
 	bsr	rd_init_pal_screen_colors
 	bsr	rd_init_pal_screen_tags
@@ -1215,14 +1220,36 @@ qh_init_gadgets
 	move.b	d0,ta_flags(a0)
 ; ** NewGadget **
 	lea	qh_new_gadget(pc),a0
-	move.w	#qh_button_x_size,gng_Width(a0)
-	move.w	#qh_button_y_size,gng_Height(a0)
 	lea	qh_topaz_80(pc),a1
 	move.l	a1,gng_TextAttr(a0)
 	moveq	#0,d0
    	move.l	d0,gng_UserData(a0)
-; ** CreateGadget() **
-	lea	qh_new_gadget_tag_list(pc),a0
+	rts
+
+	CNOP 0,4
+qh_init_tag_lists
+	lea	qh_button_tag_list(pc),a0
+	moveq	#TAG_DONE,d2
+	move.l	d2,(a0)
+
+	lea	qh_integer_entry_tag_list(pc),a0
+	move.l	#GTIN_Number,(a0)+
+	moveq	#1,d2
+	move.l	d2,(a0)+
+	move.l	#GTIN_MaxChars,(a0)+
+	moveq	#2,d2
+	move.l	d2,(a0)+
+	moveq	#TAG_DONE,d2
+	move.l	d2,(a0)
+
+	lea	qh_text_display_tag_list(pc),a0
+	moveq	#TAG_DONE,d2
+	move.l	d2,(a0)
+
+	lea	qh_set_text_display_tag_list(pc),a0
+	move.l	#GTTX_Text,(a0)+
+	moveq	#0,d0
+	move.l	d0,(a0)+
 	moveq	#TAG_DONE,d2
 	move.l	d2,(a0)
 	rts
@@ -2785,6 +2812,7 @@ qh_init_gadgets_environment
 	bsr	qh_open_edit_window
 	move.l	d0,adl_dos_return_code(a3)
 	bne.s	qh_cleanup_gadgets
+	bsr	qh_init_text_display_filename
 	bsr	qh_process_window_events
 
 qh_cleanup_edit_window
@@ -2868,30 +2896,68 @@ qh_create_context_gadget_ok
 ; d0.l	... Return-Code
 	CNOP 0,4
 qh_create_gadgets
-; ** Positive-Button-Gadget **
-	lea	qh_new_gadget(pc),a1
-	move.w	#qh_negative_button_x_position,gng_LeftEdge(a1)
-	moveq	#qh_negative_button_y_position,d0
 	move.l	qh_workbench_screen(a3),a0
-	add.b	sc_WBorTop(a0),d0
+	add.b	sc_WBorTop(a0),d2
 	move.l	sc_Font(a0),a0
-	add.w	ta_YSize(a0),d0
-	addq.w	#1,d0
+	move.w	ta_YSize(a0),d2
+	addq.w	#1,d2			; Höhe der Titelleiste des Fensters
+; ** Integer-Entry Gadget **
+	lea	qh_new_gadget(pc),a1
+	move.w	#qh_integer_entry_x_position,gng_LeftEdge(a1)
+	moveq	#qh_integer_entry_y_position,d0
+	add.w	d2,d0
 	move.w	d0,gng_TopEdge(a1)
+	move.w	#qh_integer_entry_x_size,gng_Width(a1)
+	move.w	#qh_integer_entry_y_size,gng_Height(a1)
+	moveq	#0,d0
+	move.l  d0,gng_GadgetText(a1)
+        move.w	#qh_integer_entry_id,gng_GadgetID(a1)
+	move.l	d0,gng_Flags(a1)
+	move.l	qh_screen_visual_info(a3),gng_VisualInfo(a1)
+	move.l	#INTEGER_KIND,d0
+	move.l	qh_context_gadget(a3),a0
+	lea	qh_integer_entry_tag_list(pc),a2
+	CALLGADTOOLS CreateGadgetA
+	move.l	d0,a4
+; ** Text-Display Gadget **
+	lea	qh_new_gadget(pc),a1
+	move.w	#qh_text_display_x_position,gng_LeftEdge(a1)
+	moveq	#qh_text_display_y_position,d0
+	add.w	d2,d0
+	move.w	d0,gng_TopEdge(a1)
+	move.w	#qh_text_display_x_size,gng_Width(a1)
+	move.w	#qh_text_display_y_size,gng_Height(a1)
+	moveq	#0,d0
+	move.l  d0,gng_GadgetText(a1)
+        move.w	d0,gng_GadgetID(a1)
+	move.l	d0,gng_Flags(a1)
+	move.l	#TEXT_KIND,d0
+	move.l	a4,a0
+	lea	qh_text_display_tag_list(pc),a2
+	CALLGADTOOLS CreateGadgetA
+	move.l	d0,a4
+	move.l	d0,qh_text_display_gadget(a3)
+; ** Positive-Button Gadget **
+	lea	qh_new_gadget(pc),a1
+	move.w	#qh_positive_button_x_position,gng_LeftEdge(a1)
+	moveq	#qh_positive_button_y_position,d0
+	add.w	d2,d0
+	move.w	d0,gng_TopEdge(a1)
+	move.w	#qh_button_x_size,gng_Width(a1)
+	move.w	#qh_button_y_size,gng_Height(a1)
 	lea	qh_positive_button_text(pc),a0
 	move.l  a0,gng_GadgetText(a1)
         move.w	#qh_positive_button_id,gng_GadgetID(a1)
 	moveq	#0,d0
 	move.l	d0,gng_Flags(a1)
-	move.l	qh_screen_visual_info(a3),gng_VisualInfo(a1)
 	move.l	#BUTTON_KIND,d0
-	move.l	qh_context_gadget(a3),a0
-	lea	qh_new_gadget_tag_list(pc),a2
+	move.l	a4,a0
+	lea	qh_button_tag_list(pc),a2
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,a4
 ; ** Negative-Button-Gadget **
 	lea	qh_new_gadget(pc),a1
-	move.w	#qh_positive_button_x_position,gng_LeftEdge(a1)
+	move.w	#qh_negative_button_x_position,gng_LeftEdge(a1)
 	lea	qh_negative_button_text(pc),a0
 	move.l  a0,gng_GadgetText(a1)
         move.w	#qh_negative_button_id,gng_GadgetID(a1)
@@ -2899,8 +2965,9 @@ qh_create_gadgets
 	move.l	d0,gng_Flags(a1)
 	move.l	#BUTTON_KIND,d0
 	move.l	a4,a0
-	lea	qh_new_gadget_tag_list(pc),a2
+	lea	qh_button_tag_list(pc),a2
 	CALLGADTOOLS CreateGadgetA
+
 	tst.l	d0
 	bne.s	qh_create_gadgets_ok
 	lea	qh_error_text4(pc),a0
@@ -2940,6 +3007,21 @@ qh_open_edit_window_ok
 
 
 	CNOP 0,4
+qh_init_text_display_filename
+	move.l	adl_entries_buffer(a3),a0
+	bsr	qh_get_demofile_title
+	move.l	qh_text_display_gadget(a3),a0
+	move.l	qh_edit_window(a3),a1
+	sub.l	a2,a2			; Kein Requester
+	move.l	a3,-(a7)
+	lea	qh_set_text_display_tag_list(pc),a3
+	move.l	d0,ti_data(a3)		; Zeiger auf Dateinamen des Demos
+  	CALLGADTOOLS GT_SetGadgetAttrsA
+	move.l	(a7)+,a3
+	rts
+
+
+	CNOP 0,4
 qh_process_window_events
 	move.l	qh_edit_window(a3),a0
 	move.l	wd_UserPort(a0),a2
@@ -2957,6 +3039,29 @@ qh_process_window_events_loop
 	cmp.l	#IDCMP_GADGETUP,d0
 	bne.s   qh_check_event_close_window
 	move.l	im_IAddress(a4),a0
+
+	cmp.w	#qh_integer_entry_id,gg_GadgetID(a0)
+	bne.s	qh_check_positive_button_event
+	move.l	gg_SpecialInfo(a0),a0
+	move.l	si_Buffer(a0),a0	; Zeiger auf String
+	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
+	bsr	qh_ascii_to_dec
+	subq.l	#1,d0			; Zählung von Null an
+	move.l	adl_entries_buffer(a3),a0
+	mulu.w	#playback_queue_entry_size,d0 ; Offset in Puffer berechnen
+	add.l	d0,a0
+	bsr	qh_get_demofile_title
+	move.l	qh_text_display_gadget(a3),a0
+	move.l	qh_edit_window(a3),a1
+	movem.l	a2-a3,-(a7)
+	sub.l	a2,a2			; Kein Requester
+	lea	qh_set_text_display_tag_list(pc),a3
+	move.l	d0,ti_data(a3)		; Zeiger auf Dateinamen des Demos
+  	CALLLIBS GT_SetGadgetAttrsA
+	movem.l	(a7)+,a2-a3
+	bra.s	qh_process_window_events_ok
+	CNOP 0,4
+qh_check_positive_button_event
 	cmp.w	#qh_positive_button_id,gg_GadgetID(a0)
 	bne.s	qh_check_negative_button_event
 	nop
@@ -3019,8 +3124,8 @@ qh_unlock_workbench
 
 	CNOP 0,4
 qh_change_window_title
-	move.l	adl_entries_buffer(a3),a2
-;	add.l	#2*playback_queue_entry_size,a2
+	move.l	adl_entries_buffer(a3),a0
+;	add.l	#2*playback_queue_entry_size,a0
 
 	bsr.s	qh_get_demofile_title
 	move.l	d0,a1
@@ -3029,15 +3134,15 @@ qh_change_window_title
 	CALLINTQ SetWindowTitles
 
 ; Input
-; a2	... Zeiger auf Eintrag in Playback-Queue
+; a0	... Zeiger auf Eintrag in Playback-Queue
 ; Result
 ; d0.l	... Zeiger auf Dateinamen
 	CNOP 0,4
 qh_get_demofile_title
+	movem.l d2-a3,-(a7)
 	moveq	#"/",d2
 	moveq	#":",d3
 	moveq	#adl_demofile_path_length-1,d6
-	move.l	a2,a0
 	add.l	d6,a0			; Zeiger auf letztes Zeichen (Nullbyte)
 qh_get_demofile_title_loop
 	tst.b	(a0)
@@ -3050,8 +3155,34 @@ qh_get_demofile_title_loop
 qh_get_demofile_title_skip
 	addq.w	#1,a0			; "/" oder ":" überspringen
 	move.l	a0,d0
+	movem.l	(a7)+,d2-d3
 	rts
 
+
+; Input
+; a0	... Zeiger auf String
+; d7.l	... Anzahl der Stellen zum Umwandeln
+; Result
+; d0.l	... Rückgabewert: Dezimalzahl
+	CNOP 0,4
+qh_ascii_to_dec
+	tst.b	1(a0)
+	bne.s	qh_ascii_to_dec_skip
+	subq.w	#1,d7		        ; Nur eine Stelle umwandeln
+qh_ascii_to_dec_skip
+	add.l	d7,a0			; Zeiger auf Ende des Strings
+	moveq	#0,d0			; Dezimalzahl
+	moveq	#1,d2			; Erster Dezimal-Stellenwert 1
+	subq.w	#1,d7			; wegen dbf
+qh_ascii_to_dec_loop
+	moveq	#0,d3
+	move.b	-(a0),d3		; ASCII-Wert lesen
+	sub.b	#"0",d3			; ASCII-Wert "0" abziehen = 0..9
+	mulu.w	d2,d3			; Dezimal-Stellenwert (1,10,..)
+	MULUF.L	10,d2,d1		; nächste Zehnerprotenz
+	add.l	d3,d0			; Stelle zum Ergebnis addieren
+	dbf	d7,qh_ascii_to_dec_loop
+	rts
 
 
 	CNOP 0,4
@@ -6485,33 +6616,39 @@ dc_error_text18_end
 
 ; **** Queue-Handler ****
 	CNOP 0,4
-qh_get_visual_info_tag_list
-	DS.L 1
+qh_get_visual_info_tag_list	DS.L 1
 
 
 	CNOP 0,4
-qh_edit_window_tag_list
-	DS.B edit_window_tag_list_size
+qh_edit_window_tag_list		DS.B edit_window_tag_list_size
 
 
 	CNOP 0,4
-qh_gadget_list
-	DS.L 1
+qh_button_tag_list		DS.L 1
 
 
 	CNOP 0,4
-qh_new_gadget_tag_list
-	DS.L 1
+qh_integer_entry_tag_list	DS.L 5
 
 
 	CNOP 0,4
-qh_new_gadget
-	DS.B gng_SIZEOF
+qh_text_display_tag_list	DS.L 1
+
+	CNOP 0,4
+qh_set_text_display_tag_list	DS.L 3
 
 
 	CNOP 0,4
-qh_topaz_80
-	DS.B ta_SIZEOF
+qh_gadget_list			DS.L 1
+
+
+	CNOP 0,4
+qh_new_gadget			DS.B gng_SIZEOF
+
+
+	CNOP 0,4
+qh_topaz_80			DS.B ta_SIZEOF
+
 
 
 qh_positive_button_text		DC.B "Save",0
