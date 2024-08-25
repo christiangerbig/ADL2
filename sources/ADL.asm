@@ -234,6 +234,8 @@
 ; - File-Requester: Der Filter berücksichtigt jetzt auch die Endung ".data"
 ; - Neues Argument: EDITQUEUE
 ; - Neuer Bereich: Queue-Handler qh_
+; - Edit-Window: Gadgets für Entry-Nummer, Runmode und Entry-Active,
+;                Änderungrn können in der Playback-Queue gespeichert werden
 
 
 	SECTION code_and_variables,CODE
@@ -257,6 +259,8 @@
 	INCLUDE "intuition/intuition.i"
 	INCLUDE "intuition/intuition_lib.i"
 
+	INCLUDE "libraries/gadtools.i"
+	INCLUDE "libraries/gadtools_lib.i"
 	INCLUDE "libraries/asl.i"
 	INCLUDE "libraries/asl_lib.i"
 	INCLUDE "libraries/icon_lib.i"
@@ -322,6 +326,57 @@ dc_entries_number_max		EQU 99
 
 dc_file_request_x_size		EQU 320
 dc_file_request_y_size		EQU 200
+
+
+; **** Queue-Handler ****
+qh_edit_window_left		EQU 0
+qh_edit_window_top		EQU 0
+qh_edit_window_x_size		EQU 320
+qh_edit_window_y_size		EQU 128
+
+qh_text_gadget_x_size		EQU 230
+qh_text_gadget_y_size		EQU 12
+qh_text_gadget_x_position	EQU 30
+qh_text_gadget_y_position	EQU 1
+
+qh_bwd_button_gadget_x_size	EQU 30
+qh_bwd_button_gadget_y_size	EQU 12
+qh_bwd_button_gadget_x_position	EQU 30
+qh_bwd_button_gadget_y_position	EQU 15
+qh_bwd_button_gadget_id	EQU 1
+
+qh_integer_gadget_x_size	EQU 30
+qh_integer_gadget_y_size	EQU 12
+qh_integer_gadget_x_position	EQU 80
+qh_integer_gadget_y_position	EQU 15
+qh_integer_gadget_id		EQU 2
+
+qh_fwd_button_gadget_x_size	EQU 30
+qh_fwd_button_gadget_y_size	EQU 12
+qh_fwd_button_gadget_x_position	EQU 140
+qh_fwd_button_gadget_y_position	EQU 15
+qh_fwd_button_gadget_id		EQU 3
+
+qh_cycle_gadget_x_size		EQU 130
+qh_cycle_gadget_y_size		EQU 12
+qh_cycle_gadget_x_position	EQU 30
+qh_cycle_gadget_y_position	EQU 40
+qh_cycle_gadget_id		EQU 4
+
+qh_mx_gadget_x_position 	EQU 30
+qh_mx_gadget_y_position 	EQU 65
+qh_mx_gadget_id	EQU 5
+
+qh_pos_button_gadget_x_size	EQU 70
+qh_pos_button_gadget_y_size	EQU 12
+qh_pos_button_gadget_x_position	EQU 10
+qh_pos_button_gadget_y_position	EQU 100
+qh_pos_button_gadget_id		EQU 6
+qh_neg_button_gadget_x_size	EQU 70
+qh_neg_button_gadget_y_size	EQU 12
+qh_neg_button_gadget_x_position	EQU 240
+qh_neg_button_gadget_y_position	EQU 100
+qh_neg_button_gadget_id		EQU 7
 
 
 ; **** Run-Demo ****
@@ -470,6 +525,28 @@ qh_arg_editqueue_enabled	RS.W 1
 qh_arg_clearqueue_enabled       RS.W 1
 qh_arg_resetqueue_enabled	RS.W 1
 
+	RS_ALIGN_LONGWORD
+
+qh_workbench_screen		RS.L 1
+qh_edit_window			RS.L 1
+
+qh_screen_visual_info		RS.L 1
+qh_context_gadget		RS.L 1
+qh_text_gadget_gadget		RS.L 1
+qh_bwd_button_gadget_gadget	RS.L 1
+qh_integer_gadget_gadget	RS.L 1
+qh_fwd_button_gadget_gadget	RS.L 1
+qh_cycle_gadget_gadget		RS.L 1
+qh_mx_gadget_gadget		RS.L 1
+
+qh_check_window_events_active	RS.W 1
+
+qh_edit_entry			RS.L 1
+qh_edit_entry_demofile_name	RS.L 1
+qh_edit_entry_order_number	RS.W 1
+qh_edit_runmode			RS.B 1
+qh_edit_entry_active		RS.B 1
+
 
 ; **** Run-Demo ****
 rd_arg_prerunscript_enabled	RS.W 1
@@ -598,7 +675,7 @@ playback_queue_entry		RS.B 0
 pqe_demofile_path		RS.B adl_demofile_path_length
 pqe_playtime			RS.W 1
 pqe_runmode			RS.B 1
-pqe_tag_active			RS.B 1
+pqe_entry_active		RS.B 1
 pqe_prerunscript_path		RS.B adl_prerunscript_path_length
 
 playback_queue_entry_size 	RS.B 0
@@ -698,6 +775,31 @@ os_line_feed			RS.B 1
 output_string_size		RS.B 0
 
 
+  RSRESET
+
+edit_window_tag_list		RS.B 0
+
+ewtl_WA_Left			RS.L 2
+ewtl_WA_Top			RS.L 2
+ewtl_WA_Width			RS.L 2
+ewtl_WA_Height			RS.L 2
+ewtl_WA_DetailPen		RS.L 2
+ewtl_WA_BlockPen		RS.L 2
+ewtl_WA_IDCMP			RS.L 2
+ewtl_WA_Title			RS.L 2
+ewtl_WA_PubScreenName		RS.L 2
+ewtl_WA_MinWidth		RS.L 2
+ewtl_WA_MinHeight		RS.L 2
+ewtl_WA_MaxWidth		RS.L 2
+ewtl_WA_MaxHeight		RS.L 2
+ewtl_WA_AutoAdjust		RS.L 2
+ewtl_WA_Flags			RS.L 2
+ewtl_WA_Gadgets			RS.L 2
+ewtl_TAG_DONE			RS.L 1
+
+edit_window_tag_list_size	RS.B 0
+
+
 ; **** Amiga Demo-Launcher ****
 	movem.l d2-d7/a2-a6,-(a7)
 	lea	adl_variables(pc),a3
@@ -719,6 +821,9 @@ output_string_size		RS.B 0
 	bsr	adl_open_intuition_library
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_graphics_library
+	bsr	adl_open_gadtools_library
+	move.l	d0,adl_dos_return_code(a3)
+	bne	adl_cleanup_intuition_library
 	bsr	adl_check_cool_capture
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_intuition_library
@@ -733,16 +838,32 @@ output_string_size		RS.B 0
 	beq	adl_cleanup_read_arguments
 
 	tst.w	qh_arg_showqueue_enabled(a3)
-	beq	adl_cleanup_read_arguments
+	bne.s	adl_check_arg_editqueue_enabled
+	bsr	qh_show_queue
+	bra	adl_cleanup_read_arguments
+	CNOP 0,4
+adl_check_arg_editqueue_enabled
 	tst.w	qh_arg_editqueue_enabled(a3)
-	beq	adl_cleanup_read_arguments
+	bne.s	adl_check_arg_clearqueue_enabled
+	bsr	qh_edit_queue
+	bra	adl_cleanup_read_arguments
+	CNOP 0,4
+adl_check_arg_clearqueue_enabled
 	tst.w	qh_arg_clearqueue_enabled(a3)
-	beq     adl_cleanup_read_arguments
+	bne.s	adl_check_arg_resetqueue_enabled
+	bsr	qh_clear_queue
+	bra	adl_cleanup_read_arguments
+	CNOP 0,4
+adl_check_arg_resetqueue_enabled
 	tst.w	qh_arg_resetqueue_enabled(a3)
-        beq	adl_cleanup_read_arguments
+        bne.s	adl_check_queue_empty
+	bsr	qh_reset_queue
+	bra	adl_cleanup_read_arguments
+	CNOP 0,4
+adl_check_queue_empty
 	bsr	qh_check_queue_empty
 	tst.l	d0
-	bne	dc_start
+	bne.s	dc_start
 
 	tst.w	dc_arg_newentry_enabled(a3)
 	beq.s	dc_start
@@ -869,6 +990,9 @@ adl_cleanup_read_arguments
 adl_cleanup_reset_program
 	bsr	adl_remove_reset_program
 
+adl_cleanup_gadtools_library
+	bsr	adl_close_gadtools_library
+
 adl_cleanup_intuition_library
 	bsr	adl_close_intuition_library
 
@@ -921,6 +1045,10 @@ adl_init_variables
 	move.w	d1,qh_arg_clearqueue_enabled(a3)
 	move.w	d1,qh_arg_resetqueue_enabled(a3)
 
+	move.w	#1,qh_edit_entry_order_number(a3)
+
+	move.w	d0,qh_check_window_events_active(a3)
+
 
 ; **** Run-Demo ****
 	move.w	d1,rd_arg_prerunscript_enabled(a3)
@@ -971,6 +1099,9 @@ adl_init_structures
 	bsr	adl_init_output_string
 	bsr     dc_init_runmode_request
 	bsr	dc_init_file_request_tags
+	bsr	qh_init_get_visual_info_tags
+	bsr	qh_init_edit_window_tags
+	bsr	qh_init_gadgets
 	bsr	rd_init_pal_screen_colors
 	bsr	rd_init_pal_screen_tags
 	bsr	rd_init_invisible_window_tags
@@ -1058,6 +1189,185 @@ dc_init_file_request_tags
 	move.l	a1,(a0)+
 	moveq	#TAG_DONE,d2
 	move.l	d2,(a0)
+	rts
+
+
+	CNOP 0,4
+qh_init_get_visual_info_tags
+	lea	qh_get_visual_info_tag_list(pc),a0
+	moveq	#TAG_DONE,d2
+	move.l	d2,(a0)
+	rts
+
+
+	CNOP 0,4
+qh_init_edit_window_tags
+	lea	qh_edit_window_tag_list(pc),a0
+	move.l	#WA_Left,(a0)+
+	moveq	#qh_edit_window_left,d2
+	move.l	d2,(a0)+
+	move.l	#WA_Top,(a0)+
+	moveq	#qh_edit_window_top,d2
+	move.l	d2,(a0)+
+	move.l	#WA_Width,(a0)+
+	move.l	#qh_edit_window_x_size,(a0)+
+	move.l	#WA_Height,(a0)+
+	move.l	#qh_edit_window_y_size,(a0)+
+	move.l	#WA_DetailPen,(a0)+
+	moveq	#0,d0
+	move.l	d0,(a0)+
+	move.l	#WA_BlockPen,(a0)+
+	move.l	d0,(a0)+
+	move.l	#WA_IDCMP,(a0)+
+	move.l	#IDCMP_CLOSEWINDOW|IDCMP_REFRESHWINDOW|IDCMP_GADGETUP|IDCMP_GADGETDOWN,(a0)+
+	move.l	#WA_Title,(a0)+
+	lea	qh_edit_window_name(pc),a1
+	move.l	a1,(a0)+
+	move.l	#WA_PubScreenName,(a0)+
+	lea	workbench_screen_name(pc),a1
+	move.l	a1,(a0)+
+	move.l	#WA_MinWidth,(a0)+
+	move.l	#qh_edit_window_x_size,(a0)+
+	move.l	#WA_MinHeight,(a0)+
+	move.l	#qh_edit_window_y_size,(a0)+
+	move.l	#WA_MaxWidth,(a0)+
+	move.l	#qh_edit_window_x_size,(a0)+
+	move.l	#WA_MaxHeight,(a0)+
+	move.l	#qh_edit_window_y_size,(a0)+
+	move.l	#WA_AutoAdjust,(a0)+
+	move.l	d0,(a0)+
+	move.l	#WA_Flags,(a0)+
+	move.l	#WFLG_CLOSEGADGET|WFLG_ACTIVATE|WFLG_DEPTHGADGET|WFLG_DRAGBAR,(a0)+
+	move.l	#WA_Gadgets,(a0)+
+	move.l	d0,(a0)+		; Wird später initialisiert
+	moveq	#TAG_DONE,d2
+	move.l	d2,(a0)
+	rts
+
+
+	CNOP 0,4
+qh_init_gadgets
+; ** CreateContext() **
+	lea	qh_gadget_list(pc),a0
+	clr.l	(a0)
+
+; ** NewGadget **
+	lea	qh_topaz_80(pc),a0
+	lea	topaz_font_name(pc),a1
+	move.l	a1,ta_name(a0)
+	move.w	#8,ta_ysize(a0)
+	moveq	#0,d0
+	move.b	d0,ta_style(a0)
+	move.b	d0,ta_flags(a0)
+
+	lea	qh_new_gadget(pc),a0
+	lea	qh_topaz_80(pc),a1
+	move.l	a1,gng_TextAttr(a0)
+	moveq	#0,d0
+   	move.l	d0,gng_UserData(a0)
+
+; ** Text Gadget **
+	lea	qh_text_gadget_tag_list(pc),a0
+	move.l	#GTTX_Text,(a0)+
+	moveq	#0,d0
+	move.l	d0,(a0)+
+	moveq	#TAG_DONE,d0
+	move.l	d0,(a0)
+
+	lea	qh_set_text_gadget_tag_list(pc),a0
+	move.l	#GTTX_Text,(a0)+
+	moveq	#0,d0
+	move.l	d0,(a0)+
+	moveq	#TAG_DONE,d0
+	move.l	d0,(a0)
+
+; ** Button Gadgets **
+	lea	qh_button_gadget_tag_list(pc),a0
+	move.l	#GA_Disabled,(a0)+
+	moveq	#FALSE,d0
+	move.l	d0,(a0)+
+	moveq	#TAG_DONE,d0
+	move.l	d0,(a0)
+
+	lea	qh_set_button_gadget_tag_list(pc),a0
+	move.l	#GA_Disabled,(a0)+
+	moveq	#TRUE,d0
+	move.l	d0,(a0)+
+	moveq	#TAG_DONE,d0
+	move.l	d0,(a0)
+
+; ** Integer Gadget **
+	lea	qh_integer_gadget_tag_list(pc),a0
+	move.l	#GTIN_Number,(a0)+
+	moveq	#0,d0
+	move.w	qh_edit_entry_order_number(a3),d0
+	move.l	d0,(a0)+
+	move.l	#GTIN_MaxChars,(a0)+
+	moveq	#2,d0			; 2 Stellen
+	move.l	d0,(a0)+
+	moveq	#TAG_DONE,d0
+	move.l	d0,(a0)
+
+	lea	qh_set_integer_gadget_tag_list(pc),a0
+	move.l	#GTIN_Number,(a0)+
+	moveq	#0,d0
+	move.l	d0,(a0)+
+	moveq	#TAG_DONE,d0
+	move.l	d0,(a0)
+
+; ** Cycle Gadget **
+	lea	qh_cycle_gadget_array(pc),a0
+	lea	qh_cycle_gadget_choice_text1(pc),a1
+	move.l	a1,(a0)+
+	lea	qh_cycle_gadget_choice_text2(pc),a1
+	move.l	a1,(a0)+
+	lea	qh_cycle_gadget_choice_text3(pc),a1
+	move.l	a1,(a0)+
+	moveq	#0,d0
+	move.w	d0,(a0)
+
+	lea	qh_cycle_gadget_tag_list(pc),a0
+	move.l	#GTCY_Labels,(a0)+
+	lea	qh_cycle_gadget_array(pc),a1
+	move.l	a1,(a0)+
+	move.l	#GTCY_Active,(a0)+
+	moveq	#2,d0
+	move.l	d0,(a0)+
+	moveq	#TAG_DONE,d0
+	move.l	d0,(a0)
+
+	lea	qh_set_cycle_gadget_tag_list(pc),a0
+	move.l	#GTCY_Active,(a0)+
+	moveq	#0,d0
+	move.l	d0,(a0)+
+	moveq	#TAG_DONE,d0
+	move.l	d0,(a0)
+
+; ** Mutually-Exclusive Gadget **
+	lea	qh_mx_gadget_array(pc),a0
+	lea	qh_mx_gadget_text1(pc),a1
+	move.l	a1,(a0)+
+	lea	qh_mx_gadget_text2(pc),a1
+	move.l	a1,(a0)+
+	moveq	#0,d0
+	move.l	d0,(a0)
+
+	lea	qh_mx_gadget_tag_list(pc),a0
+	move.l	#GTMX_Labels,(a0)+
+	lea	qh_mx_gadget_array(pc),a1
+	move.l	a1,(a0)+
+	move.l	#GTMX_Active,(a0)+
+	moveq	#0,d0
+	move.l	d0,(a0)+
+	moveq	#TAG_DONE,d0
+	move.l	d0,(a0)
+
+	lea	qh_set_mx_gadget_tag_list(pc),a0
+	move.l	#GTMX_Active,(a0)+
+	moveq	#0,d0
+	move.l	d0,(a0)+
+	moveq	#TAG_DONE,d0
+	move.l	d0,(a0)
 	rts
 
 
@@ -1301,6 +1611,28 @@ adl_check_system_ok
 ; Result
 ; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
+adl_open_gadtools_library
+	lea	gadtools_library_name(pc),a1
+	moveq	#OS_VERSION_MIN,d0
+	CALLEXEC OpenLibrary
+	lea	_GadToolsBase(pc),a0
+	move.l	d0,(a0)
+	bne.s	adl_open_gadtools_library_ok
+	lea	adl_error_text6(pc),a0
+	moveq	#adl_error_text6_end-adl_error_text6,d0
+	bsr	adl_print_text
+	moveq	#RETURN_FAIL,d0
+	rts
+	CNOP 0,4
+adl_open_gadtools_library_ok
+	moveq	#RETURN_OK,d0
+	rts
+
+
+; Input
+; Result
+; d0.l	Rückgabewert: Return-Code
+	CNOP 0,4
 adl_open_intuition_library
 	lea	intuition_library_name(pc),a1
 	moveq	#OS_VERSION_MIN,d0
@@ -1308,8 +1640,8 @@ adl_open_intuition_library
 	lea	_IntuitionBase(pc),a0
 	move.l	d0,(a0)
 	bne.s	adl_open_intuition_library_ok
-	lea	adl_error_text6(pc),a0
-	moveq	#adl_error_text6_end-adl_error_text6,d0
+	lea	adl_error_text7(pc),a0
+	moveq	#adl_error_text7_end-adl_error_text7,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -1452,46 +1784,25 @@ dc_check_arg_newentry
 	CNOP 0,4
 adl_check_arg_showqueue
 	move.l	cra_SHOWQUEUE(a2),d0
-	beq.s   adl_check_arg_editqueue
 	not.w	d0
 	move.w	d0,qh_arg_showqueue_enabled(a3)
-	bsr	qh_show_queue
-	bra	adl_check_cmd_line_ok
 
 ; ** Queue-Handler Argument EDITQUEUE **
-	CNOP 0,4
-adl_check_arg_editqueue
 	move.l	cra_EDITQUEUE(a2),d0
-	beq.s	adl_check_arg_clearqueue
 	not.w	d0
 	move.w	d0,qh_arg_editqueue_enabled(a3)
-	bsr	qh_edit_queue
-	bra	adl_check_cmd_line_ok
 
 ; ** Queue-Handler Argument CLEARQUEUE **
-	CNOP 0,4
-adl_check_arg_clearqueue
 	move.l	cra_CLEARQUEUE(a2),d0
-	beq.s	adl_check_arg_resetqueue
 	not.w	d0
 	move.w	d0,qh_arg_clearqueue_enabled(a3)
-	bsr	qh_clear_queue
-	bra	adl_check_cmd_line_ok
 
 ; ** Queue-Handler Argument RESETQUEUE **
-	CNOP 0,4
-adl_check_arg_resetqueue
 	move.l	cra_RESETQUEUE(a2),d0
-	beq.s	adl_check_arg_playentry
 	not.w	d0
 	move.w	d0,qh_arg_resetqueue_enabled(a3)
-	bsr	qh_reset_queue
-	bra	adl_check_cmd_line_ok
-
 
 ; ** Run-Demo Argument PLAYENTRY **
-	CNOP 0,4
-adl_check_arg_playentry
 	move.l	cra_PLAYENTRY(a2),d0
 	beq.s	adl_check_arg_prerunscript
 	move.l	d0,a0
@@ -1786,10 +2097,10 @@ dc_multiselect_loop
 	bsr.s	dc_check_demofile_path
 	move.l	(a7)+,a2
 	tst.l	d0
-	beq.s	dc_next_multiselect_entry
+	beq.s	dc_fwd_multiselect_entry
 	rts
 	CNOP 0,4
-dc_next_multiselect_entry
+dc_fwd_multiselect_entry
 	addq.w	#1,d5			; nächster Eintrag in ArgLists
 	dbf	d6,dc_multiselect_loop
 	moveq	#RETURN_OK,d0
@@ -1831,13 +2142,11 @@ dc_get_playback_entry_offset
 	move.l	a2,a0			; Zeiger auf Eintrag im Puffer
 	bsr	dc_clear_playlist_entry
 	move.l	(a7)+,a0		; Zeiger auf Dateiname
-	moveq	#"/",d2
-	moveq	#":",d3
 dc_check_demo_dir_name
 	tst.b	(a1)			; Ende von Verzeichnisname (Nullbyte) ?
 	beq.s	dc_copy_demofile_name_loop ; Ja -> verzweige
-	cmp.b	(a1),d2			; Bei "/" auch Dateiname kopieren
-	bne.s	dc_copy_demo_dir_name	; Sonst Verzeichnisname kopieren
+	cmp.b	#"/",(a1)
+	bne.s	dc_copy_demo_dir_name
 	addq.w	#1,a1			; Nächstes Zeichen im Verzeichnisnamen
 	bra.s	dc_check_demo_dir_name
 	CNOP 0,4
@@ -1862,11 +2171,11 @@ dc_copy_demo_dir_skip
 	tst.b	(a1)
 	bne.s	dc_copy_demo_dir_name_loop ; Schleife, so lange bis Endes des Verzeichnisnamens erreicht ist
 	clr.b	(a4)			; Nullbyte setzen
-	cmp.b	-1(a1),d3		; War letztes Zeichen ein ":" ?
-	beq.s	dc_copy_demofile_name_loop ; Ja -> Dateiname kopieren
-	cmp.b	-1(a1),d2		; War letztes Zeichen ein "/" ?
-	beq.s	dc_copy_demofile_name_loop ; Ja -> Dateiname kopieren
-	move.b	d2,(a2)+		; Sonst "/" einfügen
+	cmp.b	#":",-1(a1)
+	beq.s	dc_copy_demofile_name_loop
+	cmp.b	#"/",-1(a1)
+	beq.s	dc_copy_demofile_name_loop
+	move.b	#"/",(a2)+
 dc_copy_demofile_name_loop
 	addq.b	#1,d0
 	cmp.b	#adl_demofile_path_length-1,d0
@@ -1881,8 +2190,8 @@ dc_copy_demofile_name_loop
 	CNOP 0,4
 dc_copy_demofile_name_skip
 	move.b	(a0)+,(a2)+
-	cmp.b	(a0),d2			; Nächstes Zeichen ein "/" ?
-	bne.s	dc_check_demofile_nullbyte ; Nein -> verzweige
+	cmp.b	#":",(a0)
+	bne.s	dc_check_demofile_nullbyte
 	lea	dc_error_text17(pc),a0
 	moveq	#dc_error_text17_end-dc_error_text17,d0
 	bsr	adl_print_text
@@ -2353,7 +2662,7 @@ dc_arg_lmbexit_save_playtime
 ; ** Playlist-Argument PRERUNSCRIPT **
 dc_check_arg_prerunscript
 	move.l	pra_PRERUNSCRIPT(a5),d0
-	beq.s	dc_next_transmitted_entry
+	beq.s	dc_fwd_transmitted_entry
 	move.l	d0,a0			; Zeiger auf Dateiname des Scriptfiles
 	move.l	d6,a1			; Zeiger auf Eintrag im Puffer
 	ADDF.W	pqe_prerunscript_path,a1 ; Zeiger auf Prerunscript-Pfad in Puffer
@@ -2368,16 +2677,16 @@ dc_copy_prerunscript_path_loop
 dc_copy_prerunscript_skip
 	move.b	(a0)+,(a1)+
 	bne.s	dc_copy_prerunscript_path_loop ; Schleife, bis Nullbyte gefunden wurd
-dc_next_transmitted_entry
+dc_fwd_transmitted_entry
 	addq.w	#1,dc_transmitted_entries_number(a3)
 	addq.w	#1,adl_entries_number(a3)
 	move.w	adl_entries_number_max(a3),d0
 	cmp.w	adl_entries_number(a3),d0
-	bne.s	dc_next_playlist_cmd_line
+	bne.s	dc_fwd_playlist_cmd_line
 	bsr.s	dc_parse_playlist_file_result
 	bra	dc_print_entries_max_message_text
 	CNOP 0,4
-dc_next_playlist_cmd_line
+dc_fwd_playlist_cmd_line
 	add.l	#playback_queue_entry_size,d6 ; nächster Eintrag
 dc_free_custom_arguments
 	move.l	a4,d1			; Zeiger auf RDArgs-Struktur
@@ -2541,17 +2850,17 @@ qh_show_queue_loop
 
 
 ; Input
-; a2 ... Zeiger auf 1. Eintrag in Playback-Queue
+; a2 ... Zeiger auf Eintrag in Playback-Queue
 ; Result
 ; d0 ... kein Rückgabewert
 	CNOP 0,4
 qh_get_entry_filename
-	move.l	a2,a0
-	moveq	#adl_demofile_path_length-1,d6
 	moveq	#0,d0			; Zähler für Demo-Dateinamen-Länge
-	add.l	d6,a0			; Zeiger auf letztes Zeichen (Nullbyte)
 	moveq	#"/",d2
 	moveq	#":",d3
+	moveq	#adl_demofile_path_length-1,d6
+	move.l	a2,a0
+	add.l	d6,a0			; Zeiger auf letztes Zeichen (Nullbyte)
 qh_get_entry_filename_loop
 	tst.b	(a0)
 	beq.s	qh_get_entry_filename_skip1
@@ -2576,22 +2885,674 @@ qh_get_entry_filename_skip3
 	moveq	#qh_show_entry_space_end-qh_show_entry_space-1,d0 ; Textlänge der Füllzeile
 	sub.w	d4,d0			; Abzüglich Länge des Dateinamens
 	bsr	adl_print_text
-	tst.b	pqe_tag_active(a2)
-	beq.s	qh_print_negative_tag_msg
-qh_print_positive_tag_msg
-	lea	qh_tag_active_text1(pc),a0
-	moveq	#qh_tag_active_text1_end-qh_tag_active_text1,d0
+
+	tst.b	pqe_entry_active(a2)
+	bne.s	qh_print_entry_active_text2
+	lea	qh_entry_active_text1(pc),a0
+	moveq	#qh_entry_active_text1_end-qh_entry_active_text1,d0
 	bra	adl_print_text
 	CNOP 0,4
-qh_print_negative_tag_msg
-	lea	qh_tag_active_text2(pc),a0
-	moveq	#qh_tag_active_text2_end-qh_tag_active_text2,d0
+qh_print_entry_active_text2
+	lea	qh_entry_active_text2(pc),a0
+	moveq	#qh_entry_active_text2_end-qh_entry_active_text2,d0
 	bra	adl_print_text
 
 
 	CNOP 0,4
 qh_edit_queue
+	move.l	adl_entries_buffer(a3),a0
+	tst.b	(a0)
+	bne.s	qh_init_gadgets_environment
+        lea	qh_message_text1(pc),a0
+	moveq	#qh_message_text1_end-qh_message_text1,d0
+	bsr	adl_print_text
+	moveq	#RETURN_FAIL,d0
+	move.l	d0,adl_dos_return_code(a3)
 	rts
+	CNOP 0,4
+qh_init_gadgets_environment
+	bsr.s	qh_lock_workbench
+	move.l	d0,adl_dos_return_code(a3)
+	bne.s	qh_edit_queue_quit
+	bsr.s	qh_get_screen_visual_info
+	move.l	d0,adl_dos_return_code(a3)
+	bne.s	qh_cleanup_locked_workbench
+	bsr	qh_create_context_gadget
+	move.l	d0,adl_dos_return_code(a3)
+	bne.s	qh_cleanup_locked_workbench
+	bsr	qh_create_gadgets
+	move.l	d0,adl_dos_return_code(a3)
+	bne.s	qh_cleanup_gadgets
+	bsr	qh_open_edit_window
+	move.l	d0,adl_dos_return_code(a3)
+	bne.s	qh_cleanup_gadgets
+	bsr	qh_process_window_events
+
+qh_cleanup_edit_window
+	bsr	qh_close_edit_window
+
+qh_cleanup_gadgets
+	bsr	qh_free_gadgets
+
+qh_cleanup_screen_visual_info
+	bsr	qh_free_screen_visual_info
+
+qh_cleanup_locked_workbench
+	bsr	qh_unlock_workbench
+
+qh_edit_queue_quit
+	rts
+
+
+; Input
+; Result
+; d0.l	... Return-Code
+	CNOP 0,4
+qh_lock_workbench
+	lea	workbench_screen_name(pc),a0
+	CALLINT LockPubScreen
+	move.l	d0,qh_workbench_screen(a3)
+	bne.s	qh_lock_workbench_ok
+	lea	qh_error_text1(pc),a0
+	moveq	#qh_error_text1_end-qh_error_text1,d0
+	bsr	adl_print_text
+	moveq	#RETURN_FAIL,d0
+	rts
+	CNOP 0,4
+qh_lock_workbench_ok
+	moveq	#RETURN_OK,d0
+	rts
+
+
+; Input
+; Result
+; d0.l	... Return-Code
+	CNOP 0,4
+qh_get_screen_visual_info
+	move.l	qh_workbench_screen(a3),a0
+	lea	qh_get_visual_info_tag_list(pc),a1
+	CALLGADTOOLS GetVisualInfoA
+	move.l	d0,qh_screen_visual_info(a3)
+	bne.s	qh_get_screen_visual_info_ok
+	lea	qh_error_text2(pc),a0
+	moveq	#qh_error_text2_end-qh_error_text2,d0
+	bsr	adl_print_text
+	moveq	#RETURN_FAIL,d0
+	rts
+	CNOP 0,4
+qh_get_screen_visual_info_ok
+	moveq	#RETURN_OK,d0
+	rts
+
+
+; Input
+; Result
+; d0.l	... Return-Code
+	CNOP 0,4
+qh_create_context_gadget
+	lea	qh_gadget_list(pc),a0
+	CALLGADTOOLS CreateContext
+	move.l	d0,qh_context_gadget(a3)
+	bne.s	qh_create_context_gadget_ok
+	lea	qh_error_text3(pc),a0
+	moveq	#qh_error_text3_end-qh_error_text3,d0
+	bsr	adl_print_text
+	moveq	#RETURN_FAIL,d0
+	rts
+	CNOP 0,4
+qh_create_context_gadget_ok
+	moveq	#RETURN_OK,d0
+	rts
+
+
+; Input
+; Result
+; d0.l	... Return-Code
+	CNOP 0,4
+qh_create_gadgets
+	move.l	qh_workbench_screen(a3),a0
+	add.b	sc_WBorTop(a0),d2
+	move.l	sc_Font(a0),a0
+	move.w	ta_YSize(a0),d2
+	addq.w	#1,d2			; Höhe der Titelleiste des Fensters
+
+; ** Text Gadget **
+	lea	qh_new_gadget(pc),a1
+	move.w	#qh_text_gadget_x_position,gng_LeftEdge(a1)
+	moveq	#qh_text_gadget_y_position,d0
+	add.w	d2,d0
+	move.w	d0,gng_TopEdge(a1)
+	move.w	#qh_text_gadget_x_size,gng_Width(a1)
+	move.w	#qh_text_gadget_y_size,gng_Height(a1)
+	moveq	#0,d0
+	move.l  d0,gng_GadgetText(a1)
+        move.w	d0,gng_GadgetID(a1)
+	move.l	d0,gng_Flags(a1)
+	move.l	qh_screen_visual_info(a3),gng_VisualInfo(a1)
+	lea	qh_text_gadget_tag_list(pc),a2
+	move.l	adl_entries_buffer(a3),a0
+	move.l	a0,qh_edit_entry(a3)
+	bsr	qh_get_demofile_title
+	move.l	d0,qh_edit_entry_demofile_name(a3)
+	move.l	d0,ti_data(a2)
+	move.l	#TEXT_KIND,d0
+	move.l	qh_context_gadget(a3),a0
+	CALLGADTOOLS CreateGadgetA
+	move.l	d0,a4
+	move.l	d0,qh_text_gadget_gadget(a3)
+
+; ** Backwards-Button Gadget **
+	lea	qh_new_gadget(pc),a1
+	move.w	#qh_bwd_button_gadget_x_position,gng_LeftEdge(a1)
+	moveq	#qh_bwd_button_gadget_y_position,d0
+	add.w	d2,d0
+	move.w	d0,gng_TopEdge(a1)
+	move.w	#qh_bwd_button_gadget_x_size,gng_Width(a1)
+	move.w	#qh_bwd_button_gadget_y_size,gng_Height(a1)
+	lea	qh_bwd_button_gadget_text(pc),a0
+	move.l  a0,gng_GadgetText(a1)
+        move.w	#qh_bwd_button_gadget_id,gng_GadgetID(a1)
+	moveq	#0,d0
+	move.l	d0,gng_Flags(a1)
+	move.l	a4,a0
+	lea	qh_button_gadget_tag_list(pc),a2
+	moveq	#FALSE,d0
+  	move.l	d0,ti_data(a2)
+	move.l	#BUTTON_KIND,d0
+	CALLGADTOOLS CreateGadgetA
+	move.l	d0,a4
+	move.l	d0,qh_bwd_button_gadget_gadget(a3)
+
+; ** Integer Gadget **
+	lea	qh_new_gadget(pc),a1
+	move.w	#qh_integer_gadget_x_position,gng_LeftEdge(a1)
+	moveq	#qh_integer_gadget_y_position,d0
+	add.w	d2,d0
+	move.w	d0,gng_TopEdge(a1)
+	move.w	#qh_integer_gadget_x_size,gng_Width(a1)
+	move.w	#qh_integer_gadget_y_size,gng_Height(a1)
+	moveq	#0,d0
+	move.l  d0,gng_GadgetText(a1)
+        move.w	#qh_integer_gadget_id,gng_GadgetID(a1)
+	move.l	d0,gng_Flags(a1)
+
+	move.l	#INTEGER_KIND,d0
+	move.l	a4,a0
+	lea	qh_integer_gadget_tag_list(pc),a2
+	CALLGADTOOLS CreateGadgetA
+	move.l	d0,a4
+	move.l	d0,qh_integer_gadget_gadget(a3)
+
+; ** Forward-Button Gadget **
+	lea	qh_new_gadget(pc),a1
+	move.w	#qh_fwd_button_gadget_x_position,gng_LeftEdge(a1)
+	moveq	#qh_fwd_button_gadget_y_position,d0
+	add.w	d2,d0
+	move.w	d0,gng_TopEdge(a1)
+	move.w	#qh_fwd_button_gadget_x_size,gng_Width(a1)
+	move.w	#qh_fwd_button_gadget_y_size,gng_Height(a1)
+	lea	qh_fwd_button_gadget_text(pc),a0
+	move.l  a0,gng_GadgetText(a1)
+        move.w	#qh_fwd_button_gadget_id,gng_GadgetID(a1)
+	moveq	#0,d0
+	move.l	d0,gng_Flags(a1)
+	move.l	a4,a0
+	lea	qh_button_gadget_tag_list(pc),a2
+	moveq	#TRUE,d0
+  	move.l	d0,ti_data(a2)
+	move.l	#BUTTON_KIND,d0
+	CALLGADTOOLS CreateGadgetA
+	move.l	d0,a4
+	move.l	d0,qh_fwd_button_gadget_gadget(a3)
+
+; ** Cycle Gadget **
+	lea	qh_new_gadget(pc),a1
+	move.w	#qh_cycle_gadget_x_position,gng_LeftEdge(a1)
+	moveq	#qh_cycle_gadget_y_position,d0
+	add.w	d2,d0
+	move.w	d0,gng_TopEdge(a1)
+	move.w	#qh_cycle_gadget_x_size,gng_Width(a1)
+	move.w	#qh_cycle_gadget_y_size,gng_Height(a1)
+	moveq	#0,d0
+	move.l  d0,gng_GadgetText(a1)
+        move.w	#qh_cycle_gadget_id,gng_GadgetID(a1)
+	moveq	#PLACETEXT_RIGHT,d0
+	move.l	d0,gng_Flags(a1)
+	lea	qh_cycle_gadget_tag_list(pc),a2
+	move.l	adl_entries_buffer(a3),a0
+	moveq	#0,d0
+	move.b	pqe_runmode(a0),d0
+	subq.b	#1,d0			; Zählung von Null
+	move.l	d0,(1*ti_SIZEOF)+ti_Data(a2)
+	move.l	#CYCLE_KIND,d0
+	move.l	a4,a0
+	CALLGADTOOLS CreateGadgetA
+	move.l	d0,a4
+	move.l	d0,qh_cycle_gadget_gadget(a3)
+
+; ** Mutually-Exclusive Gadget **
+	lea	qh_new_gadget(pc),a1
+	move.w	#qh_mx_gadget_x_position,gng_LeftEdge(a1)
+	moveq	#qh_mx_gadget_y_position,d0
+	add.w	d2,d0
+	move.w	d0,gng_TopEdge(a1)
+	moveq	#0,d0
+	move.l  d0,gng_GadgetText(a1)
+        move.w	#qh_mx_gadget_id,gng_GadgetID(a1)
+	moveq	#PLACETEXT_RIGHT,d0
+	move.l	d0,gng_Flags(a1)
+	lea	qh_mx_gadget_tag_list(pc),a2
+	move.l	adl_entries_buffer(a3),a0
+	moveq	#0,d0
+	move.b	pqe_entry_active(a0),d0
+        lsr.b	#7,d0
+	move.l	d0,(1*ti_SIZEOF)+ti_Data(a2)
+	move.l	#MX_KIND,d0
+	move.l	a4,a0
+	CALLGADTOOLS CreateGadgetA
+	move.l	d0,a4
+	move.l	d0,qh_mx_gadget_gadget(a3)
+
+; ** Positive-Button Gadget **
+	lea	qh_new_gadget(pc),a1
+	move.w	#qh_pos_button_gadget_x_position,gng_LeftEdge(a1)
+	moveq	#qh_pos_button_gadget_y_position,d0
+	add.w	d2,d0
+	move.w	d0,gng_TopEdge(a1)
+	move.w	#qh_pos_button_gadget_x_size,gng_Width(a1)
+	move.w	#qh_pos_button_gadget_y_size,gng_Height(a1)
+	lea	qh_pos_button_gadget_text(pc),a0
+	move.l  a0,gng_GadgetText(a1)
+        move.w	#qh_pos_button_gadget_id,gng_GadgetID(a1)
+	moveq	#0,d0
+	move.l	d0,gng_Flags(a1)
+	move.l	#BUTTON_KIND,d0
+	move.l	a4,a0
+	lea	qh_button_gadget_tag_list(pc),a2
+	CALLGADTOOLS CreateGadgetA
+	move.l	d0,a4
+
+; ** Negative-Button-Gadget **
+	lea	qh_new_gadget(pc),a1
+	move.w	#qh_neg_button_gadget_x_position,gng_LeftEdge(a1)
+	move.w	#qh_neg_button_gadget_x_size,gng_Width(a1)
+	move.w	#qh_neg_button_gadget_y_size,gng_Height(a1)
+	lea	qh_neg_button_gadget_text(pc),a0
+	move.l  a0,gng_GadgetText(a1)
+        move.w	#qh_neg_button_gadget_id,gng_GadgetID(a1)
+	moveq	#0,d0
+	move.l	d0,gng_Flags(a1)
+	move.l	#BUTTON_KIND,d0
+	move.l	a4,a0
+	lea	qh_button_gadget_tag_list(pc),a2
+	CALLGADTOOLS CreateGadgetA
+
+	tst.l	d0
+	bne.s	qh_create_gadgets_ok
+	lea	qh_error_text4(pc),a0
+	moveq	#qh_error_text4_end-qh_error_text4,d0
+	bsr	adl_print_text
+	moveq	#RETURN_FAIL,d0
+	rts
+	CNOP 0,4
+qh_create_gadgets_ok
+	moveq	#RETURN_OK,d0
+	rts
+
+
+; Input
+; a0	... Zeiger auf Eintrag in Playback-Queue
+; Result
+; d0.l	... Zeiger auf Dateinamen
+	CNOP 0,4
+qh_get_demofile_title
+	moveq	#adl_demofile_path_length-1,d6
+	add.l	d6,a0			; Zeiger auf letztes Zeichen (Nullbyte)
+qh_get_demofile_title_loop
+	tst.b	(a0)
+	cmp.b	#"/",(a0)
+	beq.s	qh_get_demofile_title_skip
+	cmp.b	#":",(a0)
+	beq.s	qh_get_demofile_title_skip
+	subq.w	#1,a0			; vorgeriges Zeichen in Dateipfad
+	dbf	d6,qh_get_demofile_title_loop
+qh_get_demofile_title_skip
+	addq.w	#1,a0			; "/" oder ":" überspringen
+	move.l	a0,d0
+	rts
+
+
+; Input
+; Result
+; d0.l	... Return-Code
+	CNOP 0,4
+qh_open_edit_window
+	sub.l	a0,a0			; Keine NewWindow-Struktur
+	lea	qh_edit_window_tag_list(pc),a1
+	move.l	qh_gadget_list(pc),ewtl_WA_Gadgets+ti_Data(a1)
+	CALLINT OpenWindowTagList
+	move.l	d0,qh_edit_window(a3)
+	bne.s	qh_open_edit_window_ok
+	lea	qh_error_text5(pc),a0
+	moveq	#qh_error_text5_end-qh_error_text5,d0
+	bsr	adl_print_text
+	moveq	#RETURN_FAIL,d0
+	rts
+	CNOP 0,4
+qh_open_edit_window_ok
+	move.l	d0,a0			; Window
+	sub.l	a1,a1			; Kein Requester
+	CALLGADTOOLS GT_RefreshWindow
+	moveq	#RETURN_OK,d0
+	rts
+
+
+	CNOP 0,4
+qh_process_window_events
+	move.l	qh_edit_window(a3),a0
+	move.l	wd_UserPort(a0),a2
+	moveq	#0,d0
+        move.b	MP_SigBit(a2),d1
+	bset	d1,d0			; Signal-Nummer
+	move.l	a2,a0			; Port
+	CALLEXEC Wait
+	move.l	a2,a0
+	CALLGADTOOLS GT_GetIMsg
+	move.l	d0,a4			; Intuition-Message
+	move.l 	im_Class(a4),d0		; IDCMP
+
+; ** Event Gadget-Up **
+	cmp.l	#IDCMP_GADGETUP,d0
+	bne	qh_check_event_gadget_down
+	move.l	im_IAddress(a4),a0
+; * Backwards Button Gadget *
+	cmp.w	#qh_bwd_button_gadget_id,gg_GadgetID(a0)
+	bne.s	qh_check_integer_gadget_event
+	moveq	#0,d0
+	move.w	qh_edit_entry_order_number(a3),d0
+	cmp.w	#1,d0
+	beq.s   qh_bwd_button_gadget_event_skip
+        subq.w	#1,d0			; vorheriger Eintrag
+qh_bwd_button_gadget_event_skip
+	move.w	d0,qh_edit_entry_order_number(a3)
+	moveq	#0,d0
+	move.w	qh_edit_entry_order_number(a3),d0
+	bsr	qh_edit_fetch_entry
+	moveq	#0,d2
+	move.w	qh_edit_entry_order_number(a3),d2
+	move.l	qh_edit_entry_demofile_name(a3),a2
+	move.l	qh_edit_entry(a3),a5
+	bsr	qh_update_gadgets
+	bra	qh_process_window_events_ok
+; * Integer Gadget *
+	CNOP 0,4
+qh_check_integer_gadget_event
+	cmp.w	#qh_integer_gadget_id,gg_GadgetID(a0)
+	bne	qh_check_fwd_button_gadget_event
+	move.l	gg_SpecialInfo(a0),a0
+	move.l	si_Buffer(a0),a0	; Zeiger auf String
+	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
+	bsr	qh_ascii_to_dec		; Rückgabewert d0 = Dezimalzahl
+	cmp.w	#1,d0
+	bge.s	qh_check_integer_gadget_max
+	move.l	qh_workbench_screen(a3),a0
+	CALLINT DisplayBeep
+	moveq	#1,d0
+	bra.s	qh_check_integer_gadget_ok
+	CNOP 0,4
+qh_check_integer_gadget_max
+	moveq	#0,d2
+	move.w	adl_entries_number(a3),d2
+	cmp.w	d2,d0
+	ble.s   qh_check_integer_gadget_ok
+	move.l	qh_workbench_screen(a3),a0
+	CALLINT DisplayBeep
+	move.l	d2,d0
+qh_check_integer_gadget_ok
+	move.w	d0,qh_edit_entry_order_number(a3)
+	bsr	qh_edit_fetch_entry
+	moveq	#0,d2
+	move.w	qh_edit_entry_order_number(a3),d2
+	move.l	qh_edit_entry_demofile_name(a3),a2
+	move.l	qh_edit_entry(a3),a5
+	bsr	qh_update_gadgets
+	bra	qh_process_window_events_ok
+; * Fowrward-Button Gadget *
+	CNOP 0,4
+qh_check_fwd_button_gadget_event
+	cmp.w	#qh_fwd_button_gadget_id,gg_GadgetID(a0)
+	bne.s	qh_check_cycle_gadget_event
+	move.w	qh_edit_entry_order_number(a3),d0
+	cmp.w	adl_entries_number(a3),d0
+	beq.s   qh_fwd_button_gadget_event_skip
+        addq.w	#1,d0			; nächster Eintrag
+qh_fwd_button_gadget_event_skip
+	move.w	d0,qh_edit_entry_order_number(a3)
+	moveq	#0,d0
+	move.w	qh_edit_entry_order_number(a3),d0
+	bsr	qh_edit_fetch_entry
+	moveq	#0,d2
+	move.w	qh_edit_entry_order_number(a3),d2
+	move.l	qh_edit_entry_demofile_name(a3),a2
+	move.l	qh_edit_entry(a3),a5
+	bsr	qh_update_gadgets
+	bra	qh_process_window_events_ok
+; * Cycle Gadget *
+	CNOP 0,4
+qh_check_cycle_gadget_event
+	cmp.w	#qh_cycle_gadget_id,gg_GadgetID(a0)
+	bne.s	qh_check_pos_button_gadget_event
+	move.w	im_Code(a4),d0
+	addq.b	#1,d0
+	move.b	d0,qh_edit_runmode(a3)
+	bra	qh_process_window_events_ok
+; * Positive-Button Gadget *
+	CNOP 0,4
+qh_check_pos_button_gadget_event
+	cmp.w	#qh_pos_button_gadget_id,gg_GadgetID(a0)
+	bne.s	qh_check_neg_button_gadget_event
+	move.l	qh_edit_entry(a3),a0
+	move.b	qh_edit_runmode(a3),pqe_runmode(a0)
+	move.b	qh_edit_entry_active(a3),pqe_entry_active(a0)
+	move.w	#FALSE,qh_check_window_events_active(a3)
+	bra.s	qh_process_window_events_ok
+; * Negative-Button Gadget *
+	CNOP 0,4
+qh_check_neg_button_gadget_event
+	cmp.w	#qh_neg_button_gadget_id,gg_GadgetID(a0)
+	bne.s	qh_process_window_events_ok
+	move.w	#FALSE,qh_check_window_events_active(a3)
+	bra.s	qh_process_window_events_ok
+
+; ** Gadget-Down **
+	CNOP 0,4
+qh_check_event_gadget_down
+	cmp.l	#IDCMP_GADGETDOWN,d0
+	bne.s	qh_check_event_close_window
+	move.l	im_IAddress(a4),a0
+	cmp.w	#qh_mx_gadget_id,gg_GadgetID(a0)
+	bne.s	qh_process_window_events_ok
+	move.w	im_Code(a4),d0
+	neg.b	d0
+	move.b	d0,qh_edit_entry_active(a3)
+	bra.s	qh_process_window_events_ok
+
+; ** Close_window **
+	CNOP 0,4
+qh_check_event_close_window
+	cmp.l	#IDCMP_CLOSEWINDOW,d0
+	bne.s	qh_check_event_refresh_window
+	move.w	#FALSE,qh_check_window_events_active(a3)
+       	bra.s	qh_process_window_events_ok
+
+; ** Refresh-Window **
+	CNOP 0,4
+qh_check_event_refresh_window
+	cmp.l	#IDCMP_REFRESHWINDOW,d0
+	bne.s   qh_process_window_events_ok
+	move.l	qh_edit_window(a3),a5
+	move.l	a5,a0
+	CALLGADTOOLS GT_BeginRefresh
+	move.l	a5,a0			; Window
+	moveq	#TRUE,d0
+	CALLLIBS GT_EndRefresh
+
+qh_process_window_events_ok
+	move.l	a4,a1			; Intuition-Message
+	move.l	qh_edit_window(a3),a0
+	move.l	wd_UserPort(a0),a2
+	CALLGADTOOLS GT_ReplyIMsg
+	tst.w	qh_check_window_events_active(a3)
+	beq	qh_process_window_events
+	rts
+
+
+; Input
+; a0	... Zeiger auf String
+; d7.l	... Anzahl der Stellen zum Umwandeln
+; Result
+; d0.l	... Rückgabewert: Dezimalzahl
+	CNOP 0,4
+qh_ascii_to_dec
+	tst.b	1(a0)
+	bne.s	qh_ascii_to_dec_skip
+	subq.w	#1,d7		        ; Nur eine Stelle umwandeln
+qh_ascii_to_dec_skip
+	add.l	d7,a0			; Zeiger auf Ende des Strings
+	moveq	#0,d0			; Dezimalzahl
+	moveq	#1,d2			; Erster Dezimal-Stellenwert 1
+	subq.w	#1,d7			; wegen dbf
+qh_ascii_to_dec_loop
+	moveq	#0,d3
+	move.b	-(a0),d3		; ASCII-Wert lesen
+	sub.b	#"0",d3			; ASCII-Wert "0" abziehen = 0..9
+	mulu.w	d2,d3			; Dezimal-Stellenwert (1,10,..)
+	MULUF.L	10,d2,d1		; nächste Zehnerprotenz
+	add.l	d3,d0			; Stelle zum Ergebnis addieren
+	dbf	d7,qh_ascii_to_dec_loop
+	rts
+
+
+; Input
+; d0.l	... Nummer des Eintrags (1..n)
+; Result
+; d0.l	... Kein Rückgabewert
+	CNOP 0,4
+qh_edit_fetch_entry
+	subq.l	#1,d0			; Zählung von Null an
+	move.l	adl_entries_buffer(a3),a0
+	MULUF.L	playback_queue_entry_size,d0,d1 ; Offset in Puffer berechnen
+	add.l	d0,a0
+	move.l	a0,qh_edit_entry(a3)
+	bsr	qh_get_demofile_title
+	move.l	d0,qh_edit_entry_demofile_name(a3)
+	rts
+
+
+; Input
+; d2.l	... Nummer des Eintrags
+; a2	... Zeiger auf Dateinamen des Demos
+; a5	... Zeiger auf Eintrag
+; Result
+; d0.l	... Kein Rückgabewert
+	CNOP 0,4
+qh_update_gadgets
+	move.l	qh_text_gadget_gadget(a3),a0
+	move.l	qh_edit_window(a3),a1
+	move.l	a3,-(a7)
+	lea	qh_set_text_gadget_tag_list(pc),a3
+	move.l	a2,ti_data(a3)		; Zeiger auf Dateinamen des Demos
+	sub.l	a2,a2			; Kein Requester
+  	CALLGADTOOLS GT_SetGadgetAttrsA
+	move.l	(a7)+,a3
+
+	move.l	qh_bwd_button_gadget_gadget(a3),a0
+	move.l	qh_edit_window(a3),a1
+	sub.l	a2,a2			; Kein Requester
+	moveq	#TRUE,d0		; Gadget aktiv
+	cmp.w	#1,qh_edit_entry_order_number(a3)
+        bne.s	qh_update_gadgets_skip1
+	moveq	#FALSE,d0		; Gadget inaktiv
+qh_update_gadgets_skip1
+	move.l	a3,-(a7)
+	lea	qh_set_button_gadget_tag_list(pc),a3
+	move.l	d0,ti_data(a3)		; Button aktivieren/deaktivieren
+  	CALLLIBS GT_SetGadgetAttrsA
+	move.l	(a7)+,a3
+
+	move.l	qh_integer_gadget_gadget(a3),a0
+	move.l	qh_edit_window(a3),a1
+	sub.l	a2,a2			; Kein Requester
+	move.l	a3,-(a7)
+	lea	qh_set_integer_gadget_tag_list(pc),a3
+	move.l	d2,ti_data(a3)
+  	CALLLIBS GT_SetGadgetAttrsA
+	move.l	(a7)+,a3
+
+	move.l	qh_fwd_button_gadget_gadget(a3),a0
+	move.l	qh_edit_window(a3),a1
+	sub.l	a2,a2			; Kein Requester
+	moveq	#TRUE,d0		; Gadget aktiv
+	move.w	qh_edit_entry_order_number(a3),d1
+	cmp.w	adl_entries_number(a3),d1
+        blt.s	qh_update_gadgets_skip2
+	moveq	#FALSE,d0		; Gadget inaktiv
+qh_update_gadgets_skip2
+	move.l	a3,-(a7)
+	lea	qh_set_button_gadget_tag_list(pc),a3
+	move.l	d0,ti_data(a3)		; Button aktivieren/deaktivieren
+  	CALLLIBS GT_SetGadgetAttrsA
+	move.l	(a7)+,a3
+
+	move.l	qh_cycle_gadget_gadget(a3),a0
+	move.l	qh_edit_window(a3),a1
+	sub.l	a2,a2			; Kein Requester
+	move.l	a3,-(a7)
+	lea	qh_set_cycle_gadget_tag_list(pc),a3
+	moveq	#0,d0
+	move.b	pqe_runmode(a5),d0
+	subq.b	#1,d0
+	move.l	d0,ti_data(a3)		; Ordnungsnummer
+  	CALLLIBS GT_SetGadgetAttrsA
+	move.l	(a7)+,a3
+
+	move.l	qh_mx_gadget_gadget(a3),a0
+	move.l	qh_edit_window(a3),a1
+	sub.l	a2,a2			; Kein Requester
+	move.l	a3,-(a7)
+	lea	qh_set_mx_gadget_tag_list(pc),a3
+	moveq	#0,d0
+	move.b	pqe_entry_active(a5),d0
+	lsr.b	#7,d0
+	move.l	d0,ti_data(a3)
+  	CALLLIBS GT_SetGadgetAttrsA
+	move.l	(a7)+,a3
+	rts
+
+
+	CNOP 0,4
+qh_close_edit_window
+	move.l	qh_edit_window(a3),a0
+	CALLINTQ CloseWindow
+
+
+	CNOP 0,4
+qh_free_gadgets
+	move.l	qh_gadget_list(pc),a0
+	CALLGADTOOLSQ FreeGadgets
+
+
+	CNOP 0,4
+qh_free_screen_visual_info
+	move.l	qh_screen_visual_info(a3),a0
+	CALLGADTOOLSQ FreeVisualInfo
+
+
+	CNOP 0,4
+qh_unlock_workbench
+	sub.l	a0,a0			; Kein Name
+	move.l	qh_workbench_screen(a3),a1
+	CALLINTQ UnLockPubScreen
 
 
 	CNOP 0,4
@@ -2599,8 +3560,8 @@ qh_clear_queue
 	move.l	adl_entries_buffer(a3),a0
 	tst.b	(a0)
 	bne.s   qh_clear_queue_ok
-	lea	qh_message_text3(pc),a0
-	moveq	#qh_message_text3_end-qh_message_text3,d0
+	lea	qh_message_text4(pc),a0
+	moveq	#qh_message_text4_end-qh_message_text4,d0
 	bra	adl_print_text
 	CNOP 0,4
 qh_clear_queue_ok
@@ -2620,9 +3581,15 @@ qh_clear_queue_loop
 	move.l	d0,a0
 	move.w	#1,(a0)
 qh_clear_queue_skip
-	lea	qh_message_text4(pc),a0
-	moveq	#qh_message_text4_end-qh_message_text4,d0
+	lea	qh_message_text5(pc),a0
+	moveq	#qh_message_text5_end-qh_message_text5,d0
 	bra	adl_print_text
+
+
+	CNOP 0,4
+qh_free_visual_info
+	move.l	qh_screen_visual_info(a3),a0
+	CALLGADTOOLSQ FreeVisualInfo
 
 
 
@@ -2630,16 +3597,16 @@ qh_clear_queue_skip
 qh_reset_queue
 	cmp.w	#1,rd_entry_offset(a3)
         bne.s	qh_reset_queue_ok
-	lea	qh_message_text5(pc),a0
-	moveq	#qh_message_text5_end-qh_message_text5,d0
+	lea	qh_message_text6(pc),a0
+	moveq	#qh_message_text6_end-qh_message_text6,d0
 	bsr	adl_print_text
 	bra	adl_check_cmd_line_ok
 	CNOP 0,4
 qh_reset_queue_ok
 	move.w	#1,rd_entry_offset(a3)
-	bsr	rd_clear_demofile_tags
-	lea	qh_message_text6(pc),a0
-	moveq	#qh_message_text6_end-qh_message_text6,d0
+	bsr	rd_deactivate_queue
+	lea	qh_message_text7(pc),a0
+	moveq	#qh_message_text7_end-qh_message_text7,d0
 	bsr	adl_print_text
 
 
@@ -2704,6 +3671,12 @@ adl_free_reset_programm_memory
 	lea	adl_message_text1(pc),a0
 	moveq	#adl_message_text1_end-adl_message_text1,d0
 	bra	adl_print_text
+
+
+	CNOP 0,4
+adl_close_gadtools_library
+	move.l	_GadToolsBase(pc),a1
+	CALLEXECQ CloseLibrary
 
 
 	CNOP 0,4
@@ -2778,7 +3751,7 @@ rd_start
 	bsr	sf_copy_screen_color_table
 
 rd_play_loop
-	bsr	rd_check_demofile_tags
+	bsr	rd_check_queue
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_screen_color_cache
 
@@ -2879,7 +3852,7 @@ rd_cleanup_io_error
 	move.l	rd_demofile_path(a3),a0
 	bsr	adl_print_io_error
 
-	bsr	rd_check_demofile_tags
+	bsr	rd_check_queue
 	move.l	d0,adl_dos_return_code(a3)
 	bne.s	rd_cleanup_screen_color_cache
 
@@ -3153,7 +4126,7 @@ rd_get_random_entry_loop
 	MULUF.L playback_queue_entry_size,d0,d1 ; Offset in Dateipfade-Puffer berechnen
 	move.l	adl_entries_buffer(a3),a0
 	add.l	d0,a0
-	tst.b	pqe_tag_active(a0)	; Demo bereits ausgeführt ?
+	tst.b	pqe_entry_active(a0)	; Demo bereits ausgeführt ?
 	bne.s	rd_get_random_entry_loop ; Ja -> neue Berechnung
 	bra.s	rd_check_demofile_path
 	CNOP 0,4
@@ -3213,7 +4186,7 @@ rd_print_demofile_start_message
 	CNOP 0,4
 rd_check_demofile_play_state
 	move.l	rd_demofile_path(a3),a0
-	tst.b	pqe_tag_active(a0)
+	tst.b	pqe_entry_active(a0)
 	beq.s   rd_check_demofile_play_state_ok
 	lea	rd_error_text9(pc),a0
 	moveq	#rd_error_text9_end-rd_error_text9,d0
@@ -3253,7 +4226,7 @@ rd_get_random_entry
 	CNOP 0,4
 rd_open_demofile
 	move.l	rd_demofile_path(a3),a0
-	move.b	#FALSE,pqe_tag_active(a0) ; Demo wurde abgespielt
+	move.b	#FALSE,pqe_entry_active(a0) ; Demo wurde abgespielt
 	move.l	a0,d1
 	MOVEF.L	MODE_OLDFILE,d2
 	CALLDOS Open
@@ -4713,25 +5686,25 @@ rd_restore_current_dir
 ; Result
 ; d0.l	Rückgabewert: Return-Code
 	CNOP 0,4
-rd_check_demofile_tags
+rd_check_queue
 	move.l	adl_entries_buffer(a3),a0
-	ADDF.W	pqe_tag_active,a0
+	ADDF.W	pqe_entry_active,a0
 	MOVEF.L	playback_queue_entry_size,d0
 	move.w	adl_entries_number(a3),d7
 	subq.w 	#1,d7			; wegen dbf
-rd_check_demofile_tags_loop
+rd_check_queue_loop
 	tst.b	(a0)
-	beq.s	rd_check_demofile_tags_ok
+	beq.s	rd_check_queue_ok
 	add.l	d0,a0			; nächster Eintrag
-	dbf	d7,rd_check_demofile_tags_loop
+	dbf	d7,rd_check_queue_loop
 	tst.w 	rd_arg_endless_enabled(a3)
-	bne.s   rd_all_demofiles_played
-	bsr.s	rd_clear_demofile_tags
-rd_check_demofile_tags_ok
+	bne.s   rd_queue_played
+	bsr.s	rd_deactivate_queue
+rd_check_queue_ok
 	moveq	#RETURN_OK,d0
 	rts
 	CNOP 0,4
-rd_all_demofiles_played
+rd_queue_played
 	lea	rd_message_text1(pc),a0
 	moveq	#rd_message_text1_end-rd_message_text1,d0
 	bsr	adl_print_text
@@ -4740,17 +5713,17 @@ rd_all_demofiles_played
 
 
 	CNOP 0,4
-rd_clear_demofile_tags
+rd_deactivate_queue
 	moveq 	#0,d0
 	MOVEF.L	playback_queue_entry_size,d1
 	move.l	adl_entries_buffer(a3),a0
-	ADDF.W	pqe_tag_active,a0
+	ADDF.W	pqe_entry_active,a0
 	move.w	adl_entries_number(a3),d7
 	subq.w  #1,d7			; wegen dbf
-rd_clear_demofile_tags_loop
+rd_deactivate_queue_loop
 	move.b	d0,(a0)			; Status löschen
 	add.l	d1,a0			; nächster Eintrag
-	dbf	d7,rd_clear_demofile_tags_loop
+	dbf	d7,rd_deactivate_queue_loop
 	move.w	#1,rd_entry_offset(a3)
 	GET_RESIDENT_ENTRY_OFFSET
 	move.l	d0,a0
@@ -5644,7 +6617,7 @@ rp_endless_enabled		DC.W 0
 
 rp_output_string		DS.B output_string_size
 
-rp_entries_buffer			; Größe wirdn erst später berechnet
+rp_entries_buffer			; Größe wird später berechnet
 
 
 ; **** Main ****
@@ -5653,6 +6626,7 @@ _SysBase			DC.L 0
 _DOSBase			DC.L 0
 _GfxBase			DC.L 0
 _IntuitionBase			DC.L 0
+_GadToolsBase			DC.L 0
 _ASLBase			DC.L 0
 _IconBase			DC.L 0
 _CIABase			DC.L 0
@@ -5664,6 +6638,8 @@ graphics_library_name		DC.B "graphics.library",0
 	EVEN
 intuition_library_name		DC.B "intuition.library",0
 	EVEN
+gadtools_library_name		DC.B "gadtools.library",0
+	EVEN
 asl_library_name		DC.B "asl.library",0
 	EVEN
 icon_library_name		DC.B "icon.library",0
@@ -5673,6 +6649,10 @@ ciaa_resource_name		DC.B "ciaa.resource",0
 ciab_resource_name		DC.B "ciab.resource",0
 	EVEN
 serial_device_name		DC.B "serial.device",0
+	EVEN
+workbench_screen_name		DC.B "Workbench",0
+	EVEN
+topaz_font_name			DC.B "topaz.font",0
 	EVEN
 
 
@@ -5815,8 +6795,12 @@ adl_error_text5
 adl_error_text5_end
 	EVEN
 adl_error_text6
-	DC.B ASCII_LINE_FEED,"Couldn't open intuition.library",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't open gadtools.library",ASCII_LINE_FEED
 adl_error_text6_end
+	EVEN
+adl_error_text7
+	DC.B ASCII_LINE_FEED,"Couldn't open intuition.library",ASCII_LINE_FEED
+adl_error_text7_end
 	EVEN
 
 
@@ -6001,6 +6985,99 @@ dc_error_text18_end
 
 
 ; **** Queue-Handler ****
+	CNOP 0,4
+qh_get_visual_info_tag_list	DS.L 1
+
+
+	CNOP 0,4
+qh_edit_window_tag_list		DS.B edit_window_tag_list_size
+
+
+	CNOP 0,4
+qh_button_gadget_tag_list	DS.L 3
+
+	CNOP 0,4
+qh_set_button_gadget_tag_list	DS.L 3
+
+
+	CNOP 0,4
+qh_text_gadget_tag_list	DS.L 3
+
+	CNOP 0,4
+qh_set_text_gadget_tag_list	DS.L 3
+
+
+	CNOP 0,4
+qh_integer_gadget_tag_list	DS.L 5
+
+	CNOP 0,4
+qh_set_integer_gadget_tag_list	DS.L 3
+
+
+	CNOP 0,4
+qh_cycle_gadget_tag_list	DS.L 5
+
+
+	CNOP 0,4
+qh_set_cycle_gadget_tag_list	DS.L 3
+
+
+	CNOP 0,4
+qh_cycle_gadget_array		DS.L 4
+
+
+	CNOP 0,4
+qh_mx_gadget_tag_list		DS.L 5
+
+	CNOP 0,4
+qh_set_mx_gadget_tag_list 	DS.L 3
+
+	CNOP 0,4
+qh_mx_gadget_array		DS.L 3
+
+
+	CNOP 0,4
+qh_gadget_list			DS.L 1
+
+
+	CNOP 0,4
+qh_new_gadget			DS.B gng_SIZEOF
+
+
+	CNOP 0,4
+qh_topaz_80			DS.B ta_SIZEOF
+
+
+qh_bwd_button_gadget_text	DC.B "<",0
+	EVEN
+
+qh_fwd_button_gadget_text	DC.B ">",0
+	EVEN
+
+qh_cycle_gadget_choice_text1	DC.B "Turbo",0
+	EVEN
+
+qh_cycle_gadget_choice_text2	DC.B "OCS vanilla",0
+	EVEN
+
+qh_cycle_gadget_choice_text3	DC.B "AGA vanilla",0
+	EVEN
+
+
+qh_mx_gadget_text1		DC.B "Not played",0
+	EVEN
+
+qh_mx_gadget_text2		DC.B "Played",0
+	EVEN
+
+
+qh_pos_button_gadget_text	DC.B "Save",0
+	EVEN
+
+qh_neg_button_gadget_text	DC.B "Quit",0
+	EVEN
+
+
 qh_show_entry_header
 	DC.B ASCII_LINE_FEED,"Nr."
 qh_show_entry_current_number
@@ -6011,13 +7088,17 @@ qh_show_entry_space
 	DC.B 34," ................................................"
 qh_show_entry_space_end
 	EVEN
-qh_tag_active_text1
-	DC.B " [played]"
-qh_tag_active_text1_end
-	EVEN
-qh_tag_active_text2
+qh_entry_active_text1
 	DC.B " [not played]"
-qh_tag_active_text2_end
+qh_entry_active_text1_end
+	EVEN
+qh_entry_active_text2
+	DC.B " [played]"
+qh_entry_active_text2_end
+	EVEN
+
+
+qh_edit_window_name		DC.B "Edit queue",0
 	EVEN
 
 
@@ -6033,20 +7114,47 @@ qh_not_used_entries_string
 qh_message_text2_end
 	EVEN
 qh_message_text3
-	DC.B ASCII_LINE_FEED,"No playback queue entries to clear",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"The playback queue is empty",ASCII_LINE_FEED,ASCII_LINE_FEED
 qh_message_text3_end
 	EVEN
 qh_message_text4
-	DC.B ASCII_LINE_FEED,"Playback queue entries cleared",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"No playback queue entries to clear",ASCII_LINE_FEED,ASCII_LINE_FEED
 qh_message_text4_end
 	EVEN
 qh_message_text5
-	DC.B ASCII_LINE_FEED,"Queue already set back.",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Playback queue entries cleared",ASCII_LINE_FEED,ASCII_LINE_FEED
 qh_message_text5_end
 	EVEN
 qh_message_text6
-	DC.B ASCII_LINE_FEED,"Queue position set back to first entry. All demo play states cleared",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Queue already set back.",ASCII_LINE_FEED,ASCII_LINE_FEED
 qh_message_text6_end
+	EVEN
+qh_message_text7
+	DC.B ASCII_LINE_FEED,"Queue position set back to first entry. All demo play states cleared",ASCII_LINE_FEED,ASCII_LINE_FEED
+qh_message_text7_end
+	EVEN
+
+
+
+qh_error_text1
+	DC.B ASCII_LINE_FEED,"Couldn't lock workbench",ASCII_LINE_FEED
+qh_error_text1_end
+	EVEN
+qh_error_text2
+	DC.B ASCII_LINE_FEED,"Couldn't get workbench visuals",ASCII_LINE_FEED
+qh_error_text2_end
+	EVEN
+qh_error_text3
+	DC.B ASCII_LINE_FEED,"Couldn't create context gadget",ASCII_LINE_FEED
+qh_error_text3_end
+	EVEN
+qh_error_text4
+	DC.B ASCII_LINE_FEED,"Couldn't create gadget",ASCII_LINE_FEED
+qh_error_text4_end
+	EVEN
+qh_error_text5
+	DC.B ASCII_LINE_FEED,"Couldn't open edit window",ASCII_LINE_FEED
+qh_error_text5_end
 	EVEN
 
 
