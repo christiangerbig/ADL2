@@ -236,6 +236,7 @@
 ; - Neuer Bereich: Queue-Handler qh_
 ; - Edit-Window: Gadgets für Entry-Nummer, Runmode und Entry-Active,
 ;                Änderungrn können in der Playback-Queue gespeichert werden
+; - Neues Argument: EDITENTRY n
 
 
 	SECTION code_and_variables,CODE
@@ -308,6 +309,8 @@ adl_lmbexit_code_enabled	EQU FALSE
 
 adl_demofile_path_length	EQU 124
 adl_prerunscript_path_length	EQU 64
+
+adl_entries_number_min		EQU 1
 
 adl_seconds_max			EQU 59
 adl_minutes_max			EQU 99
@@ -523,6 +526,7 @@ dc_transmitted_entries_number 	RS.W 1
 
 ; **** Queue-handler ****
 qh_arg_showqueue_enabled	RS.W 1
+qh_arg_editentry_enabled	RS.W 1
 qh_arg_editqueue_enabled	RS.W 1
 qh_arg_clearqueue_enabled       RS.W 1
 qh_arg_resetqueue_enabled	RS.W 1
@@ -545,7 +549,7 @@ qh_check_window_events_active	RS.W 1
 
 qh_edit_entry			RS.L 1
 qh_edit_entry_demofile_name	RS.L 1
-qh_edit_entry_order_number	RS.W 1
+qh_edit_entry_offset		RS.W 1
 qh_edit_runmode			RS.B 1
 qh_edit_entry_active		RS.B 1
 
@@ -564,7 +568,7 @@ rd_timer_delay			RS.W 1
 
 rd_play_duration		RS.W 1
 
-rd_entry_offset			RS.W 1
+rd_entry_offset		RS.W 1
 
 	RS_ALIGN_LONGWORD
 rd_demofile_name		RS.L 1
@@ -632,6 +636,7 @@ cra_NEWENTRY			RS.L 1
 cra_PLAYLIST			RS.L 1
 ; **** Queue-Handler ****
 cra_SHOWQUEUE			RS.L 1
+cra_EDITENTRY			RS.L 1
 cra_EDITQUEUE			RS.L 1
 cra_CLEARQUEUE			RS.L 1
 cra_RESETQUEUE			RS.L 1
@@ -840,8 +845,14 @@ edit_window_tag_list_size	RS.B 0
 	beq	adl_cleanup_read_arguments
 
 	tst.w	qh_arg_showqueue_enabled(a3)
-	bne.s	adl_check_arg_editqueue_enabled
+	bne.s	adl_check_arg_editentry_enabled
 	bsr	qh_show_queue
+	bra	adl_cleanup_read_arguments
+	CNOP 0,4
+adl_check_arg_editentry_enabled
+	tst.w	qh_arg_editentry_enabled(a3)
+	bne.s	adl_check_arg_editqueue_enabled
+	bsr	qh_edit_single_entry
 	bra	adl_cleanup_read_arguments
 	CNOP 0,4
 adl_check_arg_editqueue_enabled
@@ -1043,11 +1054,12 @@ adl_init_variables
 
 ; **** Queue-Handler ****
 	move.w	d1,qh_arg_showqueue_enabled(a3)
+	move.w	d1,qh_arg_editentry_enabled(a3)
 	move.w	d1,qh_arg_editqueue_enabled(a3)
 	move.w	d1,qh_arg_clearqueue_enabled(a3)
 	move.w	d1,qh_arg_resetqueue_enabled(a3)
 
-	move.w	#1,qh_edit_entry_order_number(a3)
+	move.w	#adl_entries_number_min,qh_edit_entry_offset(a3)
 
 	move.w	d0,qh_check_window_events_active(a3)
 
@@ -1063,7 +1075,7 @@ adl_init_variables
 	move.w	d0,rd_timer_delay(a3)
 	move.w	d0,rd_play_duration(a3)
 
-	move.w	#1,rd_entry_offset(a3)
+	move.w	#adl_entries_number_min,rd_entry_offset(a3)
 
 	move.l	d0,rd_demofile_seglist(a3)
 
@@ -1088,7 +1100,7 @@ adl_init_variables
 	move.w	#dc_entries_number_default_max,(a0)
 
 	lea	rp_entry_offset(pc),a0
-	move.w	#1,(a0)
+	move.w	#adl_entries_number_min,(a0)
 
 	lea	rp_endless_enabled(pc),a0
 	move.w	d1,(a0)
@@ -1223,8 +1235,7 @@ qh_init_edit_window_tags
 	move.l	#WA_IDCMP,(a0)+
 	move.l	#IDCMP_CLOSEWINDOW|IDCMP_REFRESHWINDOW|IDCMP_GADGETUP|IDCMP_GADGETDOWN,(a0)+
 	move.l	#WA_Title,(a0)+
-	lea	qh_edit_window_name(pc),a1
-	move.l	a1,(a0)+
+	move.l	d0,(a0)+
 	move.l	#WA_PubScreenName,(a0)+
 	lea	workbench_screen_name(pc),a1
 	move.l	a1,(a0)+
@@ -1305,7 +1316,7 @@ qh_init_gadgets
 	lea	qh_integer_gadget_tag_list(pc),a0
 	move.l	#GTIN_Number,(a0)+
 	moveq	#0,d0
-	move.w	qh_edit_entry_order_number(a3),d0
+	move.w	qh_edit_entry_offset(a3),d0
 	move.l	d0,(a0)+
 	move.l	#GTIN_MaxChars,(a0)+
 	moveq	#2,d0			; 2 Stellen
@@ -1758,9 +1769,9 @@ adl_check_arg_remove
 	CNOP 0,4
 adl_check_arg_maxentries
 	move.l	cra_MAXENTRIES(a2),d0
-	beq.s	dc_check_arg_newentry
+	beq.s	adl_check_arg_newentry
 	tst.w	adl_reset_program_active(a3)
-	beq.s	dc_check_arg_newentry
+	beq.s	adl_check_arg_newentry
 	move.l	d0,a0
 	move.l	(a0),d0			;  Anzahl
 	cmp.w	#dc_entries_number_max,d0
@@ -1773,45 +1784,90 @@ adl_update_entries_number_max
 	move.w	d0,(a0)
 
 ; ** Demo-Charger Argument NEWENTRY **
-dc_check_arg_newentry
+adl_check_arg_newentry
 	move.l	cra_NEWENTRY(a2),d0
+	beq.s	adl_check_arg_playlist
         not.w	d0
 	move.w	d0,dc_arg_newentry_enabled(a3)
+	bra	adl_check_cmd_line_ok
 
 ; ** Demo-Charger Argument PLAYLIST **
+	CNOP 0,4
+adl_check_arg_playlist
 	move.l	cra_PLAYLIST(a2),dc_playlist_file_name(a3)
 	beq.s	adl_check_arg_showqueue
 	clr.w	dc_arg_playlist_enabled(a3)
 	bra	adl_check_cmd_line_ok
 
-
 ; ** Queue-Handler Argument SHOWQUEUE **
 	CNOP 0,4
 adl_check_arg_showqueue
 	move.l	cra_SHOWQUEUE(a2),d0
+	beq.s	adl_check_arg_editentry
 	not.w	d0
 	move.w	d0,qh_arg_showqueue_enabled(a3)
+	bra	adl_check_cmd_line_ok
+
+; ** Queue-Handler Argument EDITENTRY **
+	CNOP 0,4
+adl_check_arg_editentry
+	move.l	cra_EDITENTRY(a2),d0
+	beq.s	adl_check_arg_editqueue
+	move.l	d0,a0
+	move.l	(a0),d0		; Entry-Nummer
+	cmp.w	#adl_entries_number_min,d0
+	bge.s	arg_check_arg_editentry_max
+	bra	adl_check_cmd_line_fail
+	CNOP 0,4
+arg_check_arg_editentry_max
+	cmp.w	adl_entries_number(a3),d0
+	ble.s   adl_check_arg_editentry_set
+	bra	adl_check_cmd_line_fail
+	CNOP 0,4
+adl_check_arg_editentry_set
+	move.w	d0,qh_edit_entry_offset(a3)
+	clr.w	qh_arg_editentry_enabled(a3)
+	bra	adl_check_cmd_line_ok
 
 ; ** Queue-Handler Argument EDITQUEUE **
+	CNOP 0,4
+adl_check_arg_editqueue
 	move.l	cra_EDITQUEUE(a2),d0
+	beq.s	adl_check_arg_clearqueue
 	not.w	d0
 	move.w	d0,qh_arg_editqueue_enabled(a3)
+	bra	adl_check_cmd_line_ok
 
 ; ** Queue-Handler Argument CLEARQUEUE **
+	CNOP 0,4
+adl_check_arg_clearqueue
 	move.l	cra_CLEARQUEUE(a2),d0
+	beq.s	adl_check_arg_resetqueue
 	not.w	d0
 	move.w	d0,qh_arg_clearqueue_enabled(a3)
+	bra	adl_check_cmd_line_ok
 
 ; ** Queue-Handler Argument RESETQUEUE **
+	CNOP 0,4
+adl_check_arg_resetqueue
 	move.l	cra_RESETQUEUE(a2),d0
+	beq.s	adl_check_playentry
 	not.w	d0
 	move.w	d0,qh_arg_resetqueue_enabled(a3)
+	bra	adl_check_cmd_line_ok
 
 ; ** Run-Demo Argument PLAYENTRY **
+	CNOP 0,4
+adl_check_playentry
 	move.l	cra_PLAYENTRY(a2),d0
 	beq.s	adl_check_arg_prerunscript
 	move.l	d0,a0
 	move.l	(a0),d0		; Entry-Nummer
+	cmp.w	#adl_entries_number_min,d0
+	bge.s	arg_check_arg_playentry_max
+	bra	adl_check_cmd_line_fail
+	CNOP 0,4
+arg_check_arg_playentry_max
 	cmp.w	adl_entries_number(a3),d0
 	ble.s   adl_check_arg_playentry_set
 	bra	adl_check_cmd_line_fail
@@ -2028,8 +2084,8 @@ dc_get_program_dir_name_ok
 dc_display_remaining_files
 	lea	dc_remaining_files(pc),a0 ; Stringadresse
 	move.w	adl_entries_number_max(a3),d1
-	sub.w	adl_entries_number(a3),d1 ; Verbleibende Anzahl der zu ladenden Dateien ermitteln
-	cmp.w	#1,d1			; Nur noch ein File?
+	sub.w	adl_entries_number(a3),d1 ; Verbleibende Anzahl der zu ladenden Dateien berechnen
+	cmp.w	#adl_entries_number_min,d1 ; Nur noch ein File?
 	bne.s	dc_request_title_skip	; Nein -> verzweige
 	clr.b	dc_character_s-dc_remaining_files(a0) ; "s" von Demo"s" löschen
 dc_request_title_skip
@@ -2139,7 +2195,7 @@ dc_check_demofile_name
 dc_get_playback_entry_offset
 	moveq   #0,d0
 	move.w	adl_entries_number(a3),d0
-	MULUF.L playback_queue_entry_size,d0,d1 ; Aktuelles Offset in Puffer ermitteln
+	MULUF.L playback_queue_entry_size,d0,d1 ; Offset in Puffer berechnen
 	move.l	adl_entries_buffer(a3),a2
 	add.l   d0,a2			; Zeiger auf Eintrag im Puffer
 	move.l	a2,dc_current_entry(a3)
@@ -2282,7 +2338,7 @@ dc_check_reset_program_active
 	move.w	d0,d7		
 	moveq	#0,d1
 	move.w	adl_entries_number_max(a3),d1
-	MULUF.L playback_queue_entry_size,d1,d2 ; Größe des Puffers ermitteln
+	MULUF.L playback_queue_entry_size,d1,d2 ; Größe des Puffers berechnen
 	add.l	d1,d0			; Gesamtlänge inkusive Puffergröße
 	lea	rp_reset_program_size(pc),a0
 	move.l	d0,(a0)
@@ -2308,7 +2364,7 @@ dc_copy_reset_program_loop
 	dbf	d7,dc_copy_reset_program_loop
 	move.l	adl_entries_buffer(a3),a0 ; Quelle
 	move.w	adl_entries_number_max(a3),d7
-	MULUF.W playback_queue_entry_size,d7,d0 ; Puffergröße zum Kopieren ermitteln
+	MULUF.W playback_queue_entry_size,d7,d0 ; Puffergröße zum Kopieren berechnen
 	subq.w	#1,d7			; wegen dbf
 dc_copy_entries_buffer_loop
 	move.b	(a0)+,(a1)+
@@ -2485,7 +2541,7 @@ dc_parse_playlist_file
 	bsr	adl_print_text
         moveq   #0,d0
 	move.w	adl_entries_number(a3),d0
-	MULUF.L playback_queue_entry_size,d0,d1 ; Offset in Puffer ermitteln
+	MULUF.L playback_queue_entry_size,d0,d1 ; Offset in Puffer berechnen
 	move.l	adl_entries_buffer(a3),a0
 	add.l   d0,a0			; Zeiger auf Eintrag im Puffer
 	move.l	a0,d6
@@ -2808,7 +2864,7 @@ dc_do_free_entries_buffer
 	move.l	adl_entries_buffer(a3),a1
 	moveq	#0,d0
 	move.w	adl_entries_number_max(a3),d0
-	MULUF.L playback_queue_entry_size,d0,d1 ; Größe des Puffers ermitteln
+	MULUF.L playback_queue_entry_size,d0,d1 ; Größe des Puffers berechnen
 	CALLEXECQ FreeMem
 
 
@@ -2846,7 +2902,7 @@ qh_show_queue_loop
 	dbf	d7,qh_show_queue_loop
 	lea	qh_not_used_entries_string(pc),a0
 	move.w	adl_entries_number_max(a3),d1
-	sub.w	adl_entries_number(a3),d1 ; Verbleibende Anzahl der zu ladenden Dateien ermitteln
+	sub.w	adl_entries_number(a3),d1 ; Verbleibende Anzahl der zu ladenden Dateien berechnen
 	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
 	bsr	rp_dec_to_ascii
 	lea	qh_message_text2(pc),a0
@@ -2904,6 +2960,36 @@ qh_print_entry_active_text2
 
 
 	CNOP 0,4
+qh_edit_single_entry
+	bsr	qh_lock_workbench
+	move.l	d0,adl_dos_return_code(a3)
+	bne.s	qh_edit_entry_quit
+	bsr	qh_get_screen_visual_info
+	move.l	d0,adl_dos_return_code(a3)
+	bne.s	qh_edit_entry_cleanup_wb_lock
+	bsr	qh_create_context_gadget
+	move.l	d0,adl_dos_return_code(a3)
+	bne.s	qh_edit_entry_cleanup_wb_lock
+	bsr	qh_create_gadgets
+	move.l	d0,adl_dos_return_code(a3)
+	bne.s	qh_edit_entry_cleanup_gadgets
+	bsr	qh_open_edit_window
+	move.l	d0,adl_dos_return_code(a3)
+	bne.s	qh_edit_entry_cleanup_gadgets
+	bsr	qh_process_window_events
+
+	bsr	qh_close_edit_window
+qh_edit_entry_cleanup_gadgets
+	bsr	qh_free_gadgets
+qh_edit_entry_cleanup_visual_info
+	bsr	qh_free_screen_visual_info
+qh_edit_entry_cleanup_wb_lock
+	bsr	qh_unlock_workbench
+qh_edit_entry_quit
+	rts
+
+
+	CNOP 0,4
 qh_edit_queue
 	move.l	adl_entries_buffer(a3),a0
 	tst.b	(a0)
@@ -2921,30 +3007,25 @@ qh_init_gadgets_environment
 	bne.s	qh_edit_queue_quit
 	bsr.s	qh_get_screen_visual_info
 	move.l	d0,adl_dos_return_code(a3)
-	bne.s	qh_cleanup_locked_workbench
+	bne	qh_edit_queue_cleanup_wb_lock
 	bsr	qh_create_context_gadget
 	move.l	d0,adl_dos_return_code(a3)
-	bne.s	qh_cleanup_locked_workbench
+	bne	qh_edit_queue_cleanup_wb_lock
 	bsr	qh_create_gadgets
 	move.l	d0,adl_dos_return_code(a3)
-	bne.s	qh_cleanup_gadgets
+	bne.s	qh_edit_queue_cleanup_gadgets
 	bsr	qh_open_edit_window
 	move.l	d0,adl_dos_return_code(a3)
-	bne.s	qh_cleanup_gadgets
+	bne.s	qh_edit_queue_cleanup_gadgets
 	bsr	qh_process_window_events
 
-qh_cleanup_edit_window
 	bsr	qh_close_edit_window
-
-qh_cleanup_gadgets
+qh_edit_queue_cleanup_gadgets
 	bsr	qh_free_gadgets
-
-qh_cleanup_screen_visual_info
+qh_edit_queue_cleanup_visual_info
 	bsr	qh_free_screen_visual_info
-
-qh_cleanup_locked_workbench
+qh_edit_queue_cleanup_wb_lock
 	bsr	qh_unlock_workbench
-
 qh_edit_queue_quit
 	rts
 
@@ -3035,7 +3116,12 @@ qh_create_gadgets
 	move.l	d0,gng_Flags(a1)
 	move.l	qh_screen_visual_info(a3),gng_VisualInfo(a1)
 	lea	qh_text_gadget_tag_list(pc),a2
+	moveq	#0,d0
+	move.w	qh_edit_entry_offset(a3),d0
+	subq.w	#1,d0			; Zählung ab 0
+	MULUF.L playback_queue_entry_size,d0,d1 ; Offset in Puffer berechnen
 	move.l	adl_entries_buffer(a3),a0
+  	add.l	d0,a0
 	move.l	a0,qh_edit_entry(a3)
 	bsr	qh_get_demofile_title
 	move.l	d0,qh_edit_entry_demofile_name(a3)
@@ -3046,6 +3132,8 @@ qh_create_gadgets
 	move.l	d0,a4
 	move.l	d0,qh_text_gadget_gadget(a3)
 
+	tst.w	qh_arg_editentry_enabled(a3)
+	beq	qh_create_cycle_gadget
 ; ** Backwards-Button Gadget **
 	lea	qh_new_gadget(pc),a1
 	move.w	#qh_bwd_button_gadget_x_position,gng_LeftEdge(a1)
@@ -3111,6 +3199,7 @@ qh_create_gadgets
 	move.l	d0,qh_fwd_button_gadget_gadget(a3)
 
 ; ** Cycle Gadget **
+qh_create_cycle_gadget
 	lea	qh_new_gadget(pc),a1
 	move.w	#qh_cycle_gadget_x_position,gng_LeftEdge(a1)
 	moveq	#qh_cycle_gadget_y_position,d0
@@ -3121,10 +3210,15 @@ qh_create_gadgets
 	moveq	#0,d0
 	move.l  d0,gng_GadgetText(a1)
         move.w	#qh_cycle_gadget_id,gng_GadgetID(a1)
-	moveq	#PLACETEXT_RIGHT,d0
+	moveq	#0,d0
 	move.l	d0,gng_Flags(a1)
 	lea	qh_cycle_gadget_tag_list(pc),a2
+	moveq	#0,d0
+	move.w	qh_edit_entry_offset(a3),d0
+	subq.w	#1,d0			; Zählung ab 0
+	MULUF.L playback_queue_entry_size,d0,d1 ; Offset in Puffer berechnen
 	move.l	adl_entries_buffer(a3),a0
+	add.l	d0,a0
 	moveq	#0,d0
 	move.b	pqe_runmode(a0),d0
 	subq.b	#1,d0			; Zählung von Null
@@ -3147,10 +3241,15 @@ qh_create_gadgets
 	moveq	#PLACETEXT_RIGHT,d0
 	move.l	d0,gng_Flags(a1)
 	lea	qh_mx_gadget_tag_list(pc),a2
+	moveq   #0,d0
+	move.w	qh_edit_entry_offset(a3),d0
+	subq.w	#1,d0			; Zählung von 0
+	MULUF.L playback_queue_entry_size,d0,d1 ; Offset in Puffer berechnen
 	move.l	adl_entries_buffer(a3),a0
+	add.l	d0,a0
 	moveq	#0,d0
 	move.b	pqe_entry_active(a0),d0
-        lsr.b	#7,d0
+        neg.b	d0
 	move.l	d0,(1*ti_SIZEOF)+ti_Data(a2)
 	move.l	#MX_KIND,d0
 	move.l	a4,a0
@@ -3237,17 +3336,26 @@ qh_open_edit_window
 	move.l	qh_gadget_list(pc),ewtl_WA_Gadgets+ti_Data(a1)
 	CALLINT OpenWindowTagList
 	move.l	d0,qh_edit_window(a3)
-	bne.s	qh_open_edit_window_ok
+	bne.s	qh_do_open_edit_window
 	lea	qh_error_text5(pc),a0
 	moveq	#qh_error_text5_end-qh_error_text5,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
-qh_open_edit_window_ok
+qh_do_open_edit_window
+	move.l	d0,a2
 	move.l	d0,a0			; Window
 	sub.l	a1,a1			; Kein Requester
 	CALLGADTOOLS GT_RefreshWindow
+        move.l	a2,a0			; Window
+	lea	qh_edit_window_name1(pc),a1 ; Neuer Window-Titel
+	tst.w	qh_arg_editentry_enabled(a3)
+	beq.s	qh_open_edit_window_skip
+	lea	qh_edit_window_name2(pc),a1 ; Neuer Window-Titel
+qh_open_edit_window_skip
+	move.w	#-1,a2			; Screen-Titel beibehalten
+	CALLINT SetWindowTitles
 	moveq	#RETURN_OK,d0
 	rts
 
@@ -3274,17 +3382,17 @@ qh_process_window_events
 	cmp.w	#qh_bwd_button_gadget_id,gg_GadgetID(a0)
 	bne.s	qh_check_integer_gadget_event
 	moveq	#0,d0
-	move.w	qh_edit_entry_order_number(a3),d0
-	cmp.w	#1,d0
+	move.w	qh_edit_entry_offset(a3),d0
+	cmp.w	#adl_entries_number_min,d0
 	beq.s   qh_bwd_button_gadget_event_skip
         subq.w	#1,d0			; vorheriger Eintrag
 qh_bwd_button_gadget_event_skip
-	move.w	d0,qh_edit_entry_order_number(a3)
+	move.w	d0,qh_edit_entry_offset(a3)
 	moveq	#0,d0
-	move.w	qh_edit_entry_order_number(a3),d0
+	move.w	qh_edit_entry_offset(a3),d0
 	bsr	qh_edit_fetch_entry
 	moveq	#0,d2
-	move.w	qh_edit_entry_order_number(a3),d2
+	move.w	qh_edit_entry_offset(a3),d2
 	move.l	qh_edit_entry_demofile_name(a3),a2
 	move.l	qh_edit_entry(a3),a5
 	bsr	qh_update_gadgets
@@ -3298,11 +3406,11 @@ qh_check_integer_gadget_event
 	move.l	si_Buffer(a0),a0	; Zeiger auf String
 	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
 	bsr	qh_ascii_to_dec		; Rückgabewert d0 = Dezimalzahl
-	cmp.w	#1,d0
+	cmp.w	#adl_entries_number_min,d0
 	bge.s	qh_check_integer_gadget_max
 	move.l	qh_workbench_screen(a3),a0
 	CALLINT DisplayBeep
-	moveq	#1,d0
+	moveq	#adl_entries_number_min,d0
 	bra.s	qh_check_integer_gadget_ok
 	CNOP 0,4
 qh_check_integer_gadget_max
@@ -3314,10 +3422,10 @@ qh_check_integer_gadget_max
 	CALLINT DisplayBeep
 	move.l	d2,d0
 qh_check_integer_gadget_ok
-	move.w	d0,qh_edit_entry_order_number(a3)
+	move.w	d0,qh_edit_entry_offset(a3)
 	bsr	qh_edit_fetch_entry
 	moveq	#0,d2
-	move.w	qh_edit_entry_order_number(a3),d2
+	move.w	qh_edit_entry_offset(a3),d2
 	move.l	qh_edit_entry_demofile_name(a3),a2
 	move.l	qh_edit_entry(a3),a5
 	bsr	qh_update_gadgets
@@ -3327,17 +3435,17 @@ qh_check_integer_gadget_ok
 qh_check_fwd_button_gadget_event
 	cmp.w	#qh_fwd_button_gadget_id,gg_GadgetID(a0)
 	bne.s	qh_check_cycle_gadget_event
-	move.w	qh_edit_entry_order_number(a3),d0
+	move.w	qh_edit_entry_offset(a3),d0
 	cmp.w	adl_entries_number(a3),d0
 	beq.s   qh_fwd_button_gadget_event_skip
         addq.w	#1,d0			; nächster Eintrag
 qh_fwd_button_gadget_event_skip
-	move.w	d0,qh_edit_entry_order_number(a3)
+	move.w	d0,qh_edit_entry_offset(a3)
 	moveq	#0,d0
-	move.w	qh_edit_entry_order_number(a3),d0
+	move.w	qh_edit_entry_offset(a3),d0
 	bsr	qh_edit_fetch_entry
 	moveq	#0,d2
-	move.w	qh_edit_entry_order_number(a3),d2
+	move.w	qh_edit_entry_offset(a3),d2
 	move.l	qh_edit_entry_demofile_name(a3),a2
 	move.l	qh_edit_entry(a3),a5
 	bsr	qh_update_gadgets
@@ -3444,9 +3552,9 @@ qh_ascii_to_dec_loop
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 qh_edit_fetch_entry
-	subq.l	#1,d0			; Zählung von Null an
-	move.l	adl_entries_buffer(a3),a0
+	subq.l	#1,d0			; Zählung ab 0
 	MULUF.L	playback_queue_entry_size,d0,d1 ; Offset in Puffer berechnen
+	move.l	adl_entries_buffer(a3),a0
 	add.l	d0,a0
 	move.l	a0,qh_edit_entry(a3)
 	bsr	qh_get_demofile_title
@@ -3475,7 +3583,7 @@ qh_update_gadgets
 	move.l	qh_edit_window(a3),a1
 	sub.l	a2,a2			; Kein Requester
 	moveq	#BOOL_FALSE,d0		; Gadget aktiv
-	cmp.w	#1,qh_edit_entry_order_number(a3)
+	cmp.w	#adl_entries_number_min,qh_edit_entry_offset(a3)
         bne.s	qh_update_gadgets_skip1
 	moveq	#BOOL_TRUE,d0		; Gadget inaktiv
 qh_update_gadgets_skip1
@@ -3498,7 +3606,7 @@ qh_update_gadgets_skip1
 	move.l	qh_edit_window(a3),a1
 	sub.l	a2,a2			; Kein Requester
 	moveq	#BOOL_FALSE,d0		; Gadget aktiv
-	move.w	qh_edit_entry_order_number(a3),d1
+	move.w	qh_edit_entry_offset(a3),d1
 	cmp.w	adl_entries_number(a3),d1
         blt.s	qh_update_gadgets_skip2
 	moveq	#BOOL_TRUE,d0		; Gadget inaktiv
@@ -3528,7 +3636,7 @@ qh_update_gadgets_skip2
 	lea	qh_set_mx_gadget_tag_list(pc),a3
 	moveq	#0,d0
 	move.b	pqe_entry_active(a5),d0
-	lsr.b	#7,d0
+	neg.b	d0
 	move.l	d0,ti_data(a3)
   	CALLLIBS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
@@ -3576,7 +3684,7 @@ qh_clear_queue_loop
 	bsr	dc_clear_playlist_entry
 	dbf	d7,qh_clear_queue_loop
 	clr.w	adl_entries_number(a3)
-	move.w	#1,rd_entry_offset(a3)
+	move.w	#adl_entries_number_min,rd_entry_offset(a3)
 	tst.w	adl_reset_program_active(a3)
 	bne.s	qh_clear_queue_skip
 	GET_RESIDENT_ENTRIES_NUMBER
@@ -3584,7 +3692,7 @@ qh_clear_queue_loop
 	clr.w	(a0)
 	GET_RESIDENT_ENTRY_OFFSET
 	move.l	d0,a0
-	move.w	#1,(a0)
+	move.w	#adl_entries_number_min,(a0)
 qh_clear_queue_skip
 	lea	qh_message_text5(pc),a0
 	moveq	#qh_message_text5_end-qh_message_text5,d0
@@ -3600,7 +3708,7 @@ qh_free_visual_info
 
 	CNOP 0,4
 qh_reset_queue
-	cmp.w	#1,rd_entry_offset(a3)
+	cmp.w	#adl_entries_number_min,rd_entry_offset(a3)
         bne.s	qh_reset_queue_ok
 	lea	qh_message_text6(pc),a0
 	moveq	#qh_message_text6_end-qh_message_text6,d0
@@ -3608,7 +3716,7 @@ qh_reset_queue
 	bra	adl_check_cmd_line_ok
 	CNOP 0,4
 qh_reset_queue_ok
-	move.w	#1,rd_entry_offset(a3)
+	move.w	#adl_entries_number_min,rd_entry_offset(a3)
 	bsr	rd_deactivate_queue
 	lea	qh_message_text7(pc),a0
 	moveq	#qh_message_text7_end-qh_message_text7,d0
@@ -4128,7 +4236,7 @@ rd_get_demofile_name
 rd_get_random_entry_loop
 	move.w	adl_entries_number(a3),d1
 	bsr	rd_get_random_entry
-	MULUF.L playback_queue_entry_size,d0,d1 ; Offset in Dateipfade-Puffer berechnen
+	MULUF.L playback_queue_entry_size,d0,d1 ; Offset in Puffer berechnen
 	move.l	adl_entries_buffer(a3),a0
 	add.l	d0,a0
 	tst.b	pqe_entry_active(a0)	; Demo bereits ausgeführt ?
@@ -4137,8 +4245,8 @@ rd_get_random_entry_loop
 	CNOP 0,4
 rd_get_fixed_entry
 	move.w	rd_entry_offset(a3),d0
-	subq.w	#1,d0			; Zählung beginnt bei Null
-	MULUF.L playback_queue_entry_size,d0,d1 ; Offset in Dateipfade-Puffer berechnen
+	subq.w	#1,d0			; Zählung ab 0
+	MULUF.L playback_queue_entry_size,d0,d1 ; Offset in Puffer berechnen
 	move.l	adl_entries_buffer(a3),a0
 	add.l	d0,a0
 rd_check_demofile_path
@@ -5729,10 +5837,10 @@ rd_deactivate_queue_loop
 	move.b	d0,(a0)			; Status löschen
 	add.l	d1,a0			; nächster Eintrag
 	dbf	d7,rd_deactivate_queue_loop
-	move.w	#1,rd_entry_offset(a3)
+	move.w	#adl_entries_number_min,rd_entry_offset(a3)
 	GET_RESIDENT_ENTRY_OFFSET
 	move.l	d0,a0
-	move.w	#1,(a0)
+	move.w	#adl_entries_number_min,(a0)
 	rts
 
 
@@ -6079,7 +6187,7 @@ rp_proceed
 	move.l	rp_reset_program_memory(pc),a1
 	moveq	#0,d1
 	move.w	rp_entries_number_max(pc),d1
-	MULUF.L playback_queue_entry_size,d1,d2 ;Größe des Puffers für Einträge ermitteln
+	MULUF.L playback_queue_entry_size,d1,d2 ; Größe des Puffers für Einträge berechnen
 	add.l	d1,d0			; Programmlänge + Puffer für Einträge
 	CALLLIBS AllocAbs		; Speicher nochmals reservieren
 	tst.l	d0
@@ -6617,7 +6725,7 @@ rp_old_adkcon			DC.W 0
 
 rp_entries_number		DC.W 0
 rp_entries_number_max		DC.W 0
-rp_entry_offset	 		DC.W 0
+rp_entry_offset 		DC.W 0
 rp_endless_enabled		DC.W 0
 
 rp_output_string		DS.B output_string_size
@@ -6709,21 +6817,22 @@ adl_cmd_usage_text
 	DC.B "HELP                   This short arguments description",ASCII_LINE_FEED
 	DC.B "REMOVE                 Remove Amiga Demo Launcher out of memory",ASCII_LINE_FEED
 ; ** Demo-Charger **
-	DC.B "MAXENTRIES ",155,"3",109,"number ",155,"0",109,"     Set maximum entries number of playback queue",ASCII_LINE_FEED
+	DC.B "MAXENTRIES ",155,"3",109,"number 1..n",155,"0",109,"     Set maximum entries number of playback queue",ASCII_LINE_FEED
 	DC.B "NEWENTRY               Create new entry in playback queue",ASCII_LINE_FEED
 	DC.B "PLAYLIST ",155,"3",109,"file path ",155,"0",109,"    Load and transfer external playlist script file",ASCII_LINE_FEED
 ; ** Queue-Handler **
 	DC.B "SHOWQUEUE              Show content of playback queue",ASCII_LINE_FEED
+	DC.B "EDITENTRY ",155,"3",109,"number 1..n",155,"0",109,"      Edit a certain entry of playback queue",ASCII_LINE_FEED
 	DC.B "EDITQUEUE              Edit content of playback queue",ASCII_LINE_FEED
 	DC.B "CLEARQUEUE             Clear the whole playback queue with all its entries",ASCII_LINE_FEED
 	DC.B "RESETQUEUE             Reset entry offset of playback queue to zero and reset all play states",ASCII_LINE_FEED
 ; ** Run-Demo **
-	DC.B "PLAYENTRY ",155,"3",109,"number ",155,"0",109,"      Play certain entry of playback queue",ASCII_LINE_FEED
+	DC.B "PLAYENTRY ",155,"3",109,"number ",155,"0",109,"      Play a certain entry of playback queue",ASCII_LINE_FEED
 	DC.B "PRERUNSCRIPT ",155,"3",109,"file path ",155,"0",109,"Execute prerrun script file before demo is played",ASCII_LINE_FEED
 	DC.B "MIN/MINS ",155,"3",109,"number ",155,"0",109,"       Playtime in minutes (reset device needed)",ASCII_LINE_FEED
 	DC.B "SEC/SECS ",155,"3",109,"number ",155,"0",109,"       Playtime in seconds (reset device needed)",ASCII_LINE_FEED
 	IFEQ adl_lmbexit_code_enabled
-		DC.B "LMBEXIT ",155,"3",109,"number ",155,"0",109,"        Play demo multiparts by LMB exit (reset device needed)",ASCII_LINE_FEED
+		DC.B "LMBEXIT ",155,"3",109,"number 1..9",155,"0",109,"        Play demo multiparts by LMB exit (reset device needed)",ASCII_LINE_FEED
         ENDC
 	DC.B "RANDOM                 Play random entry of playback queue",ASCII_LINE_FEED
 	DC.B "ENDLESS                Play entries of playback queue endlessly",ASCII_LINE_FEED
@@ -6744,6 +6853,7 @@ adl_cmd_template
 	DC.B "PLAYLIST/K,"
 ; ** Queue-Handler **
 	DC.B "SHOWQUEUE/S,"
+	DC.B "EDITENTRY/K/N,"
 	DC.B "EDITQUEUE/S,"
 	DC.B "CLEARQUEUE/S,"
 	DC.B "RESETQUEUE/S,"
@@ -7103,7 +7213,10 @@ qh_entry_active_text2_end
 	EVEN
 
 
-qh_edit_window_name		DC.B "Edit queue",0
+qh_edit_window_name1		DC.B "Edit entry",0
+	EVEN
+
+qh_edit_window_name2		DC.B "Edit queue",0
 	EVEN
 
 
