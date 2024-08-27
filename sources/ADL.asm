@@ -1,6 +1,6 @@
 ; AmigaDemoLauncher (ADL)
 ; Christian Gerbig
-; 12.08.2024
+; 27.08.2024
 ; V.2.0
 
 ; Requirements
@@ -331,51 +331,53 @@ dc_file_request_y_size		EQU 200
 ; **** Queue-Handler ****
 qh_edit_window_left		EQU 0
 qh_edit_window_top		EQU 0
-qh_edit_window_x_size		EQU 320
-qh_edit_window_y_size		EQU 128
+qh_edit_window_x_size		EQU 260
+qh_edit_window_y_size		EQU 130
 
-qh_text_gadget_x_size		EQU 230
+qh_text_gadget_x_size		EQU 240
 qh_text_gadget_y_size		EQU 12
-qh_text_gadget_x_position	EQU 30
-qh_text_gadget_y_position	EQU 1
+qh_text_gadget_x_position	EQU ((qh_edit_window_x_size-qh_text_gadget_x_size)*50)/100
+qh_text_gadget_y_position	EQU ((qh_edit_window_y_size-qh_text_gadget_y_size)*5)/100
 
 qh_bwd_button_gadget_x_size	EQU 30
 qh_bwd_button_gadget_y_size	EQU 12
-qh_bwd_button_gadget_x_position	EQU 30
-qh_bwd_button_gadget_y_position	EQU 15
-qh_bwd_button_gadget_id	EQU 1
+qh_bwd_button_gadget_x_position	EQU ((qh_edit_window_x_size-qh_bwd_button_gadget_x_size)*25)/100
+qh_bwd_button_gadget_y_position	EQU ((qh_edit_window_y_size-qh_bwd_button_gadget_y_size)*20)/100
+qh_bwd_button_gadget_id		EQU 1
 
 qh_integer_gadget_x_size	EQU 30
 qh_integer_gadget_y_size	EQU 12
-qh_integer_gadget_x_position	EQU 80
-qh_integer_gadget_y_position	EQU 15
+qh_integer_gadget_x_position	EQU ((qh_edit_window_x_size-qh_integer_gadget_x_size)*50)/100
+qh_integer_gadget_y_position	EQU ((qh_edit_window_y_size-qh_integer_gadget_y_size)*20)/100
 qh_integer_gadget_id		EQU 2
 
 qh_fwd_button_gadget_x_size	EQU 30
 qh_fwd_button_gadget_y_size	EQU 12
-qh_fwd_button_gadget_x_position	EQU 140
-qh_fwd_button_gadget_y_position	EQU 15
+qh_fwd_button_gadget_x_position	EQU ((qh_edit_window_x_size-qh_fwd_button_gadget_x_size)*75)/100
+qh_fwd_button_gadget_y_position	EQU ((qh_edit_window_y_size-qh_fwd_button_gadget_y_size)*20)/100
 qh_fwd_button_gadget_id		EQU 3
 
 qh_cycle_gadget_x_size		EQU 130
 qh_cycle_gadget_y_size		EQU 12
-qh_cycle_gadget_x_position	EQU 30
-qh_cycle_gadget_y_position	EQU 40
+qh_cycle_gadget_x_position	EQU ((qh_edit_window_x_size-qh_cycle_gadget_x_size)*50)/100
+qh_cycle_gadget_y_position	EQU ((qh_edit_window_y_size-qh_cycle_gadget_y_size)*40)/100
 qh_cycle_gadget_id		EQU 4
 
-qh_mx_gadget_x_position 	EQU 30
-qh_mx_gadget_y_position 	EQU 65
-qh_mx_gadget_id	EQU 5
+qh_mx_gadget_x_size		EQU 105
+qh_mx_gadget_y_size		EQU 11
+qh_mx_gadget_x_position 	EQU ((qh_edit_window_x_size-qh_mx_gadget_x_size)*50)/100
+qh_mx_gadget_y_position 	EQU ((qh_edit_window_y_size-qh_mx_gadget_y_size)*60)/100
+qh_mx_gadget_id			EQU 5
 
 qh_pos_button_gadget_x_size	EQU 70
 qh_pos_button_gadget_y_size	EQU 12
-qh_pos_button_gadget_x_position	EQU 10
-qh_pos_button_gadget_y_position	EQU 100
+qh_pos_button_gadget_x_position	EQU ((qh_edit_window_x_size-qh_pos_button_gadget_x_size)*4)/100
+qh_pos_button_gadget_y_position	EQU ((qh_edit_window_y_size-qh_pos_button_gadget_y_size)*90)/100
 qh_pos_button_gadget_id		EQU 6
 qh_neg_button_gadget_x_size	EQU 70
 qh_neg_button_gadget_y_size	EQU 12
-qh_neg_button_gadget_x_position	EQU 240
-qh_neg_button_gadget_y_position	EQU 100
+qh_neg_button_gadget_x_position	EQU ((qh_edit_window_x_size-qh_neg_button_gadget_x_size)*96)/100
+qh_neg_button_gadget_y_position	EQU ((qh_edit_window_y_size-qh_neg_button_gadget_y_size)*90)/100
 qh_neg_button_gadget_id		EQU 7
 
 
@@ -1271,6 +1273,9 @@ qh_init_gadgets
 	move.l	#GTTX_Text,(a0)+
 	moveq	#0,d0
 	move.l	d0,(a0)+
+	move.l	#GTTX_Border,(a0)+
+	moveq	#BOOL_TRUE,d0
+	move.l	d0,(a0)+
 	moveq	#TAG_DONE,d0
 	move.l	d0,(a0)
 
@@ -1284,14 +1289,14 @@ qh_init_gadgets
 ; ** Button Gadgets **
 	lea	qh_button_gadget_tag_list(pc),a0
 	move.l	#GA_Disabled,(a0)+
-	moveq	#FALSE,d0
+	moveq	#BOOL_FALSE,d0
 	move.l	d0,(a0)+
 	moveq	#TAG_DONE,d0
 	move.l	d0,(a0)
 
 	lea	qh_set_button_gadget_tag_list(pc),a0
 	move.l	#GA_Disabled,(a0)+
-	moveq	#TRUE,d0
+	moveq	#BOOL_FALSE,d0
 	move.l	d0,(a0)+
 	moveq	#TAG_DONE,d0
 	move.l	d0,(a0)
@@ -3056,8 +3061,8 @@ qh_create_gadgets
 	move.l	d0,gng_Flags(a1)
 	move.l	a4,a0
 	lea	qh_button_gadget_tag_list(pc),a2
-	moveq	#FALSE,d0
-  	move.l	d0,ti_data(a2)
+	moveq	#BOOL_TRUE,d0
+  	move.l	d0,ti_data(a2)		; Gadget aktiv
 	move.l	#BUTTON_KIND,d0
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,a4
@@ -3098,8 +3103,8 @@ qh_create_gadgets
 	move.l	d0,gng_Flags(a1)
 	move.l	a4,a0
 	lea	qh_button_gadget_tag_list(pc),a2
-	moveq	#TRUE,d0
-  	move.l	d0,ti_data(a2)
+	moveq	#BOOL_FALSE,d0
+  	move.l	d0,ti_data(a2)		; Gadget aktiv
 	move.l	#BUTTON_KIND,d0
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,a4
@@ -3469,10 +3474,10 @@ qh_update_gadgets
 	move.l	qh_bwd_button_gadget_gadget(a3),a0
 	move.l	qh_edit_window(a3),a1
 	sub.l	a2,a2			; Kein Requester
-	moveq	#TRUE,d0		; Gadget aktiv
+	moveq	#BOOL_FALSE,d0		; Gadget aktiv
 	cmp.w	#1,qh_edit_entry_order_number(a3)
         bne.s	qh_update_gadgets_skip1
-	moveq	#FALSE,d0		; Gadget inaktiv
+	moveq	#BOOL_TRUE,d0		; Gadget inaktiv
 qh_update_gadgets_skip1
 	move.l	a3,-(a7)
 	lea	qh_set_button_gadget_tag_list(pc),a3
@@ -3492,11 +3497,11 @@ qh_update_gadgets_skip1
 	move.l	qh_fwd_button_gadget_gadget(a3),a0
 	move.l	qh_edit_window(a3),a1
 	sub.l	a2,a2			; Kein Requester
-	moveq	#TRUE,d0		; Gadget aktiv
+	moveq	#BOOL_FALSE,d0		; Gadget aktiv
 	move.w	qh_edit_entry_order_number(a3),d1
 	cmp.w	adl_entries_number(a3),d1
         blt.s	qh_update_gadgets_skip2
-	moveq	#FALSE,d0		; Gadget inaktiv
+	moveq	#BOOL_TRUE,d0		; Gadget inaktiv
 qh_update_gadgets_skip2
 	move.l	a3,-(a7)
 	lea	qh_set_button_gadget_tag_list(pc),a3
@@ -6335,7 +6340,7 @@ rp_init_custom_exceptions
 	move.l	d0,a0
 	IFEQ adl_restore_adl_code_enabled
 		lea	rp_restore_adl_active(pc),a1
-		move.w	#FALSE,(a1)	; Sicherheitshalber auf FALSE setzen
+		move.w	#FALSE,(a1)	; Sicherheitshalber
 		lea	rp_old_level_7_autovector(pc),a1
 		move.l	LEVEL_7_AUTOVECTOR(a0),(a1)
 		lea	rp_level_7_program(pc),a1
@@ -7001,7 +7006,7 @@ qh_set_button_gadget_tag_list	DS.L 3
 
 
 	CNOP 0,4
-qh_text_gadget_tag_list	DS.L 3
+qh_text_gadget_tag_list		DS.L 5
 
 	CNOP 0,4
 qh_set_text_gadget_tag_list	DS.L 3
@@ -7367,7 +7372,7 @@ whdl_slave_cmd_line_path
 
 
 ; **** Main ****
-	DC.B "$VER: Amiga Demo Launcher 2.0 (12.8.24)",0
+	DC.B "$VER: Amiga Demo Launcher 2.0 (27.8.24)",0
 	EVEN
 
 
