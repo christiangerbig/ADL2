@@ -7332,7 +7332,7 @@ rd_demofile_name_header
 rd_demofile_name_header_end
 	EVEN
 rd_demofile_name_tail
-	DC.B 34,ASCII_LINE_FEED
+	DC.B 34,ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_demofile_name_tail_end
 	EVEN
 
