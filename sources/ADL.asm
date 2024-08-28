@@ -1,6 +1,6 @@
 ; AmigaDemoLauncher (ADL)
 ; Christian Gerbig
-; 27.08.2024
+; 28.08.2024
 ; V.2.0
 
 ; Requirements
@@ -342,11 +342,11 @@ qh_text_gadget_y_size		EQU 12
 qh_text_gadget_x_position	EQU ((qh_edit_window_x_size-qh_text_gadget_x_size)*50)/100
 qh_text_gadget_y_position	EQU ((qh_edit_window_y_size-qh_text_gadget_y_size)*5)/100
 
-qh_bwd_button_gadget_x_size	EQU 30
-qh_bwd_button_gadget_y_size	EQU 12
-qh_bwd_button_gadget_x_position	EQU ((qh_edit_window_x_size-qh_bwd_button_gadget_x_size)*25)/100
-qh_bwd_button_gadget_y_position	EQU ((qh_edit_window_y_size-qh_bwd_button_gadget_y_size)*20)/100
-qh_bwd_button_gadget_id		EQU 1
+qh_bwd_button_x_size		EQU 30
+qh_bwd_button_y_size		EQU 12
+qh_bwd_button_x_position	EQU ((qh_edit_window_x_size-qh_bwd_button_x_size)*25)/100
+qh_bwd_button_y_position	EQU ((qh_edit_window_y_size-qh_bwd_button_y_size)*20)/100
+qh_bwd_button_id		EQU 1
 
 qh_integer_gadget_x_size	EQU 30
 qh_integer_gadget_y_size	EQU 12
@@ -354,34 +354,36 @@ qh_integer_gadget_x_position	EQU ((qh_edit_window_x_size-qh_integer_gadget_x_siz
 qh_integer_gadget_y_position	EQU ((qh_edit_window_y_size-qh_integer_gadget_y_size)*20)/100
 qh_integer_gadget_id		EQU 2
 
-qh_fwd_button_gadget_x_size	EQU 30
-qh_fwd_button_gadget_y_size	EQU 12
-qh_fwd_button_gadget_x_position	EQU ((qh_edit_window_x_size-qh_fwd_button_gadget_x_size)*75)/100
-qh_fwd_button_gadget_y_position	EQU ((qh_edit_window_y_size-qh_fwd_button_gadget_y_size)*20)/100
-qh_fwd_button_gadget_id		EQU 3
+qh_fwd_button_x_size		EQU 30
+qh_fwd_button_y_size		EQU 12
+qh_fwd_button_x_position	EQU ((qh_edit_window_x_size-qh_fwd_button_x_size)*75)/100
+qh_fwd_button_y_position	EQU ((qh_edit_window_y_size-qh_fwd_button_y_size)*20)/100
+qh_fwd_button_id		EQU 3
 
 qh_cycle_gadget_x_size		EQU 130
 qh_cycle_gadget_y_size		EQU 12
 qh_cycle_gadget_x_position	EQU ((qh_edit_window_x_size-qh_cycle_gadget_x_size)*50)/100
-qh_cycle_gadget_y_position	EQU ((qh_edit_window_y_size-qh_cycle_gadget_y_size)*40)/100
+qh_cycle_gadget_y_position1	EQU ((qh_edit_window_y_size-qh_cycle_gadget_y_size)*30)/100
+qh_cycle_gadget_y_position2	EQU ((qh_edit_window_y_size-qh_cycle_gadget_y_size)*40)/100
 qh_cycle_gadget_id		EQU 4
 
 qh_mx_gadget_x_size		EQU 105
 qh_mx_gadget_y_size		EQU 11
 qh_mx_gadget_x_position 	EQU ((qh_edit_window_x_size-qh_mx_gadget_x_size)*50)/100
-qh_mx_gadget_y_position 	EQU ((qh_edit_window_y_size-qh_mx_gadget_y_size)*60)/100
+qh_mx_gadget_y_position1 	EQU ((qh_edit_window_y_size-qh_mx_gadget_y_size)*55)/100
+qh_mx_gadget_y_position2 	EQU ((qh_edit_window_y_size-qh_mx_gadget_y_size)*60)/100
 qh_mx_gadget_id			EQU 5
 
-qh_pos_button_gadget_x_size	EQU 70
-qh_pos_button_gadget_y_size	EQU 12
-qh_pos_button_gadget_x_position	EQU ((qh_edit_window_x_size-qh_pos_button_gadget_x_size)*4)/100
-qh_pos_button_gadget_y_position	EQU ((qh_edit_window_y_size-qh_pos_button_gadget_y_size)*90)/100
-qh_pos_button_gadget_id		EQU 6
-qh_neg_button_gadget_x_size	EQU 70
-qh_neg_button_gadget_y_size	EQU 12
-qh_neg_button_gadget_x_position	EQU ((qh_edit_window_x_size-qh_neg_button_gadget_x_size)*96)/100
-qh_neg_button_gadget_y_position	EQU ((qh_edit_window_y_size-qh_neg_button_gadget_y_size)*90)/100
-qh_neg_button_gadget_id		EQU 7
+qh_positive_button_x_size	EQU 70
+qh_positive_button_y_size	EQU 12
+qh_positive_button_x_position	EQU ((qh_edit_window_x_size-qh_positive_button_x_size)*4)/100
+qh_positive_button_y_position	EQU ((qh_edit_window_y_size-qh_positive_button_y_size)*90)/100
+qh_positive_button_id		EQU 6
+qh_negative_button_x_size	EQU 70
+qh_negative_button_y_size	EQU 12
+qh_negative_button_x_position	EQU ((qh_edit_window_x_size-qh_negative_button_x_size)*96)/100
+qh_negative_button_y_position	EQU ((qh_edit_window_y_size-qh_negative_button_y_size)*90)/100
+qh_negative_button_id		EQU 7
 
 
 ; **** Run-Demo ****
@@ -539,9 +541,9 @@ qh_edit_window			RS.L 1
 qh_screen_visual_info		RS.L 1
 qh_context_gadget		RS.L 1
 qh_text_gadget_gadget		RS.L 1
-qh_bwd_button_gadget_gadget	RS.L 1
+qh_bwd_button_gadget	RS.L 1
 qh_integer_gadget_gadget	RS.L 1
-qh_fwd_button_gadget_gadget	RS.L 1
+qh_fwd_button_gadget	RS.L 1
 qh_cycle_gadget_gadget		RS.L 1
 qh_mx_gadget_gadget		RS.L 1
 
@@ -568,7 +570,7 @@ rd_timer_delay			RS.W 1
 
 rd_play_duration		RS.W 1
 
-rd_entry_offset		RS.W 1
+rd_entry_offset			RS.W 1
 
 	RS_ALIGN_LONGWORD
 rd_demofile_name		RS.L 1
@@ -1298,14 +1300,14 @@ qh_init_gadgets
 	move.l	d0,(a0)
 
 ; ** Button Gadgets **
-	lea	qh_button_gadget_tag_list(pc),a0
+	lea	qh_button_tag_list(pc),a0
 	move.l	#GA_Disabled,(a0)+
 	moveq	#BOOL_FALSE,d0
 	move.l	d0,(a0)+
 	moveq	#TAG_DONE,d0
 	move.l	d0,(a0)
 
-	lea	qh_set_button_gadget_tag_list(pc),a0
+	lea	qh_set_button_tag_list(pc),a0
 	move.l	#GA_Disabled,(a0)+
 	moveq	#BOOL_FALSE,d0
 	move.l	d0,(a0)+
@@ -3136,25 +3138,25 @@ qh_create_gadgets
 	beq	qh_create_cycle_gadget
 ; ** Backwards-Button Gadget **
 	lea	qh_new_gadget(pc),a1
-	move.w	#qh_bwd_button_gadget_x_position,gng_LeftEdge(a1)
-	moveq	#qh_bwd_button_gadget_y_position,d0
+	move.w	#qh_bwd_button_x_position,gng_LeftEdge(a1)
+	moveq	#qh_bwd_button_y_position,d0
 	add.w	d2,d0
 	move.w	d0,gng_TopEdge(a1)
-	move.w	#qh_bwd_button_gadget_x_size,gng_Width(a1)
-	move.w	#qh_bwd_button_gadget_y_size,gng_Height(a1)
-	lea	qh_bwd_button_gadget_text(pc),a0
+	move.w	#qh_bwd_button_x_size,gng_Width(a1)
+	move.w	#qh_bwd_button_y_size,gng_Height(a1)
+	lea	qh_bwd_button_text(pc),a0
 	move.l  a0,gng_GadgetText(a1)
-        move.w	#qh_bwd_button_gadget_id,gng_GadgetID(a1)
+        move.w	#qh_bwd_button_id,gng_GadgetID(a1)
 	moveq	#0,d0
 	move.l	d0,gng_Flags(a1)
 	move.l	a4,a0
-	lea	qh_button_gadget_tag_list(pc),a2
+	lea	qh_button_tag_list(pc),a2
 	moveq	#BOOL_TRUE,d0
   	move.l	d0,ti_data(a2)		; Gadget aktiv
 	move.l	#BUTTON_KIND,d0
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,a4
-	move.l	d0,qh_bwd_button_gadget_gadget(a3)
+	move.l	d0,qh_bwd_button_gadget(a3)
 
 ; ** Integer Gadget **
 	lea	qh_new_gadget(pc),a1
@@ -3178,31 +3180,35 @@ qh_create_gadgets
 
 ; ** Forward-Button Gadget **
 	lea	qh_new_gadget(pc),a1
-	move.w	#qh_fwd_button_gadget_x_position,gng_LeftEdge(a1)
-	moveq	#qh_fwd_button_gadget_y_position,d0
+	move.w	#qh_fwd_button_x_position,gng_LeftEdge(a1)
+	moveq	#qh_fwd_button_y_position,d0
 	add.w	d2,d0
 	move.w	d0,gng_TopEdge(a1)
-	move.w	#qh_fwd_button_gadget_x_size,gng_Width(a1)
-	move.w	#qh_fwd_button_gadget_y_size,gng_Height(a1)
-	lea	qh_fwd_button_gadget_text(pc),a0
+	move.w	#qh_fwd_button_x_size,gng_Width(a1)
+	move.w	#qh_fwd_button_y_size,gng_Height(a1)
+	lea	qh_fwd_button_text(pc),a0
 	move.l  a0,gng_GadgetText(a1)
-        move.w	#qh_fwd_button_gadget_id,gng_GadgetID(a1)
+        move.w	#qh_fwd_button_id,gng_GadgetID(a1)
 	moveq	#0,d0
 	move.l	d0,gng_Flags(a1)
 	move.l	a4,a0
-	lea	qh_button_gadget_tag_list(pc),a2
+	lea	qh_button_tag_list(pc),a2
 	moveq	#BOOL_FALSE,d0
   	move.l	d0,ti_data(a2)		; Gadget aktiv
 	move.l	#BUTTON_KIND,d0
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,a4
-	move.l	d0,qh_fwd_button_gadget_gadget(a3)
+	move.l	d0,qh_fwd_button_gadget(a3)
 
 ; ** Cycle Gadget **
 qh_create_cycle_gadget
 	lea	qh_new_gadget(pc),a1
 	move.w	#qh_cycle_gadget_x_position,gng_LeftEdge(a1)
-	moveq	#qh_cycle_gadget_y_position,d0
+	moveq	#qh_cycle_gadget_y_position1,d0
+	tst.w	qh_arg_editentry_enabled(a3)
+	beq.s	qh_create_cycle_gadget_skip
+	moveq	#qh_cycle_gadget_y_position2,d0
+qh_create_cycle_gadget_skip
 	add.w	d2,d0
 	move.w	d0,gng_TopEdge(a1)
 	move.w	#qh_cycle_gadget_x_size,gng_Width(a1)
@@ -3232,7 +3238,11 @@ qh_create_cycle_gadget
 ; ** Mutually-Exclusive Gadget **
 	lea	qh_new_gadget(pc),a1
 	move.w	#qh_mx_gadget_x_position,gng_LeftEdge(a1)
-	moveq	#qh_mx_gadget_y_position,d0
+	moveq	#qh_mx_gadget_y_position1,d0
+	tst.w	qh_arg_editentry_enabled(a3)
+	beq.s	qh_create_mx_gadget_skip
+	moveq	#qh_mx_gadget_y_position2,d0
+qh_create_mx_gadget_skip
 	add.w	d2,d0
 	move.w	d0,gng_TopEdge(a1)
 	moveq	#0,d0
@@ -3259,36 +3269,36 @@ qh_create_cycle_gadget
 
 ; ** Positive-Button Gadget **
 	lea	qh_new_gadget(pc),a1
-	move.w	#qh_pos_button_gadget_x_position,gng_LeftEdge(a1)
-	moveq	#qh_pos_button_gadget_y_position,d0
+	move.w	#qh_positive_button_x_position,gng_LeftEdge(a1)
+	moveq	#qh_positive_button_y_position,d0
 	add.w	d2,d0
 	move.w	d0,gng_TopEdge(a1)
-	move.w	#qh_pos_button_gadget_x_size,gng_Width(a1)
-	move.w	#qh_pos_button_gadget_y_size,gng_Height(a1)
-	lea	qh_pos_button_gadget_text(pc),a0
+	move.w	#qh_positive_button_x_size,gng_Width(a1)
+	move.w	#qh_positive_button_y_size,gng_Height(a1)
+	lea	qh_positive_button_text(pc),a0
 	move.l  a0,gng_GadgetText(a1)
-        move.w	#qh_pos_button_gadget_id,gng_GadgetID(a1)
+        move.w	#qh_positive_button_id,gng_GadgetID(a1)
 	moveq	#0,d0
 	move.l	d0,gng_Flags(a1)
 	move.l	#BUTTON_KIND,d0
 	move.l	a4,a0
-	lea	qh_button_gadget_tag_list(pc),a2
+	lea	qh_button_tag_list(pc),a2
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,a4
 
 ; ** Negative-Button-Gadget **
 	lea	qh_new_gadget(pc),a1
-	move.w	#qh_neg_button_gadget_x_position,gng_LeftEdge(a1)
-	move.w	#qh_neg_button_gadget_x_size,gng_Width(a1)
-	move.w	#qh_neg_button_gadget_y_size,gng_Height(a1)
-	lea	qh_neg_button_gadget_text(pc),a0
+	move.w	#qh_negative_button_x_position,gng_LeftEdge(a1)
+	move.w	#qh_negative_button_x_size,gng_Width(a1)
+	move.w	#qh_negative_button_y_size,gng_Height(a1)
+	lea	qh_negative_button_text(pc),a0
 	move.l  a0,gng_GadgetText(a1)
-        move.w	#qh_neg_button_gadget_id,gng_GadgetID(a1)
+        move.w	#qh_negative_button_id,gng_GadgetID(a1)
 	moveq	#0,d0
 	move.l	d0,gng_Flags(a1)
 	move.l	#BUTTON_KIND,d0
 	move.l	a4,a0
-	lea	qh_button_gadget_tag_list(pc),a2
+	lea	qh_button_tag_list(pc),a2
 	CALLGADTOOLS CreateGadgetA
 
 	tst.l	d0
@@ -3379,14 +3389,14 @@ qh_process_window_events
 	bne	qh_check_event_gadget_down
 	move.l	im_IAddress(a4),a0
 ; * Backwards Button Gadget *
-	cmp.w	#qh_bwd_button_gadget_id,gg_GadgetID(a0)
+	cmp.w	#qh_bwd_button_id,gg_GadgetID(a0)
 	bne.s	qh_check_integer_gadget_event
 	moveq	#0,d0
 	move.w	qh_edit_entry_offset(a3),d0
 	cmp.w	#adl_entries_number_min,d0
-	beq.s   qh_bwd_button_gadget_event_skip
+	beq.s   qh_bwd_button_event_skip
         subq.w	#1,d0			; vorheriger Eintrag
-qh_bwd_button_gadget_event_skip
+qh_bwd_button_event_skip
 	move.w	d0,qh_edit_entry_offset(a3)
 	moveq	#0,d0
 	move.w	qh_edit_entry_offset(a3),d0
@@ -3401,7 +3411,7 @@ qh_bwd_button_gadget_event_skip
 	CNOP 0,4
 qh_check_integer_gadget_event
 	cmp.w	#qh_integer_gadget_id,gg_GadgetID(a0)
-	bne	qh_check_fwd_button_gadget_event
+	bne	qh_check_fwd_button_event
 	move.l	gg_SpecialInfo(a0),a0
 	move.l	si_Buffer(a0),a0	; Zeiger auf String
 	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
@@ -3432,14 +3442,14 @@ qh_check_integer_gadget_ok
 	bra	qh_process_window_events_ok
 ; * Fowrward-Button Gadget *
 	CNOP 0,4
-qh_check_fwd_button_gadget_event
-	cmp.w	#qh_fwd_button_gadget_id,gg_GadgetID(a0)
+qh_check_fwd_button_event
+	cmp.w	#qh_fwd_button_id,gg_GadgetID(a0)
 	bne.s	qh_check_cycle_gadget_event
 	move.w	qh_edit_entry_offset(a3),d0
 	cmp.w	adl_entries_number(a3),d0
-	beq.s   qh_fwd_button_gadget_event_skip
+	beq.s   qh_fwd_button_event_skip
         addq.w	#1,d0			; nächster Eintrag
-qh_fwd_button_gadget_event_skip
+qh_fwd_button_event_skip
 	move.w	d0,qh_edit_entry_offset(a3)
 	moveq	#0,d0
 	move.w	qh_edit_entry_offset(a3),d0
@@ -3454,16 +3464,16 @@ qh_fwd_button_gadget_event_skip
 	CNOP 0,4
 qh_check_cycle_gadget_event
 	cmp.w	#qh_cycle_gadget_id,gg_GadgetID(a0)
-	bne.s	qh_check_pos_button_gadget_event
+	bne.s	qh_check_positive_button_event
 	move.w	im_Code(a4),d0
 	addq.b	#1,d0
 	move.b	d0,qh_edit_runmode(a3)
 	bra	qh_process_window_events_ok
 ; * Positive-Button Gadget *
 	CNOP 0,4
-qh_check_pos_button_gadget_event
-	cmp.w	#qh_pos_button_gadget_id,gg_GadgetID(a0)
-	bne.s	qh_check_neg_button_gadget_event
+qh_check_positive_button_event
+	cmp.w	#qh_positive_button_id,gg_GadgetID(a0)
+	bne.s	qh_check_negative_button_event
 	move.l	qh_edit_entry(a3),a0
 	move.b	qh_edit_runmode(a3),pqe_runmode(a0)
 	move.b	qh_edit_entry_active(a3),pqe_entry_active(a0)
@@ -3471,8 +3481,8 @@ qh_check_pos_button_gadget_event
 	bra.s	qh_process_window_events_ok
 ; * Negative-Button Gadget *
 	CNOP 0,4
-qh_check_neg_button_gadget_event
-	cmp.w	#qh_neg_button_gadget_id,gg_GadgetID(a0)
+qh_check_negative_button_event
+	cmp.w	#qh_negative_button_id,gg_GadgetID(a0)
 	bne.s	qh_process_window_events_ok
 	move.w	#FALSE,qh_check_window_events_active(a3)
 	bra.s	qh_process_window_events_ok
@@ -3579,7 +3589,7 @@ qh_update_gadgets
   	CALLGADTOOLS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
 
-	move.l	qh_bwd_button_gadget_gadget(a3),a0
+	move.l	qh_bwd_button_gadget(a3),a0
 	move.l	qh_edit_window(a3),a1
 	sub.l	a2,a2			; Kein Requester
 	moveq	#BOOL_FALSE,d0		; Gadget aktiv
@@ -3588,7 +3598,7 @@ qh_update_gadgets
 	moveq	#BOOL_TRUE,d0		; Gadget inaktiv
 qh_update_gadgets_skip1
 	move.l	a3,-(a7)
-	lea	qh_set_button_gadget_tag_list(pc),a3
+	lea	qh_set_button_tag_list(pc),a3
 	move.l	d0,ti_data(a3)		; Button aktivieren/deaktivieren
   	CALLLIBS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
@@ -3602,7 +3612,7 @@ qh_update_gadgets_skip1
   	CALLLIBS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
 
-	move.l	qh_fwd_button_gadget_gadget(a3),a0
+	move.l	qh_fwd_button_gadget(a3),a0
 	move.l	qh_edit_window(a3),a1
 	sub.l	a2,a2			; Kein Requester
 	moveq	#BOOL_FALSE,d0		; Gadget aktiv
@@ -3612,7 +3622,7 @@ qh_update_gadgets_skip1
 	moveq	#BOOL_TRUE,d0		; Gadget inaktiv
 qh_update_gadgets_skip2
 	move.l	a3,-(a7)
-	lea	qh_set_button_gadget_tag_list(pc),a3
+	lea	qh_set_button_tag_list(pc),a3
 	move.l	d0,ti_data(a3)		; Button aktivieren/deaktivieren
   	CALLLIBS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
@@ -6815,22 +6825,22 @@ adl_cmd_usage_text
 	DC.B ASCII_LINE_FEED,"Amiga Demo Launcher arguments description:",ASCII_LINE_FEED,ASCII_LINE_FEED
 ; ** Amiga-Demo-Launcher **
 	DC.B "HELP                   This short arguments description",ASCII_LINE_FEED
-	DC.B "REMOVE                 Remove Amiga Demo Launcher out of memory",ASCII_LINE_FEED
+	DC.B "REMOVE                 Remove Amiga Demo Launcher from memory",ASCII_LINE_FEED
 ; ** Demo-Charger **
-	DC.B "MAXENTRIES ",155,"3",109,"number 1..n",155,"0",109,"     Set maximum entries number of playback queue",ASCII_LINE_FEED
+	DC.B "MAXENTRIES ",155,"3",109,"number 1..n",155,"0",109," Set maximum entries number of playback queue",ASCII_LINE_FEED
 	DC.B "NEWENTRY               Create new entry in playback queue",ASCII_LINE_FEED
 	DC.B "PLAYLIST ",155,"3",109,"file path ",155,"0",109,"    Load and transfer external playlist script file",ASCII_LINE_FEED
 ; ** Queue-Handler **
 	DC.B "SHOWQUEUE              Show content of playback queue",ASCII_LINE_FEED
-	DC.B "EDITENTRY ",155,"3",109,"number 1..n",155,"0",109,"      Edit a certain entry of playback queue",ASCII_LINE_FEED
+	DC.B "EDITENTRY ",155,"3",109,"number 1..n",155,"0",109,"  Edit certain entry of playback queue",ASCII_LINE_FEED
 	DC.B "EDITQUEUE              Edit content of playback queue",ASCII_LINE_FEED
 	DC.B "CLEARQUEUE             Clear the whole playback queue with all its entries",ASCII_LINE_FEED
-	DC.B "RESETQUEUE             Reset entry offset of playback queue to zero and reset all play states",ASCII_LINE_FEED
+	DC.B "RESETQUEUE             Reset playback queue offset and all entry states",ASCII_LINE_FEED
 ; ** Run-Demo **
-	DC.B "PLAYENTRY ",155,"3",109,"number ",155,"0",109,"      Play a certain entry of playback queue",ASCII_LINE_FEED
+	DC.B "PLAYENTRY ",155,"3",109,"number 1..n",155,"0",109,"  Play certain entry of playback queue",ASCII_LINE_FEED
 	DC.B "PRERUNSCRIPT ",155,"3",109,"file path ",155,"0",109,"Execute prerrun script file before demo is played",ASCII_LINE_FEED
-	DC.B "MIN/MINS ",155,"3",109,"number ",155,"0",109,"       Playtime in minutes (reset device needed)",ASCII_LINE_FEED
-	DC.B "SEC/SECS ",155,"3",109,"number ",155,"0",109,"       Playtime in seconds (reset device needed)",ASCII_LINE_FEED
+	DC.B "MIN/MINS ",155,"3",109,"number 0..99",155,"0",109,"  Playtime in minutes (reset device needed)",ASCII_LINE_FEED
+	DC.B "SEC/SECS ",155,"3",109,"number 0..59",155,"0",109,"  Playtime in seconds (reset device needed)",ASCII_LINE_FEED
 	IFEQ adl_lmbexit_code_enabled
 		DC.B "LMBEXIT ",155,"3",109,"number 1..9",155,"0",109,"        Play demo multiparts by LMB exit (reset device needed)",ASCII_LINE_FEED
         ENDC
@@ -7109,10 +7119,10 @@ qh_edit_window_tag_list		DS.B edit_window_tag_list_size
 
 
 	CNOP 0,4
-qh_button_gadget_tag_list	DS.L 3
+qh_button_tag_list		DS.L 3
 
 	CNOP 0,4
-qh_set_button_gadget_tag_list	DS.L 3
+qh_set_button_tag_list		DS.L 3
 
 
 	CNOP 0,4
@@ -7163,10 +7173,10 @@ qh_new_gadget			DS.B gng_SIZEOF
 qh_topaz_80			DS.B ta_SIZEOF
 
 
-qh_bwd_button_gadget_text	DC.B "<",0
+qh_bwd_button_text	DC.B "<",0
 	EVEN
 
-qh_fwd_button_gadget_text	DC.B ">",0
+qh_fwd_button_text	DC.B ">",0
 	EVEN
 
 qh_cycle_gadget_choice_text1	DC.B "Turbo",0
@@ -7186,10 +7196,10 @@ qh_mx_gadget_text2		DC.B "Played",0
 	EVEN
 
 
-qh_pos_button_gadget_text	DC.B "Save",0
+qh_positive_button_text		DC.B "Save",0
 	EVEN
 
-qh_neg_button_gadget_text	DC.B "Quit",0
+qh_negative_button_text		DC.B "Quit",0
 	EVEN
 
 
@@ -7485,7 +7495,7 @@ whdl_slave_cmd_line_path
 
 
 ; **** Main ****
-	DC.B "$VER: Amiga Demo Launcher 2.0 (27.8.24)",0
+	DC.B "$VER: Amiga Demo Launcher 2.0 (28.8.24)",0
 	EVEN
 
 
