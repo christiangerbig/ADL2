@@ -541,9 +541,9 @@ qh_edit_window			RS.L 1
 qh_screen_visual_info		RS.L 1
 qh_context_gadget		RS.L 1
 qh_text_gadget_gadget		RS.L 1
-qh_bwd_button_gadget	RS.L 1
+qh_bwd_button_gadget		RS.L 1
 qh_integer_gadget_gadget	RS.L 1
-qh_fwd_button_gadget	RS.L 1
+qh_fwd_button_gadget		RS.L 1
 qh_cycle_gadget_gadget		RS.L 1
 qh_mx_gadget_gadget		RS.L 1
 
@@ -887,11 +887,10 @@ adl_check_queue_empty
 	tst.w	adl_reset_program_active(a3)
 	beq	rd_start
 
-	bsr	adl_print_intro_message_text
-
 
 ; **** Demo-Charger ****
 dc_start
+	bsr	adl_print_intro_message_text
 	bsr	dc_check_entries_number_max
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_read_arguments
