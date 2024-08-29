@@ -237,7 +237,6 @@
 ; - Edit-Window: Gadgets für Entry-Nummer, Runmode und Entry-Active,
 ;                Änderungrn können in der Playback-Queue gespeichert werden
 ; - Neues Argument: EDITENTRY n
-; - Umbenennung: FADER -> SCREENFADER
 
 
 	SECTION code_and_variables,CODE
@@ -313,7 +312,6 @@ adl_prerunscript_path_length	EQU 64
 
 adl_entries_number_min		EQU 1
 
-adl_seconds_factor		EQU 60
 adl_seconds_max			EQU 59
 adl_minutes_max			EQU 99
 
@@ -329,8 +327,6 @@ adl_lmbexit_parts_number_max	EQU 10
 dc_entries_number_default_max	EQU 10
 dc_entries_number_max		EQU 99
 
-dc_file_request_left		EQU 0
-dc_file_request_top		EQU 0
 dc_file_request_x_size		EQU 320
 dc_file_request_y_size		EQU 200
 
@@ -391,11 +387,8 @@ qh_negative_button_id		EQU 7
 
 
 ; **** Run-Demo ****
-rd_output_string_duration_shift	EQU 10
-rd_cleared_sprite_x_size	EQU 16	; 1x Bandwidth
+rd_cleared_sprite_x_size	EQU 16
 rd_cleared_sprite_y_size	EQU 1
-rd_cleared_sprite_x_offset	EQU 0
-rd_cleared_sprite_y_offset	EQU 0
 rd_sprites_colors_number	EQU 16
 rd_pal_screen_left		EQU 0
 rd_pal_screen_top		EQU 0
@@ -473,10 +466,11 @@ SET_RESTORE_ADL_ACTIVE		MACRO
 
 
 WAIT_MOUSE		MACRO
+
 wm
-	move.w	$dff006,$dff180
-	btst	#2,$dff016
-	bne.s	wm
+ move.w $dff006,$dff180
+ btst #2,$dff016
+ bne.s wm
 	ENDM
 
 
@@ -540,6 +534,7 @@ qh_arg_clearqueue_enabled       RS.W 1
 qh_arg_resetqueue_enabled	RS.W 1
 
 	RS_ALIGN_LONGWORD
+
 qh_workbench_screen		RS.L 1
 qh_edit_window			RS.L 1
 
@@ -554,7 +549,6 @@ qh_mx_gadget_gadget		RS.L 1
 
 qh_check_window_events_active	RS.W 1
 
-	RS_ALIGN_LONGWORD
 qh_edit_entry			RS.L 1
 qh_edit_entry_demofile_name	RS.L 1
 qh_edit_entry_offset		RS.W 1
@@ -567,7 +561,7 @@ rd_arg_prerunscript_enabled	RS.W 1
 rd_arg_random_enabled		RS.W 1
 rd_arg_endless_enabled		RS.W 1
 rd_arg_loop_enabled		RS.W 1
-rd_arg_screenfader_enabled	RS.W 1
+rd_arg_fader_enabled		RS.W 1
 rd_arg_softreset_enabled	RS.W 1
 
 	RS_ALIGN_LONGWORD
@@ -589,6 +583,7 @@ rd_demofile_dir_lock		RS.L 1
 
 rd_prerunscript_path		RS.L 1
 
+	RS_ALIGN_LONGWORD
 rd_active_screen		RS.L 1
 rd_active_screen_mode		RS.L 1
 rd_pal_screen			RS.L 1
@@ -658,7 +653,7 @@ cra_LMBEXIT			RS.L 1
 cra_RANDOM			RS.L 1
 cra_ENDLESS			RS.L 1
 cra_LOOP			RS.L 1
-cra_SCREENFADER			RS.L 1
+cra_FADER			RS.L 1
 cra_SOFTRESET			RS.L 1
 
 cmd_results_array_size		RS.B 0
@@ -789,7 +784,7 @@ os_line_feed			RS.B 1
 output_string_size		RS.B 0
 
 
-	RSRESET
+  RSRESET
 
 edit_window_tag_list		RS.B 0
 
@@ -846,12 +841,11 @@ edit_window_tag_list_size	RS.B 0
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_read_arguments
 
-; ** Amiga-Demo-Launcher Argumente **
 	tst.w	adl_arg_help_enabled(a3)
 	beq     adl_cleanup_read_arguments
 	tst.w	adl_arg_remove_enabled(a3)
 	beq	adl_cleanup_read_arguments
-; ** Queue-Handler Argumente **
+
 	tst.w	qh_arg_showqueue_enabled(a3)
 	bne.s	adl_check_arg_editentry_enabled
 	bsr	qh_show_queue
@@ -885,14 +879,14 @@ adl_check_queue_empty
 	bsr	qh_check_queue_empty
 	tst.l	d0
 	bne.s	dc_start
-; ** Demo-Charger Argumente **
+
 	tst.w	dc_arg_newentry_enabled(a3)
 	beq.s	dc_start
 	tst.w	dc_arg_playlist_enabled(a3)
 	beq.s	dc_start
-
 	tst.w	adl_reset_program_active(a3)
 	beq	rd_start
+
 
 ; **** Demo-Charger ****
 dc_start
@@ -1076,7 +1070,7 @@ adl_init_variables
 	move.w	d1,rd_arg_random_enabled(a3)
 	move.w	d1,rd_arg_endless_enabled(a3)
 	move.w	d1,rd_arg_loop_enabled(a3)
-	move.w	d1,rd_arg_screenfader_enabled(a3)
+	move.w	d1,rd_arg_fader_enabled(a3)
 	move.w	d1,rd_arg_softreset_enabled(a3)
 
 	move.w	d0,rd_timer_delay(a3)
@@ -1187,11 +1181,9 @@ dc_init_file_request_tags
 	move.l	a1,(a0)+
 ; ** Grundparameter für File-Requester **
 	move.l	#ASLFR_InitialLeftEdge,(a0)+
-	moveq	#dc_file_request_left,d2
-	move.l	d2,(a0)+
+	move.l	d0,(a0)+
 	move.l	#ASLFR_InitialTopEdge,(a0)+
-	moveq	#dc_file_request_top,d2
-	move.l	d2,(a0)+
+	move.l	d0,(a0)+
 	move.l	#ASLFR_InitialWidth,(a0)+
 	move.l	#dc_file_request_x_size,(a0)+
 	move.l	#ASLFR_InitialHeight,(a0)+
@@ -1356,7 +1348,7 @@ qh_init_gadgets
 	lea	qh_cycle_gadget_array(pc),a1
 	move.l	a1,(a0)+
 	move.l	#GTCY_Active,(a0)+
-	moveq	#0,d0
+	moveq	#2,d0
 	move.l	d0,(a0)+
 	moveq	#TAG_DONE,d0
 	move.l	d0,(a0)
@@ -1401,7 +1393,7 @@ rd_init_pal_screen_colors
 	lea	rd_pal_screen_colors(pc),a0
 	move.w	#rd_pal_screen_colors_number,(a0)+
 	moveq	#0,d0
-	move.w	d0,(a0)+		; Erste Farbe COLOR00 / Farbwert schwarz
+	move.w	d0,(a0)+		; Erste Farbe COLOR00
 	move.l	d0,(a0)+		; COLOR00 32-Bit Rotwert
 	move.l	d0,(a0)+		; COLOR00 32-Bit Grünwert
 	move.l	d0,(a0)+		; COLOR00 32-Bit Blauwert
@@ -1494,16 +1486,12 @@ rd_init_invisible_window_tags
 	move.l	#WA_CustomScreen,(a0)+
 	move.l	d0,(a0)+		; Zeiger wird später initialisiert
 	move.l	#WA_MinWidth,(a0)+
-	moveq	#rd_invisible_window_x_size,d2
 	move.l	d2,(a0)+
 	move.l	#WA_MinHeight,(a0)+
-	moveq	#rd_invisible_window_y_size,d2
 	move.l	d2,(a0)+
 	move.l	#WA_MaxWidth,(a0)+
-	moveq	#rd_invisible_window_x_size,d2
 	move.l	d2,(a0)+
 	move.l	#WA_MaxHeight,(a0)+
-	moveq	#rd_invisible_window_y_size,d2
 	move.l	d2,(a0)+
 	move.l	#WA_AutoAdjust,(a0)+
 	moveq	#FALSE,d2
@@ -1864,14 +1852,14 @@ adl_check_arg_clearqueue
 	CNOP 0,4
 adl_check_arg_resetqueue
 	move.l	cra_RESETQUEUE(a2),d0
-	beq.s	adl_check_arg_playentry
+	beq.s	adl_check_playentry
 	not.w	d0
 	move.w	d0,qh_arg_resetqueue_enabled(a3)
 	bra	adl_check_cmd_line_ok
 
 ; ** Run-Demo Argument PLAYENTRY **
 	CNOP 0,4
-adl_check_arg_playentry
+adl_check_playentry
 	move.l	cra_PLAYENTRY(a2),d0
 	beq.s	adl_check_arg_prerunscript
 	move.l	d0,a0
@@ -1921,9 +1909,9 @@ adl_check_arg_mins
 
 	CNOP 0,4
 adl_calculate_playtime
-	mulu.w	#adl_seconds_factor,d1	; Umrechnung Minuten in Sekunden
-	add.l	d0,d1		; Gesamtwert in Sekunden
-	mulu.w	#rd_output_string_duration_shift,d1
+	MULUF.L 60,d1,d2		; Umrechnung Minuten in Sekunden
+	add.l	d0,d1			; Gesamtwert Sekunden
+	MULUF.L 10,d1,d0		; Linksshift
 	move.w	d1,rd_play_duration(a3)
 
 	IFEQ adl_lmbexit_code_enabled
@@ -1979,10 +1967,10 @@ adl_check_arg_loop
 	not.w	d0
 	move.w	d0,rd_arg_loop_enabled(a3)
 
-; ** Run-Demo Argument SCREENFADER **
-	move.l	cra_SCREENFADER(a2),d0
+; ** Run-Demo Argument FADER **
+	move.l	cra_FADER(a2),d0
 	not.w	d0
-	move.w	d0,rd_arg_screenfader_enabled(a3)
+	move.w	d0,rd_arg_fader_enabled(a3)
 
 ; ** Run-Demo Argument SOFTRESET **
 	move.l	cra_SOFTRESET(a2),d0
@@ -2020,8 +2008,9 @@ adl_print_intro_message_text_skip
 dc_alloc_entries_buffer
 	tst.w	adl_reset_program_active(a3)
 	beq.s	dc_alloc_entries_buffer_ok
+	moveq	#0,d0
 	move.w	adl_entries_number_max(a3),d0
-	mulu.w	#playback_queue_entry_size,d0 Größe des Puffers berechnen
+	MULUF.L playback_queue_entry_size,d0,d1 ; Größe des Puffers berechnen
 	MOVEF.L MEMF_CLEAR|MEMF_PUBLIC|MEMF_ANY,d1
 	CALLEXEC AllocMem
 	move.l	d0,adl_entries_buffer(a3)
@@ -2205,8 +2194,9 @@ dc_check_demofile_name
 	rts
 	CNOP 0,4
 dc_get_playback_entry_offset
+	moveq   #0,d0
 	move.w	adl_entries_number(a3),d0
-	mulu.w	#playback_queue_entry_size,d0 ; Offset in Puffer berechnen
+	MULUF.L playback_queue_entry_size,d0,d1 ; Offset in Puffer berechnen
 	move.l	adl_entries_buffer(a3),a2
 	add.l   d0,a2			; Zeiger auf Eintrag im Puffer
 	move.l	a2,dc_current_entry(a3)
@@ -2349,7 +2339,7 @@ dc_check_reset_program_active
 	move.w	d0,d7		
 	moveq	#0,d1
 	move.w	adl_entries_number_max(a3),d1
-	mulu.w	#playback_queue_entry_size,d1 ; Größe des Puffers berechnen
+	MULUF.L playback_queue_entry_size,d1,d2 ; Größe des Puffers berechnen
 	add.l	d1,d0			; Gesamtlänge inkusive Puffergröße
 	lea	rp_reset_program_size(pc),a0
 	move.l	d0,(a0)
@@ -2375,7 +2365,7 @@ dc_copy_reset_program_loop
 	dbf	d7,dc_copy_reset_program_loop
 	move.l	adl_entries_buffer(a3),a0 ; Quelle
 	move.w	adl_entries_number_max(a3),d7
-	mulu.w	#playback_queue_entry_size,d7 ; Puffergröße zum Kopieren berechnen
+	MULUF.W playback_queue_entry_size,d7,d0 ; Puffergröße zum Kopieren berechnen
 	subq.w	#1,d7			; wegen dbf
 dc_copy_entries_buffer_loop
 	move.b	(a0)+,(a1)+
@@ -2550,8 +2540,9 @@ dc_parse_playlist_file
 	lea	dc_parsing_begin_text(pc),a0
 	moveq	#dc_parsing_begin_text_end-dc_parsing_begin_text,d0
 	bsr	adl_print_text
+        moveq   #0,d0
 	move.w	adl_entries_number(a3),d0
-	mulu.w	#playback_queue_entry_size,d0 ; Offset in Puffer berechnen
+	MULUF.L playback_queue_entry_size,d0,d1 ; Offset in Puffer berechnen
 	move.l	adl_entries_buffer(a3),a0
 	add.l   d0,a0			; Zeiger auf Eintrag im Puffer
 	move.l	a0,d6
@@ -2696,9 +2687,9 @@ dc_check_arg_mins
 
 	CNOP 0,4
 dc_calculate_playtime
-	mulu.w	#adl_seconds_factor,d1	; Umrechnung Minuten in Sekunden
-	add.l	d0,d1			; Gesamtwert in Sekunden
-	mulu.w	#rd_output_string_duration_shift,d1
+	MULUF.L 60,d1,d2		; Sekundenwert
+	add.l	d0,d1			; + Sekundenwert = Gesamtwert Sekunden
+	MULUF.L 10,d1,d0		; Zählerwert in 100 ms
 	move.w	d1,pqe_playtime(a1)
 
 	IFEQ adl_lmbexit_code_enabled
@@ -2872,8 +2863,9 @@ dc_free_entries_buffer
 	CNOP 0,4
 dc_do_free_entries_buffer
 	move.l	adl_entries_buffer(a3),a1
+	moveq	#0,d0
 	move.w	adl_entries_number_max(a3),d0
-	mulu.w	#playback_queue_entry_size,d0 ; Größe des Puffers berechnen
+	MULUF.L playback_queue_entry_size,d0,d1 ; Größe des Puffers berechnen
 	CALLEXECQ FreeMem
 
 
@@ -3124,18 +3116,19 @@ qh_create_gadgets
         move.w	d0,gng_GadgetID(a1)
 	move.l	d0,gng_Flags(a1)
 	move.l	qh_screen_visual_info(a3),gng_VisualInfo(a1)
+	lea	qh_text_gadget_tag_list(pc),a2
+	moveq	#0,d0
 	move.w	qh_edit_entry_offset(a3),d0
 	subq.w	#1,d0			; Zählung ab 0
-	mulu.w	#playback_queue_entry_size,d0 ; Offset in Puffer berechnen
+	MULUF.L playback_queue_entry_size,d0,d1 ; Offset in Puffer berechnen
 	move.l	adl_entries_buffer(a3),a0
   	add.l	d0,a0
 	move.l	a0,qh_edit_entry(a3)
 	bsr	qh_get_demofile_title
 	move.l	d0,qh_edit_entry_demofile_name(a3)
-	move.l	qh_context_gadget(a3),a0 ; vorheriges Gadget
-	lea	qh_text_gadget_tag_list(pc),a2
-	move.l	d0,ti_data(a2)		; Name des Demos
+	move.l	d0,ti_data(a2)
 	move.l	#TEXT_KIND,d0
+	move.l	qh_context_gadget(a3),a0
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,a4
 	move.l	d0,qh_text_gadget_gadget(a3)
@@ -3155,14 +3148,10 @@ qh_create_gadgets
         move.w	#qh_bwd_button_id,gng_GadgetID(a1)
 	moveq	#0,d0
 	move.l	d0,gng_Flags(a1)
-	moveq	#BOOL_TRUE,d0		; Gadget aktiv
-	cmp.w	#adl_entries_number_min,qh_edit_entry_offset(a3)
-        bne.s	qh_create_bwd_button_skip
-	moveq	#BOOL_TRUE,d0		; Gadget inaktiv
-qh_create_bwd_button_skip
-	move.l	a4,a0			; vorheriges Gadget
+	move.l	a4,a0
 	lea	qh_button_tag_list(pc),a2
-  	move.l	d0,ti_data(a2)		; Gadget-Status
+	moveq	#BOOL_TRUE,d0
+  	move.l	d0,ti_data(a2)		; Gadget aktiv
 	move.l	#BUTTON_KIND,d0
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,a4
@@ -3180,9 +3169,10 @@ qh_create_bwd_button_skip
 	move.l  d0,gng_GadgetText(a1)
         move.w	#qh_integer_gadget_id,gng_GadgetID(a1)
 	move.l	d0,gng_Flags(a1)
-	move.l	a4,a0			; vorheriges Gadget
-	lea	qh_integer_gadget_tag_list(pc),a2
+
 	move.l	#INTEGER_KIND,d0
+	move.l	a4,a0
+	lea	qh_integer_gadget_tag_list(pc),a2
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,a4
 	move.l	d0,qh_integer_gadget_gadget(a3)
@@ -3200,15 +3190,10 @@ qh_create_bwd_button_skip
         move.w	#qh_fwd_button_id,gng_GadgetID(a1)
 	moveq	#0,d0
 	move.l	d0,gng_Flags(a1)
-	moveq	#BOOL_FALSE,d0		; Gadget aktiv
-	move.w	qh_edit_entry_offset(a3),d1
-	cmp.w	adl_entries_number(a3),d1
-        blt.s	qh_create_fwd_button_skip
-	moveq	#BOOL_TRUE,d0		; Gadget inaktiv
-qh_create_fwd_button_skip
-	move.l	a4,a0			; vorheriges Gadget
+	move.l	a4,a0
 	lea	qh_button_tag_list(pc),a2
-  	move.l	d0,ti_data(a2)		; Gadget-Status
+	moveq	#BOOL_FALSE,d0
+  	move.l	d0,ti_data(a2)		; Gadget aktiv
 	move.l	#BUTTON_KIND,d0
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,a4
@@ -3232,18 +3217,19 @@ qh_create_cycle_gadget_skip
         move.w	#qh_cycle_gadget_id,gng_GadgetID(a1)
 	moveq	#0,d0
 	move.l	d0,gng_Flags(a1)
+	lea	qh_cycle_gadget_tag_list(pc),a2
+	moveq	#0,d0
 	move.w	qh_edit_entry_offset(a3),d0
 	subq.w	#1,d0			; Zählung ab 0
-	mulu.w	#playback_queue_entry_size,d0 ; Offset in Puffer berechnen
+	MULUF.L playback_queue_entry_size,d0,d1 ; Offset in Puffer berechnen
 	move.l	adl_entries_buffer(a3),a0
 	add.l	d0,a0
 	moveq	#0,d0
 	move.b	pqe_runmode(a0),d0
-	subq.b	#1,d0			; Ordnungsnummer Auswahltext
-	move.l	a4,a0			; vorheriges Gadget
-	lea	qh_cycle_gadget_tag_list(pc),a2
-	move.l	d0,(1*ti_SIZEOF)+ti_Data(a2) ; Ordnungsnummer Auswahltext
+	subq.b	#1,d0			; Zählung von Null
+	move.l	d0,(1*ti_SIZEOF)+ti_Data(a2)
 	move.l	#CYCLE_KIND,d0
+	move.l	a4,a0
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,a4
 	move.l	d0,qh_cycle_gadget_gadget(a3)
@@ -3263,18 +3249,19 @@ qh_create_mx_gadget_skip
         move.w	#qh_mx_gadget_id,gng_GadgetID(a1)
 	moveq	#PLACETEXT_RIGHT,d0
 	move.l	d0,gng_Flags(a1)
+	lea	qh_mx_gadget_tag_list(pc),a2
+	moveq   #0,d0
 	move.w	qh_edit_entry_offset(a3),d0
 	subq.w	#1,d0			; Zählung von 0
-	mulu.w	#playback_queue_entry_size,d0 ; Offset in Puffer berechnen
+	MULUF.L playback_queue_entry_size,d0,d1 ; Offset in Puffer berechnen
 	move.l	adl_entries_buffer(a3),a0
 	add.l	d0,a0
 	moveq	#0,d0
 	move.b	pqe_entry_active(a0),d0
-        neg.b	d0			; Ordnungsnummer Auswahltext
-	move.l	a4,a0			; vorheriges Gadget
-	lea	qh_mx_gadget_tag_list(pc),a2
-	move.l	d0,(1*ti_SIZEOF)+ti_Data(a2) ; Ordnungsnummer Auswahltext
+        neg.b	d0
+	move.l	d0,(1*ti_SIZEOF)+ti_Data(a2)
 	move.l	#MX_KIND,d0
+	move.l	a4,a0
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,a4
 	move.l	d0,qh_mx_gadget_gadget(a3)
@@ -3292,13 +3279,12 @@ qh_create_mx_gadget_skip
         move.w	#qh_positive_button_id,gng_GadgetID(a1)
 	moveq	#0,d0
 	move.l	d0,gng_Flags(a1)
-	move.l	a4,a0			; vorheriges Gadget
-	lea	qh_button_tag_list(pc),a2
-	moveq	#BOOL_FALSE,d0		; Gadget aktiv
-  	move.l	d0,ti_data(a2)		; Gadget-Status
 	move.l	#BUTTON_KIND,d0
+	move.l	a4,a0
+	lea	qh_button_tag_list(pc),a2
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,a4
+
 ; ** Negative-Button-Gadget **
 	lea	qh_new_gadget(pc),a1
 	move.w	#qh_negative_button_x_position,gng_LeftEdge(a1)
@@ -3309,9 +3295,9 @@ qh_create_mx_gadget_skip
         move.w	#qh_negative_button_id,gng_GadgetID(a1)
 	moveq	#0,d0
 	move.l	d0,gng_Flags(a1)
-	move.l	a4,a0			; vorheriges Gadget
-	lea	qh_button_tag_list(pc),a2
 	move.l	#BUTTON_KIND,d0
+	move.l	a4,a0
+	lea	qh_button_tag_list(pc),a2
 	CALLGADTOOLS CreateGadgetA
 
 	tst.l	d0
@@ -3563,7 +3549,7 @@ qh_ascii_to_dec_loop
 	move.b	-(a0),d3		; ASCII-Wert lesen
 	sub.b	#"0",d3			; ASCII-Wert "0" abziehen = 0..9
 	mulu.w	d2,d3			; Dezimal-Stellenwert (1,10,..)
-	mulu.w	#10,d2			; nächste Zehnerprotenz
+	MULUF.L	10,d2,d1		; nächste Zehnerprotenz
 	add.l	d3,d0			; Stelle zum Ergebnis addieren
 	dbf	d7,qh_ascii_to_dec_loop
 	rts
@@ -3575,8 +3561,8 @@ qh_ascii_to_dec_loop
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 qh_edit_fetch_entry
-	subq.w	#1,d0			; Zählung ab 0
-	mulu.w	#playback_queue_entry_size,d0 ; Offset in Puffer berechnen
+	subq.l	#1,d0			; Zählung ab 0
+	MULUF.L	playback_queue_entry_size,d0,d1 ; Offset in Puffer berechnen
 	move.l	adl_entries_buffer(a3),a0
 	add.l	d0,a0
 	move.l	a0,qh_edit_entry(a3)
@@ -3612,7 +3598,7 @@ qh_update_gadgets
 qh_update_gadgets_skip1
 	move.l	a3,-(a7)
 	lea	qh_set_button_tag_list(pc),a3
-	move.l	d0,ti_data(a3)		; Gadget-Status
+	move.l	d0,ti_data(a3)		; Button aktivieren/deaktivieren
   	CALLLIBS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
 
@@ -3636,7 +3622,7 @@ qh_update_gadgets_skip1
 qh_update_gadgets_skip2
 	move.l	a3,-(a7)
 	lea	qh_set_button_tag_list(pc),a3
-	move.l	d0,ti_data(a3)		; Gadget-Status
+	move.l	d0,ti_data(a3)		; Button aktivieren/deaktivieren
   	CALLLIBS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
 
@@ -3648,7 +3634,7 @@ qh_update_gadgets_skip2
 	moveq	#0,d0
 	move.b	pqe_runmode(a5),d0
 	subq.b	#1,d0
-	move.l	d0,ti_data(a3)		; Ordnungsnummer Auswahltext
+	move.l	d0,ti_data(a3)		; Ordnungsnummer
   	CALLLIBS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
 
@@ -3660,7 +3646,7 @@ qh_update_gadgets_skip2
 	moveq	#0,d0
 	move.b	pqe_entry_active(a5),d0
 	neg.b	d0
-	move.l	d0,ti_data(a3)		; Ordnungsnummer Auswahltext
+	move.l	d0,ti_data(a3)
   	CALLLIBS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
 	rts
@@ -3788,10 +3774,10 @@ adl_print_io_error_skip
 	CNOP 0,4
 adl_remove_reset_program
 	tst.w	adl_arg_remove_enabled(a3)
-	beq.s	adl_check_reset_program_active
+	beq.s	adl_check_reset_program_active2
 	rts
 	CNOP 0,4
-adl_check_reset_program_active
+adl_check_reset_program_active2
 	tst.w	adl_reset_program_active(a3)
 	beq.s	adl_free_reset_programm_memory
 	lea	adl_message_text2(pc),a0
@@ -4172,7 +4158,7 @@ rd_alloc_cleared_sprite_data_ok
 ; d0.l	Rückgabewert: Return-Code/Error-Code
 	CNOP 0,4
 sf_alloc_screen_color_table
-	tst.w	rd_arg_screenfader_enabled(a3)
+	tst.w	rd_arg_fader_enabled(a3)
 	bne.s	sf_alloc_screen_color_table_ok
 	MOVEF.L	sf_colors_number*3*LONGWORD_SIZE,d0
 	MOVEF.L	MEMF_CLEAR|MEMF_ANY|MEMF_PUBLIC|MEMF_REVERSE,d1
@@ -4195,7 +4181,7 @@ sf_alloc_screen_color_table_ok
 ; d0.l	Rückgabewert: Return-Code/Error-Code
 	CNOP 0,4
 sf_alloc_screen_color_cache
-	tst.w	rd_arg_screenfader_enabled(a3)
+	tst.w	rd_arg_fader_enabled(a3)
 	bne.s	sf_alloc_screen_color_cache_ok
 	MOVEF.L	(1+(sf_colors_number*3)+1)*LONGWORD_SIZE,d0
 	MOVEF.L	MEMF_CLEAR|MEMF_ANY|MEMF_PUBLIC|MEMF_REVERSE,d1
@@ -4215,7 +4201,7 @@ sf_alloc_screen_color_cache_ok
 
 	CNOP 0,4
 sf_get_active_screen_colors
-	tst.w	rd_arg_screenfader_enabled(a3)
+	tst.w	rd_arg_fader_enabled(a3)
 	bne.s	sf_get_active_screen_colors_skip
 	move.l	rd_active_screen(a3),d0
 	beq.s	sf_get_active_screen_colors_skip
@@ -4223,7 +4209,7 @@ sf_get_active_screen_colors
 	move.l	sc_ViewPort+vp_ColorMap(a0),a0
 	move.l	sf_screen_color_table(a3),a1 ; 32-Bit RGB-Werte
 	moveq	#0,d0			; Ab COLOR00
-	MOVEF.L	sf_colors_number,d1 	; Alle 256 Farben
+	MOVEF.L	sf_colors_number,d1 ; Alle 256 Farben
  	CALLGRAFQ GetRGB32
 	CNOP 0,4
 sf_get_active_screen_colors_skip
@@ -4232,7 +4218,7 @@ sf_get_active_screen_colors_skip
 
 	CNOP 0,4
 sf_copy_screen_color_table
-	tst.w	rd_arg_screenfader_enabled(a3)
+	tst.w	rd_arg_fader_enabled(a3)
 	beq.s	sf_copy_screen_color_table_skip
 	rts
 	CNOP 0,4
@@ -4259,7 +4245,7 @@ rd_get_demofile_name
 rd_get_random_entry_loop
 	move.w	adl_entries_number(a3),d1
 	bsr	rd_get_random_entry
-	mulu.w	#playback_queue_entry_size,d0 ; Offset in Puffer berechnen
+	MULUF.L playback_queue_entry_size,d0,d1 ; Offset in Puffer berechnen
 	move.l	adl_entries_buffer(a3),a0
 	add.l	d0,a0
 	tst.b	pqe_entry_active(a0)	; Demo bereits ausgeführt ?
@@ -4269,12 +4255,12 @@ rd_get_random_entry_loop
 rd_get_fixed_entry
 	move.w	rd_entry_offset(a3),d0
 	subq.w	#1,d0			; Zählung ab 0
-	mulu.w	#playback_queue_entry_size,d0 ; Offset in Puffer berechnen
+	MULUF.L playback_queue_entry_size,d0,d1 ; Offset in Puffer berechnen
 	move.l	adl_entries_buffer(a3),a0
 	add.l	d0,a0
 rd_check_demofile_path
 	move.l	a0,rd_demofile_path(a3)
-	moveq	#0,d0			; Zähler für Länge des Dateinamens
+	moveq	#0,d0			; Zähler für Dateinamen-Länge
 	moveq	#"/",d2
 	moveq	#":",d3
 	moveq	#adl_demofile_path_length-1,d7
@@ -4414,6 +4400,8 @@ rd_check_demofile_header_ok
 
 	CNOP 0,4
 rd_get_demofile_dir_path
+	moveq	#"/",d2
+	moveq	#":",d3
 	moveq	#adl_demofile_path_length-1,d7
 	move.l	rd_demofile_path(a3),a0 ; Zeiger auf Eintrag in Playback-Queue
 	add.l	d7,a0			; Ende des Quellpuffers
@@ -4423,9 +4411,9 @@ rd_get_dir_loop
 	move.b	-(a0),d0		; Quell-Pfadename rückwärts byteweise auslesen
 	subq.w	#1,d7
 	clr.b	-(a1)			; Quell-Pfadename rückwärts byteweise löschen
-	cmp.b	#"/",d0			; Ende des Verzeichnisnamens gefunden ?
+	cmp.b	d2,d0			; Ende des Verzeichnisnamens gefunden ?
 	beq.s	rd_dir_name_found2	; Ja -> verzweige
-	cmp.b	#":",d0			; Ende des Gerätenamens gefunden ?
+	cmp.b	d3,d0			; Ende des Gerätenamens gefunden ?
 	beq.s	rd_dir_name_found1	; Ja -> verzweige
 	bra.s	rd_get_dir_loop
 	CNOP 0,4
@@ -4448,14 +4436,14 @@ rd_set_new_current_dir
 	MOVEF.L	ACCESS_READ,d2
 	CALLDOS Lock
 	move.l	d0,rd_demofile_dir_lock(a3)
-	bne.s	rd_set_new_current_dir_skip
+	bne.s	rd_demofile_dir_lock_skip
 	lea	rd_error_text12(pc),a0
 	moveq	#rd_error_text12_end-rd_error_text12,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
-rd_set_new_current_dir_skip
+rd_demofile_dir_lock_skip
 	move.l	d0,d1			; Lock für Programm-Directory
 	move.l	d0,d3			; Lock für Current-Directory
 	CALLLIBS SetProgramDir		; PRGDIR: = Demo-Directory
@@ -4469,10 +4457,10 @@ rd_set_new_current_dir_skip
 	CNOP 0,4
 rd_get_prerunscript_path
 	tst.w	rd_arg_prerunscript_enabled(a3)
-	bne.s	rd_get_prerunscript_path_skip
+	bne.s	rd_get_queue_prerunscript_path
 	rts
 	CNOP 0,4
-rd_get_prerunscript_path_skip
+rd_get_queue_prerunscript_path
 	move.l	rd_demofile_path(a3),a0
 	ADDF.W	pqe_prerunscript_path,a0
 	tst.b	(a0)			; Wurde Pfad angegeben ?
@@ -4585,7 +4573,7 @@ rd_get_active_screen_mode_ok
 
 	CNOP 0,4
 sf_fade_out_active_screen
-	tst.w	rd_arg_screenfader_enabled(a3)
+	tst.w	rd_arg_fader_enabled(a3)
 	beq.s	sf_fade_out_active_screen_loop
 	rts
 	CNOP 0,4
@@ -4783,8 +4771,8 @@ rd_clear_mousepointer
 	move.l	rd_cleared_sprite_pointer_data(a3),a1
 	moveq	#rd_cleared_sprite_y_size,d0
 	moveq	#rd_cleared_sprite_x_size,d1
-	moveq	#rd_cleared_sprite_x_offset,d2
-	moveq	#rd_cleared_sprite_y_offset,d3
+	moveq	#0,d2			; x-Offset
+	moveq	#0,d3			; y-Offset
 	CALLINTQ SetPointer
 
 
@@ -4794,7 +4782,7 @@ rd_get_sprite_resolution
 	move.l  sc_ViewPort+vp_ColorMap(a0),a0
 	lea	rd_video_control_tag_list(pc),a1
 	move.l	#VTAG_SPRITERESN_GET,vctl_VTAG_SPRITERESN+ti_tag(a1)
-	clr.l	vctl_VTAG_SPRITERESN+ti_Data(a1)
+	clr.l	ti_data(a1)
 	CALLGRAF VideoControl
 	lea     rd_video_control_tag_list(pc),a0
 	move.l  vctl_VTAG_SPRITERESN+ti_Data(a0),rd_old_sprite_resolution(a3)
@@ -4825,7 +4813,7 @@ rd_blank_display
 	move.l	rd_demofile_path(a3),a0
 	cmp.b	#RUNMODE_OCS_VANILLA,pqe_runmode(a0)
 	bne.s	rd_blank_display_skip
-	moveq	#0,d0			; OCS Standart` Screen-Moduli
+	moveq	#0,d0
 	move.l	d0,_CUSTOM+BPL1MOD
 rd_blank_display_skip
 	rts
@@ -5364,7 +5352,7 @@ rd_run_demofile
 	move.l	(a7)+,a3
 	move.l	#_CUSTOM+DMACONR,a0
 rd_run_demofile_loop
-	btst	#DMAB_BLTDONE-8,(a0)	; Eventuell noch auf Blitteraktivität warten
+	btst	#DMAB_BLTDONE-8,(a0)	; Auf eventuell noch laufende Blits warten
 	bne.s	rd_run_demofile_loop
 	tst.w	rd_arg_softreset_enabled(a3)
 	bne.s   rd_run_demofile_ok
@@ -5668,7 +5656,7 @@ rd_close_pal_screen
 
 	CNOP 0,4
 sf_fade_in_screen
-	tst.w	rd_arg_screenfader_enabled(a3)
+	tst.w	rd_arg_fader_enabled(a3)
 	beq.s	sf_fade_in_screen_loop
 	rts
 	CNOP 0,4
@@ -5683,7 +5671,7 @@ sf_fade_in_screen_loop
 
 	CNOP 0,4
 screen_fader_in
-	MOVEF.W	sf_colors_number*3,d6	; Zähler
+	MOVEF.W	sf_colors_number*3,d6 ; Zähler
 	move.l	sf_screen_color_cache(a3),a0 ; Puffer für Farbwerte
 	addq.w	#4,a0                   ; Offset überspringen
 	move.w	#sfi_fader_speed,a4	; Additions-/Subtraktionswert für RGB-Werte
@@ -5900,8 +5888,8 @@ rd_reset_demo_variables_skip1
 	move.l	d0,rd_prerunscript_path(a3)
 rd_reset_demo_variables_skip2
 	move.w	#FALSE,whdl_slave_enabled(a3)
-	move.w	rd_arg_screenfader_enabled(a3),sfo_active(a3)
-	move.w	rd_arg_screenfader_enabled(a3),sfi_active(a3)
+	move.w	rd_arg_fader_enabled(a3),sfo_active(a3)
+	move.w	rd_arg_fader_enabled(a3),sfi_active(a3)
 	rts
 
 
@@ -6016,9 +6004,9 @@ rd_040_060_mmu_off
 	moveq	#0,d4			; TC MMU aus
 	move.l	rd_demofile_path(a3),a0
 	cmp.b	#RUNMODE_OCS_VANILLA,pqe_runmode(a0)
-	bne.s	rd_040_060_mmu_off_skip
+	bne.s	rd_set_translation_registers
 	move.l	d1,d3			; ITT0=DTT0 Cache inhibited, precise für Speicherbereich $00000000-$00ffffff (Zorro II)
-rd_040_060_mmu_off_skip
+rd_set_translation_registers
 	or.w	#SRF_I0+SRF_I1+SRF_I2,SR ; Level-7-Interruptebene
 	nop
 	movec.l DTT0,d0
@@ -6206,8 +6194,9 @@ rp_proceed
 	bsr	rp_stop_timer
 	move.l	#rp_entries_buffer-rp_start,d0
 	move.l	rp_reset_program_memory(pc),a1
+	moveq	#0,d1
 	move.w	rp_entries_number_max(pc),d1
-	mulu.w	#playback_queue_entry_size,d1 ; Größe des Puffers für Einträge berechnen
+	MULUF.L playback_queue_entry_size,d1,d2 ; Größe des Puffers für Einträge berechnen
 	add.l	d1,d0			; Programmlänge + Puffer für Einträge
 	CALLLIBS AllocAbs		; Speicher nochmals reservieren
 	tst.l	d0
@@ -6577,10 +6566,6 @@ rd_copy_old_trap_vectors_loop
 
 ; **** Exception-Routinen ****
 	IFEQ adl_restore_adl_code_enabled
-; Input
-; a6	... Exec-Base
-; Result
-; d0	... Kein Rückgabewert
 		CNOP 0,4
 rp_level_7_program
 		movem.l d0-d1/a0-a1/a6,-(a7)
@@ -6861,7 +6846,7 @@ adl_cmd_usage_text
 	DC.B "RANDOM                 Play random entry of playback queue",ASCII_LINE_FEED
 	DC.B "ENDLESS                Play entries of playback queue endlessly",ASCII_LINE_FEED
 	DC.B "LOOP                   Play demos until no more entries left to play",ASCII_LINE_FEED
-	DC.B "SCREENFADER            Fade screen to black before demo is played",ASCII_LINE_FEED
+	DC.B "FADER                  Fade screen to black before demo is played",ASCII_LINE_FEED
 	DC.B "SOFTRESET              Automatic reset after quitting demo",ASCII_LINE_FEED,ASCII_LINE_FEED
 adl_cmd_usage_text_end
 	EVEN
@@ -6892,7 +6877,7 @@ adl_cmd_template
 	DC.B "RANDOM/S,"
 	DC.B "ENDLESS/S,"
 	DC.B "LOOP/S,"
-	DC.B "SCREENFADER/S,"
+	DC.B "FADER/S,"
 	DC.B "SOFTRESET/S",0
 	EVEN
 
@@ -7187,10 +7172,10 @@ qh_new_gadget			DS.B gng_SIZEOF
 qh_topaz_80			DS.B ta_SIZEOF
 
 
-qh_bwd_button_text		DC.B "<",0
+qh_bwd_button_text	DC.B "<",0
 	EVEN
 
-qh_fwd_button_text		DC.B ">",0
+qh_fwd_button_text	DC.B ">",0
 	EVEN
 
 qh_cycle_gadget_choice_text1	DC.B "Turbo",0
@@ -7367,11 +7352,11 @@ rd_shell_cmd_line_end
 
 
 rd_message_text1
-	DC.B "No more demos left to play",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"No more demos left to play",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_message_text1_end
 	EVEN
 rd_message_text2
-	DC.B "Replay loop stopped",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Replay loop stopped",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_message_text2_end
 	EVEN
 

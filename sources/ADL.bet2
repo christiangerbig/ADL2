@@ -1525,7 +1525,7 @@ rd_init_video_control_tags
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 adl_open_dos_library
 	lea	dos_library_name(pc),a1
@@ -1544,7 +1544,7 @@ adl_open_dos_library_ok
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code/Error-Code
+; d0.l	... Rückgabewert: Return-Code/Error-Code
 	CNOP 0,4
 adl_get_output
 	CALLDOS Output
@@ -1559,7 +1559,7 @@ adl_get_output_ok
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 adl_open_graphics_library
 	lea	graphics_library_name(pc),a1
@@ -1581,7 +1581,7 @@ adl_open_graphics_library_ok
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 adl_check_system
 	move.l	_SysBase(pc),a0
@@ -1638,7 +1638,7 @@ adl_check_system_ok
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 adl_open_gadtools_library
 	lea	gadtools_library_name(pc),a1
@@ -1660,7 +1660,7 @@ adl_open_gadtools_library_ok
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 adl_open_intuition_library
 	lea	intuition_library_name(pc),a1
@@ -1682,7 +1682,7 @@ adl_open_intuition_library_ok
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 adl_check_cool_capture
 	move.l	_SysBase(pc),a0
@@ -1730,7 +1730,7 @@ adl_set_default_values
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 adl_check_cmd_line
 	lea	adl_cmd_template(pc),a0
@@ -2015,7 +2015,7 @@ adl_print_intro_message_text_skip
 ; **** Demo-Charger ****
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code/Error-Code
+; d0.l	... Rückgabewert: Return-Code/Error-Code
 	CNOP 0,4
 dc_alloc_entries_buffer
 	tst.w	adl_reset_program_active(a3)
@@ -2039,7 +2039,7 @@ dc_alloc_entries_buffer_ok
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	.... Rückgabewert: Return-Code
 	CNOP 0,4
 dc_open_asl_library
 	lea	asl_library_name(pc),a1
@@ -2061,7 +2061,7 @@ dc_open_asl_library_ok
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code/Error-Code
+; d0.l	... Rückgabewert: Return-Code/Error-Code
 	CNOP 0,4
 dc_get_program_dir
 	CALLDOS GetProgramDir
@@ -2095,6 +2095,7 @@ dc_get_program_dir_name_ok
 	CNOP 0,4
 dc_display_remaining_files
 	lea	dc_remaining_files(pc),a0 ; Stringadresse
+	moveq	#0,d1
 	move.w	adl_entries_number_max(a3),d1
 	sub.w	adl_entries_number(a3),d1 ; Verbleibende Anzahl der zu ladenden Dateien berechnen
 	cmp.w	#adl_entries_number_min,d1 ; Nur noch ein File?
@@ -2107,7 +2108,7 @@ dc_request_title_skip
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 dc_make_file_request
 	moveq	#ASL_FileRequest,d0
@@ -2128,7 +2129,7 @@ dc_make_file_request_ok
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 dc_display_file_request
 	move.l	dc_file_request(a3),a0
@@ -2146,7 +2147,7 @@ dc_display_file_request_ok
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 dc_get_demofile_path
 	clr.w   dc_multiselect_entries_number(a3)
@@ -2308,7 +2309,7 @@ dc_start_loop
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 dc_check_entries_number_max
 	move.w  adl_entries_number(a3),d0
@@ -2332,7 +2333,7 @@ dc_print_entries_max_message_text
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code/Error-Code
+; d0.l	... Rückgabewert: Return-Code/Error-Code
 	CNOP 0,4
 dc_init_reset_program
 	tst.w	adl_entries_number(a3)
@@ -2415,7 +2416,7 @@ dc_close_asl_library
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 dc_lock_playlist_file
 	move.l	dc_playlist_file_name(a3),d1
@@ -2436,7 +2437,7 @@ dc_lock_playlist_file_ok
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code/Error-Code
+; d0.l	... Rückgabewert: Return-Code/Error-Code
 	CNOP 0,4
 dc_alloc_playlist_file_fib
 	MOVEF.L fib_SIZEOF,d0
@@ -2457,7 +2458,7 @@ dc_alloc_playlist_file_fib_ok
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 dc_get_playlist_file_length
 	move.l	dc_playlist_file_lock(a3),d1
@@ -2480,7 +2481,7 @@ dc_get_playlist_file_length_ok
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code/Error-Code
+; d0.l	... Rückgabewert: Return-Code/Error-Code
 	CNOP 0,4
 dc_alloc_playlist_file_buffer
 	move.l	dc_playlist_file_length(a3),d0
@@ -2501,7 +2502,7 @@ dc_alloc_playlist_file_buffer_ok
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 dc_open_playlist_file
 	move.l	dc_playlist_file_name(a3),d1
@@ -2522,7 +2523,7 @@ dc_open_playlist_file_ok
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 dc_read_playlist_file
 	move.l	dc_playlist_file_handle(a3),d1
@@ -2544,7 +2545,7 @@ dc_read_playlist_file_ok
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 dc_parse_playlist_file
 	lea	dc_parsing_begin_text(pc),a0
@@ -2621,6 +2622,7 @@ dc_parse_playlist_entry_skip
 ; ** Playlist-Argument demofile **
 	move.l	pra_demofile(a5),d0
 	bne.s	dc_copy_demofile_path
+	move.l	d6,a0			; Zeiger auf Eintrag im Puffer
 	bsr	dc_parse_playlist_entry_error
 	bra	dc_free_custom_arguments
 	CNOP 0,4
@@ -2632,6 +2634,7 @@ dc_copy_demofile_path_loop
 	addq.b	#1,d0
 	cmp.b	#adl_demofile_path_length-1,d0
 	blt.s	dc_copy_demofile_path_skip
+	move.l	d6,a0			; Zeiger auf Eintrag im Puffer
 	bsr	dc_parse_playlist_entry_error
 	bra	dc_free_custom_arguments
 	CNOP 0,4
@@ -2665,6 +2668,7 @@ dc_check_arg_turbo
 dc_check_entry_start_mode
 	tst.b	pqe_runmode(a1)
 	bne.s   dc_check_arg_secs
+	move.l	d6,a0			; Zeiger auf Eintrag im Puffer
 	bsr	dc_parse_playlist_entry_error
 	bra	dc_free_custom_arguments
 
@@ -2678,6 +2682,7 @@ dc_check_arg_secs
 	moveq	#adl_seconds_max,d2
 	cmp.l	d2,d0
 	ble.s   dc_check_arg_mins
+	move.l	d6,a0			; Zeiger auf Eintrag im Puffer
 	bsr	dc_parse_playlist_entry_error
 	bra	dc_free_custom_arguments
 
@@ -2691,6 +2696,7 @@ dc_check_arg_mins
 	moveq	#adl_minutes_max,d2
 	cmp.l	d2,d1
 	ble.s	dc_calculate_playtime
+	move.l	d6,a0			; Zeiger auf Eintrag im Puffer
 	bsr	dc_parse_playlist_entry_error
 	bra	dc_free_custom_arguments
 
@@ -2710,18 +2716,21 @@ dc_calculate_playtime
 		move.l	d0,a0
 		move.l	(a0),d0		; Anzahl der Demoteile
 		bne.s	dc_check_demo_parts_number_min
+		move.l	d6,a0			; Zeiger auf Eintrag im Puffer
 		bsr	dc_parse_playlist_entry_error
 		bra	dc_free_custom_arguments
 		CNOP 0,4
 dc_check_demo_parts_number_min
 		cmp.w	#adl_lmbexit_parts_number_min,d0
 		bge.s	dc_check_demo_parts_number_max
+		move.l	d6,a0			; Zeiger auf Eintrag im Puffer
 		bsr	dc_parse_playlist_entry_error
 		bra	dc_free_custom_arguments
 		CNOP 0,4
 dc_check_demo_parts_number_max
 		cmp.w	#adl_lmbexit_parts_number_max,d0
 		ble.s	dc_arg_lmbexit_save_playtime
+		move.l	d6,a0			; Zeiger auf Eintrag im Puffer
 		bsr	dc_parse_playlist_entry_error
 		bra.s	dc_free_custom_arguments
 		CNOP 0,4
@@ -2742,6 +2751,7 @@ dc_copy_prerunscript_path_loop
 	addq.b	#1,d0
 	cmp.b	#adl_prerunscript_path_length-1,d0
 	blt.s	dc_copy_prerunscript_skip
+	move.l	d6,a0			; Zeiger auf Eintrag im Puffer
 	bsr	dc_parse_playlist_entry_error
 	bra.s	dc_free_custom_arguments
 	CNOP 0,4
@@ -2771,10 +2781,12 @@ dc_free_DosObject
 
 	CNOP 0,4
 dc_parse_playlist_file_result
+	moveq	#0,d1
 	move.w	dc_transmitted_entries_number(a3),d1 ; Dezimalzahl
 	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
 	lea	dc_transmitted_entries(pc),a0 ; Zeiger auf String
 	bsr	rp_dec_to_ascii
+	moveq	#0,d1
 	move.w	dc_playlist_entries_number(a3),d1 ; Dezimalzahl
 	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
 	lea	dc_playlist_entries(pc),a0 ; Zeiger auf String
@@ -2786,12 +2798,11 @@ dc_parse_playlist_file_result
 
 
 ; Input
-; d6.l	... Zeiger auf Eintrag im Puffer
+; a0	... Zeiger auf Eintrag im Puffer
 ; Result
 ; d0	... Kein Rückgabewert
 	CNOP 0,4
 dc_parse_playlist_entry_error
-	move.l	d6,a0			; Zeiger auf Eintrag im Puffer
 	bsr.s	dc_clear_playlist_entry
 	bra.s 	dc_parse_entry_syntax_error
 
@@ -2812,6 +2823,7 @@ dc_clear_playlist_entry_loop
 
 	CNOP 0,4
 dc_parse_entry_syntax_error
+	moveq	#0,d1
 	move.w	dc_playlist_entries_number(a3),d1 ; Dezimalzahl
 	move.w	d7,d4			; Schleifenzähler retten
 	lea	dc_entries_string(pc),a0 ; Zeiger auf String
@@ -2825,7 +2837,7 @@ dc_parse_entry_syntax_error
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 dc_check_entries_number_min
 	tst.w	adl_entries_number(a3)
@@ -2896,7 +2908,7 @@ qh_show_queue_loop
 	lea	qh_show_entry_header(pc),a0
 	moveq	#qh_show_entry_current_number-qh_show_entry_header,d0
 	bsr	adl_print_text
-	move.w	d5,d1			; Wert zum Umwandeln
+	move.l	d5,d1			; Wert zum Umwandeln
 	lea	qh_show_entry_current_number(pc),a0 ; Zeiger auf ASCII-Wert
 	move.w	d7,-(a7)
 	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
@@ -2910,6 +2922,7 @@ qh_show_queue_loop
 	addq.w	#1,d5			; laufende Nummer erhöhen
 	dbf	d7,qh_show_queue_loop
 	lea	qh_not_used_entries_string(pc),a0
+	moveq	#0,d1
 	move.w	adl_entries_number_max(a3),d1
 	sub.w	adl_entries_number(a3),d1 ; Verbleibende Anzahl der zu ladenden Dateien berechnen
 	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
@@ -3555,15 +3568,15 @@ qh_ascii_to_dec
 	subq.w	#1,d7		        ; Nur eine Stelle umwandeln
 qh_ascii_to_dec_skip
 	add.l	d7,a0			; Zeiger auf Ende des Strings
+	lea	rp_dec_table(pc),a1
 	moveq	#0,d0			; Dezimalzahl
-	moveq	#1,d2			; Erster Dezimal-Stellenwert 1
 	subq.w	#1,d7			; wegen dbf
 qh_ascii_to_dec_loop
+	move.l	(a1)+,d2
 	moveq	#0,d3
 	move.b	-(a0),d3		; ASCII-Wert lesen
 	sub.b	#"0",d3			; ASCII-Wert "0" abziehen = 0..9
 	mulu.w	d2,d3			; Dezimal-Stellenwert (1,10,..)
-	mulu.w	#10,d2			; nächste Zehnerprotenz
 	add.l	d3,d0			; Stelle zum Ergebnis addieren
 	dbf	d7,qh_ascii_to_dec_loop
 	rts
@@ -3572,7 +3585,7 @@ qh_ascii_to_dec_loop
 ; Input
 ; d0.l	... Nummer des Eintrags (1..n)
 ; Result
-; d0.l	... Kein Rückgabewert
+; d0	... Kein Rückgabewert
 	CNOP 0,4
 qh_edit_fetch_entry
 	subq.w	#1,d0			; Zählung ab 0
@@ -3590,7 +3603,7 @@ qh_edit_fetch_entry
 ; a2	... Zeiger auf Dateinamen des Demos
 ; a5	... Zeiger auf Eintrag
 ; Result
-; d0.l	... Kein Rückgabewert
+; d0	... Kein Rückgabewert
 	CNOP 0,4
 qh_update_gadgets
 	move.l	qh_text_gadget_gadget(a3),a0
@@ -3735,15 +3748,14 @@ qh_reset_queue
         bne.s	qh_reset_queue_ok
 	lea	qh_message_text6(pc),a0
 	moveq	#qh_message_text6_end-qh_message_text6,d0
-	bsr	adl_print_text
-	bra	adl_check_cmd_line_ok
+	bra	adl_print_text
 	CNOP 0,4
 qh_reset_queue_ok
 	move.w	#adl_entries_number_min,rd_entry_offset(a3)
 	bsr	rd_deactivate_queue
 	lea	qh_message_text7(pc),a0
 	moveq	#qh_message_text7_end-qh_message_text7,d0
-	bsr	adl_print_text
+	bra	adl_print_text
 
 
 	CNOP 0,4
@@ -4023,7 +4035,7 @@ rd_quit
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 rd_open_ciaa_resource
 	lea	CIAA_resource_name(pc),a1
@@ -4048,7 +4060,7 @@ rd_open_ciaa_resource_skip
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 rd_open_ciab_resource
 	lea	CIAB_resource_name(pc),a1
@@ -4073,7 +4085,7 @@ rd_open_ciab_resource_skip
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 rd_open_icon_library
 	lea	icon_library_name(pc),a1
@@ -4095,7 +4107,7 @@ rd_open_icon_library_ok
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 rd_create_serial_message_port
 	CALLEXEC CreateMsgPort
@@ -4125,7 +4137,7 @@ rd_init_serial_io
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 rd_open_serial_device
 	lea	serial_device_name(pc),a0
@@ -4148,7 +4160,7 @@ rd_open_serial_device_ok
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code/Error-Code
+; d0.l	... Rückgabewert: Return-Code/Error-Code
 	CNOP 0,4
 rd_alloc_cleared_sprite_data
 	moveq	#sprite_pointer_data_size,d0
@@ -4169,7 +4181,7 @@ rd_alloc_cleared_sprite_data_ok
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code/Error-Code
+; d0.l	... Rückgabewert: Return-Code/Error-Code
 	CNOP 0,4
 sf_alloc_screen_color_table
 	tst.w	rd_arg_screenfader_enabled(a3)
@@ -4192,7 +4204,7 @@ sf_alloc_screen_color_table_ok
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code/Error-Code
+; d0.l	... Rückgabewert: Return-Code/Error-Code
 	CNOP 0,4
 sf_alloc_screen_color_cache
 	tst.w	rd_arg_screenfader_enabled(a3)
@@ -4257,7 +4269,8 @@ rd_get_demofile_name
 	tst.w	rd_arg_random_enabled(a3)
 	bne.s	rd_get_fixed_entry
 rd_get_random_entry_loop
-	move.w	adl_entries_number(a3),d1
+	moveq	#0,d2
+	move.w	adl_entries_number(a3),d2
 	bsr	rd_get_random_entry
 	mulu.w	#playback_queue_entry_size,d0 ; Offset in Puffer berechnen
 	move.l	adl_entries_buffer(a3),a0
@@ -4336,21 +4349,21 @@ rd_check_demofile_play_state_ok
 
 
 ; Input
-; d1.w	... Anzahl der Einträge
+; d2.l	... Anzahl der Einträge
 ; Result
 ; d0.l	... Rückgabewert: Zufallswert für Offset
 	CNOP 0,4
 rd_get_random_entry
 	move.w	_CUSTOM+VHPOSR,d0	; f(x)
 	mulu.w	_CUSTOM+VHPOSR,d0	; f(x)*a
-	move.w	_CUSTOM+VHPOSR,d2
-	swap	d2
-	move.b	_CIAA+CIATODLOW,d2
-	lsl.w	#8,d2
-	move.b	_CIAB+CIATODLOW,d2	; b
-	add.l	d2,d0			; (f(x)*a)+b
+	move.w	_CUSTOM+VHPOSR,d1
+	swap	d1
+	move.b	_CIAA+CIATODLOW,d1
+	lsl.w	#8,d1
+	move.b	_CIAB+CIATODLOW,d1	; b
+	add.l	d1,d0			; (f(x)*a)+b
 	and.l	#$0000ffff,d0		; Nur Low-Word
-	divu.w	d1,d0			; f(x+1) = [(f(x)*a)+b]/mod rp_entries_number
+	divu.w	d2,d0			; f(x+1) = [(f(x)*a)+b]/mod rp_entries_number
 	swap	d0			; Rest der Division = Zufallsoffset
 	ext.l	d0
 	rts
@@ -4358,7 +4371,7 @@ rd_get_random_entry
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 rd_open_demofile
 	move.l	rd_demofile_path(a3),a0
@@ -4396,7 +4409,7 @@ rd_close_demofile
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code/Error-Code
+; d0.l	... Rückgabewert: Return-Code/Error-Code
 	CNOP 0,4
 rd_check_demofile_header
 	cmp.l	#MAGIC_COOKIE,rd_demofile_MAGIC_COOKIE(a3)
@@ -4441,7 +4454,7 @@ rd_copy_characters_loop
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 rd_set_new_current_dir
 	lea	rd_demo_dir_path(pc),a0
 	move.l	a0,d1			; Zeiger auf Puffer für Pfadnamen
@@ -4486,7 +4499,7 @@ rd_get_prerunscript_path_save
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code/Error-Code
+; d0.l	... Rückgabewert: Return-Code/Error-Code
 	CNOP 0,4
 rd_check_prerunscript_path
 	move.l	rd_prerunscript_path(a3),d0
@@ -4515,7 +4528,7 @@ rd_check_prerunscript_path_skip
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 rd_execute_prerunscript
 	move.l	rd_prerunscript_path(a3),d0
@@ -4883,7 +4896,7 @@ rd_turn_off_fast_memory_proceed2
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 rd_load_demofile
 	move.l	rd_demofile_path(a3),d1
@@ -4904,7 +4917,7 @@ rd_load_demofile_ok
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 rd_check_whdloadfile
 	move.l	rd_demofile_seglist(a3),a0
@@ -5082,12 +5095,19 @@ adl_wait_drives_motor
 
 	CNOP 0,4
 rd_init_timer_start
+	moveq	#0,d1
 	move.w	rd_play_duration(a3),d1
 	move.w	d1,rd_timer_delay(a3)
-	bne	rp_create_output_string
+	beq.s	rd_check_queue_playtime
+	bra	rp_create_output_string
+	CNOP 0,4
+rd_check_queue_playtime
 	move.l	rd_demofile_path(a3),a0
 	add.w	pqe_playtime(a0),d1
-	bne	rp_create_output_string
+	beq.s	rd_init_timer_start_quit
+	bra	rp_create_output_string
+	CNOP 0,4
+rd_init_timer_start_quit
 	rts
 
 
@@ -5219,7 +5239,7 @@ rd_downgrade_cpu
 rd_check_vbr1
 	tst.l	rd_old_vbr(a3)
 	beq.s	rd_check_060_cpu1
-	moveq	#0,d1
+	moveq	#0,d0
 	lea	rd_write_vbr(pc),a5
 	CALLLIBS Supervisor		; VBR auf $000000 zurücksetzen
 rd_check_060_cpu1
@@ -5232,14 +5252,14 @@ rd_check_060_cpu1
 	bne.s	rd_disable_060_caches
 	or.w	#CACR060F_FIC+CACR060F_EIC,d1 ; 1/2 Instruction-Cache an
 rd_disable_060_caches
-	lea	rd_060_caches_off(pc),a5
+	lea	rd_060_set_cacr(pc),a5
 	CALLLIBS Supervisor
 	move.l	d0,rd_old_cacr(a3)
 	lea     rd_old_mmu_registers(pc),a1
 	lea	rd_040_060_mmu_off(pc),a5
 	CALLLIBS Supervisor
 	moveq	#0,d1			; Alle Bits in PCR-Register löschen
-	lea	rd_060_superscalar_off(pc),a5
+	lea	rd_060_set_pcr(pc),a5
 	CALLLIBS Supervisor
 	move.l	d0,rd_old_060_pcr(a3)
 	rts
@@ -5514,7 +5534,7 @@ rd_upgrade_cpu
 	CNOP 0,4
 rd_restore_vbr
 	move.l	_SysBase(pc),a6
-	move.l	rd_old_vbr(a3),d1
+	move.l	rd_old_vbr(a3),d0
 	beq.s	rd_check_060_cpu2
 	lea	rd_write_vbr(pc),a5
 	CALLEXEC Supervisor
@@ -5523,10 +5543,10 @@ rd_check_060_cpu2
 	bpl.s	rd_enable_caches_mmu
 ; ** 68060 **
 	move.l	rd_old_060_pcr(a3),d1
-	lea	rd_060_superscalar_on(pc),a5
+	lea	rd_060_set_pcr(pc),a5
 	CALLLIBS Supervisor
 	move.l	rd_old_cacr(a3),d1
-	lea	rd_060_caches_on(pc),a5
+	lea	rd_060_set_cacr(pc),a5
 	CALLLIBS Supervisor
 	lea	rd_old_mmu_registers(pc),a1
 	lea	rd_040_060_mmu_on(pc),a5
@@ -5818,7 +5838,7 @@ rd_restore_current_dir
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 rd_check_queue
 	move.l	adl_entries_buffer(a3),a0
@@ -5867,7 +5887,7 @@ rd_deactivate_queue_loop
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 rd_check_user_break
 	moveq	#0,d0			; Keine neuen Signale
@@ -5907,7 +5927,7 @@ rd_reset_demo_variables_skip2
 
 ; Input
 ; Result
-; d0.l	Rückgabewert: Return-Code
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 rd_check_arg_loop_enabled
 	tst.w	rd_arg_loop_enabled(a3)
@@ -5972,14 +5992,14 @@ rd_close_icon_library
 ; **** Exception-Routinen ****
 
 ; Input
-; d1.l	... neuer Inhalt von VBR
+; d0.l	... neuer Inhalt von VBR
 ; Result
 ; d0	... Kein Rückgabewert
 	CNOP 0,4
 rd_write_vbr
 	or.w	#SRF_I0+SRF_I1+SRF_I2,SR ; Level-7-Interruptebene
 	nop
-	movec.l d1,VBR
+	movec.l d0,VBR
 	nop
 	rte
 
@@ -5990,7 +6010,7 @@ rd_write_vbr
 ; d0.l	... Rückgabewert: alter Inhalt von CACR
 	MC68040
 	CNOP 0,4
-rd_060_caches_off
+rd_060_set_cacr
 	or.w	#SRF_I0+SRF_I1+SRF_I2,SR ; Level-7-Interruptebene
 	nop
 	movec.l CACR,d0
@@ -6089,26 +6109,12 @@ rd_030_mmu_off
 ; d0.l	... alter Inhalt von PCR
 	MC68040
 	CNOP 0,4
-rd_060_superscalar_off
+rd_060_set_pcr
 	or.w	#SRF_I0+SRF_I1+SRF_I2,SR ;Level-7-Interruptebene
 	nop
 	DC.L	$4e7a0808		; movec.l PCR,d0: Alter Inhalt
 	nop
 	DC.L	$4e7b1808		; movec.l d1,PCR: Neuer Inhalt
-	nop
-	rte
-
-
-; Input
-; d1.l	... alter Inhalt von PCR
-; Result
-; d0	... Kein Rückgabewert
-	MC68040
-	CNOP 0,4
-rd_060_superscalar_on
-	or.w	#SRF_I0+SRF_I1+SRF_I2,SR ; Level-7-Interruptebene
-	nop
-	DC.L	$4e7b1808		; movec.l d1,PCR
 	nop
 	rte
 
@@ -6167,22 +6173,6 @@ rd_030_mmu_on
 	rte
 
 
-; Input
-; d1.l	... alter Inhalt von CACR
-; Result
-; d0	... Kein Rückgabewert
-	MC68040
-	CNOP 0,4
-rd_060_caches_on
-	or.w	#SRF_I0+SRF_I1+SRF_I2,SR ; Level-7-Interruptebene
-	nop
-	CPUSHA	BC			; Instruction/Data/Branch-Caches flushen
-	nop
-	movec.l d1,CACR
-	nop
-	rte
-
-
 ; **** Reset-Programm ****
 	MC68020
 	CNOP 0,4
@@ -6212,13 +6202,13 @@ rp_proceed
 	CALLLIBS AllocAbs		; Speicher nochmals reservieren
 	tst.l	d0
 	bne.s	rp_skip2
-	move.w	#rp_color_error,d3
+	move.l	#rp_color_error,d3
 	bsr	rp_screen_colour_flash
 	bsr	rp_clear_cool_capture
 	bra.s	rp_quit
 	CNOP 0,4
 rp_skip2
-	move.w	#rp_color_okay,d3
+	move.l	#rp_color_okay,d3
 	bsr	rp_screen_colour_flash
 	bsr	rp_restore_custom_cool_capture
 	bsr	rp_init_custom_exceptions
@@ -6228,7 +6218,7 @@ rp_quit
 
 
 ; Input
-; d7.w	... Anzahl der Rasterzeilen
+; d7.l	... Anzahl der Rasterzeilen
 ; Result
 ; d0	... Kein Rückgabewert
 	CNOP 0,4
@@ -6275,6 +6265,9 @@ rp_stop_timer
   	bra	rp_write_timer
 
 
+; Input
+; d1.l	... Timer-Wert
+; d0	... Kein Rückgabewert
 	CNOP 0,4
 rp_create_output_string
 	lea	rp_output_string(pc),a2
@@ -6284,21 +6277,20 @@ rp_create_output_string
 	move.l	a2,a0
 	moveq	#os_checksum-output_string,d7 ; Anzahl der ASCII-Zeichen über die die Checksumme gebildet werden soll
 	bsr	rp_update_output_checksum
-	move.w	d0,d1			; Dezimalzahl
+	move.l	d0,d1			; Dezimalzahl
 	bsr.s	rp_dec_to_hex
-	move.w	d0,d1			; Hexzahl
+	move.l	d0,d1			; Hexzahl
 	lea	os_checksum(a2),a0
 	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
 	bra.s	rp_hex_to_ascii
 
 
 ; Input
-; d1.w	... Dezimalzahl
+; d1.l	... Dezimalzahl
 ; Result
-; d0.w	... Rückgabewert: Hexadezimalzahl & $ff
+; d0.l	... Rückgabewert: Hexadezimalzahl & $ff
 	CNOP 0,4
 rp_dec_to_hex
-	ext.l	d1
 	moveq	#0,d0			; Ergebnis = Hexadezialzahl
 	moveq	#16,d3			; Hexadezimalzahl-Basis
 	moveq	#0,d4			; 1. Nibble-Shiftwert
@@ -6311,21 +6303,20 @@ rp_dec_to_hex_loop
 	add.w	d2,d0			; Nibble eintragen
 	ext.l	d1			; Quotient auf 32 Bit erweitern
 	bne.s	rp_dec_to_hex_loop	; Solange Quotient nicht Null -> Schleife
-	and.w	#$00ff,d0		; Nur Bits 0-7 (lower Byte)
+	and.l	#$000000ff,d0		; Nur Bits 0-7 (lower Byte)
 	rts
 
 
 ; Input
-; d1.w	... Dezimalzahl
-; d7.w	... Anzahl der Stellen zum Umwandeln
 ; a0	... Stringadresse
+; d1.l	... Dezimalzahl
+; d7.l	... Anzahl der Stellen zum Umwandeln
 ; Result
 ; d0	... Kein Rückgabewert
 	CNOP 0,4
 rp_dec_to_ascii
-	ext.l	d1
 	lea	rp_dec_table(pc),a1	; Stellentabelle
-	lea	(a1,d7.w*4),a1		; Erste Zehnerpotenz in Stellentabelle ermitteln
+	lea	(a1,d7.l*4),a1		; Erste Zehnerpotenz in Stellentabelle ermitteln
 	subq.w	#1,d7			; wegen dbf
 rp_dec_to_ascii_loop1
 	moveq	#-1,d3			; Ziffer
@@ -6342,14 +6333,13 @@ rp_dec_to_ascii_loop2
 
 
 ; Input
-; d1.w	... Hexadezimalzahl
-; d7.w	... Anzahl der Stellen zum Umwandeln
 ; a0	... Zeiger auf String
+; d1.l	... Hexadezimalzahl
+; d7.l	... Anzahl der Stellen zum Umwandeln
 ; Result
 ; d0	... Kein Rückgabewert
 	CNOP 0,4
 rp_hex_to_ascii
-	ext.l	d1
 	add.l	d7,a0			; Zeiger auf Ende des Strings
 	subq.w	#1,d7			; wegen dbf
 rp_hex_to_ascii_loop
@@ -6368,10 +6358,10 @@ rp_hex_to_ascii_skip
 
 ; ** Checksumme aus den ersten 7 ASCII-Zeichen des Ausgabe-Strings bilden **
 ; Input
-; d7.w	... Anzahl der ASCII-Zeichen über die die Checksumme gebildet werden soll
 ; a0	... Zeiger auf String
+; d7.l	... Anzahl der ASCII-Zeichen über die die Checksumme gebildet werden soll
 ; Result
-; d0.w	... Rückgabewert: Checksumme
+; d0.l	... Rückgabewert: Checksumme
 	CNOP 0,4
 rp_update_output_checksum
 	moveq	#0,d0			; Checksumme
@@ -6381,12 +6371,13 @@ rp_update_output_checksum_loop
 	move.b	(a0)+,d1		; ASCII-Wert
 	add.w	d1,d0
 	dbf	d7,rp_update_output_checksum_loop
+	ext.l	d0
 	rts
 
 
 	CNOP 0,4
 rp_set_timer
-	CALLLIBS Disable
+	CALLEXEC Disable
 	move.w	#$0100,d1		; 8 Bits pro Zeichen beim Schreiben, 1 Stoppbit
 	lea	rp_old_adkcon(pc),a0
 	move.w	ADKCONR(a5),(a0)	; Alten Inhalt von ADKCON retten
@@ -6397,7 +6388,7 @@ rp_set_timer
 
 	CNOP 0,4
 rp_write_timer
-	CALLLIBS Disable
+	CALLEXEC Disable
 	MOVEF.W	SERDATRF_TBE,d2
 	lea	rp_output_string(pc),a0
 	moveq	#output_string_size-1,d7 ; Anzahl der Bytes zum Schreiben
@@ -6416,7 +6407,7 @@ rp_write_timer_loop
 
 
 ; Input
-; d3.w	... RBG4-Farbwert
+; d3.l	... RBG4-Farbwert
 ; Result
 ; d0	... Kein Rückgabewert
 	CNOP 0,4
