@@ -50,20 +50,20 @@
 
                        What is the Amiga Demo Launcher?
 
-The Amiga Demo Launcher Version 2 (ADL2) is an app to replay file demos, or WHDLoad slave files from a playback queue which was created with the tool @{"Create Demo Playlist" LINK Chapter-2}. 
+The Amiga Demo Launcher Version 2 (ADL2) is an app to replay file intros/demos, or WHDLoad slave files of a playback queue which was created with the tool @{"Create Demo Playlist" LINK Chapter-2}.
 
 With the ADL2 single playback queue entries can be also created directly.
 
 So both programs work hand in hand.
 
-The ADL2 makes it possible for you to even replay many old OCS file demos on an AGA Amiga with a 68060 CPU, because it downgrades the machine if desired.
+The ADL2 makes it possible for you to even replay many old OCS file intros/cracktros on an AGA Amiga with a 68060 CPU, because it downgrades the machine if desired.
 
 Yulquen74 has created a @{"reset device" LINK Chapter-2-3-14} which can be used with the ADL2.
-Connected at the serial port of the Amiga, it counts down a given playtime and does a hardware reset if it reached the end value. After that, if the ADL2 is executed again, the next demo will be fetched out of the playback queue and gets played.
+Connected at the serial port of the Amiga, it counts down a given playtime and does a hardware reset if it reached the end value. After that, if the ADL2 is executed again, the next intro/demo will be fetched out of the playback queue and gets played.
 
 Yulquen74 has written a script called @{"Create Demo Playlist" LINK Chapter-2} for an easy handling to create playlists which can be used by the ADL2.
 
-Hence the ADL2 allows you to use your Amiga as an entertainment machine which plays each demo out of the playback queue automatically while you can lean back, have a beer and enjoy the show. ;-)
+Hence the ADL2 allows you to use your Amiga as an entertainment machine which plays each intro/demo out of the playback queue automatically while you can lean back, have a beer and enjoy the show. ;-)
 
 For any questions, tips & hints refer to our Support Forum:
 
@@ -72,7 +72,7 @@ For any questions, tips & hints refer to our Support Forum:
 
 As usual there are some greetings to the following people:
 
-First of all 4pLaY who had the general idea for this project and thanks for his patience testing so many demos with the ADL2.
+First of all 4pLaY who had the general idea for this project and thanks for his patience testing so many intros/demos with the ADL2.
 
 Additional thanks go to Yulquen74 creating the tool @{"Create Demo Playlist" LINK Chapter-2} to support the ADL2.
 
@@ -124,17 +124,17 @@ To call it any time independent from this directory you may copy it into your C 
 @NODE Chapter-1-4-1 "ADL2: How to use / The bootable disk version"
 @{B}The bootable disk version@{UB}
 
-This version is especially for the cases where you want to play old crunched OCS demos which are known to corrupt the system, because they use absolute memory addresses or don't set the AGA hardware to default OCS values.
-Running them from the boot disk out of the startup-sequence minimizes the  negative effects on the OS, because at this state the OS uses less memory than the Workbench.
+This version is especially for the cases where you want to play old crunched OCS intros/demos which are known to corrupt the system, because they use absolute memory addresses or don't set the AGA hardware to default OCS values.
+Running them from the boot disk out of the startup-sequence minimizes the negative effects on the OS, because at this state the OS uses less memory than the Workbench.
 
-It is recommended, to use the bootable disk version only for old OCS demos, because newer AGA demos, using the FPU or the MMU, may need the correct FPU/MMU configuration which is only guaranteed if you boot  from your HD.
+It is recommended, to use the bootable disk version only for old OCS intros/cracktros, because newer AGA intros/demos, using the FPU or the MMU, may need the correct FPU/MMU configuration which is only guaranteed if you boot from your HD.
 The 68040/060 library versions or the SetPatch command version used on the boot disk may differ and create a different FPU/MMU configuration.
 
 Please note, that by a disk boot, the possibility to load OS patches into memory is not supported. The boot disk startup-sequence is just the minimum that is required for a boot sequence.
-For OCS demos this is enough and the versions of the 68040/060 libraries are less important.
+For OCS intros/demos this is enough and the versions of the 68040/060 libraries are less important.
 
-After you have booted the disk, a file requester opens to create the first  entries of the playback queue if there are no entries yet.
-The title bar of the requester will tell you how many demos you can select to be loaded.
+After you have booted the disk, a file requester opens to create the first entries of the playback queue if there are no entries yet.
+The title bar of the requester will tell you how many intros/demos you can select to be loaded.
 
 At any time you can exit the file requester with the "Quit" gadget.
 
@@ -159,7 +159,7 @@ You have the possibility to type in the filename directly or select it by the mo
 
 After you have selected a file or several files you click the gadget "Use".
 
-Then the start mode requester opens and you have the choice between the modes @{"OCS vanilla" LINK Chapter-1-7-2-1}, @{"AGA vanilla" LINK Chapter-1-7-2-2} and @{"Turbo" LINK Chapter-1-7-2-3}.
+Then the run mode requester opens and you have the choice between the modes @{"OCS vanilla" LINK Chapter-1-7-2-1}, @{"AGA vanilla" LINK Chapter-1-7-2-2} and @{"Turbo" LINK Chapter-1-7-2-3}.
 
 After you made your choice, the file requester opens again, if not the maximum number files were selected to use already. The title bar of the file requester informs you how many files are left to be selected.
 
@@ -172,29 +172,27 @@ The default values of the ADL2 called from the startup-sequence are without any 
 @ENDNODE
 
 
-@NODE Chapter-1-4-2 "ADL2: How to use / The lha archive  version"
+@NODE Chapter-1-4-2 "ADL2: How to use / The lha archive version"
 @{B}The lha archive version@{UB}
 
-For all cases apart from @{"playing old OCS demos" LINK Chapter-1-4-1} you have the lha archive version.
+For all cases apart from @{"playing old OCS intros/cracktros" LINK Chapter-1-4-1} you have the lha archive version.
 The ADL2 is a pure Shell command and doesn't support a start from the Workbench with an icon. Read @{"here" LINK Chapter-1-5} more about the arguments.
 
-The default values of the ADL2 called without any arguments are unlimited playtime, no screen fader, no reset after the demo is quit  and a maximum of 10 entries in the playback queue.
+The default values of the ADL2 called without any arguments are unlimited playtime, no screen fader, no reset after the intro/demo is quit and a maximum of 10 entries in the playback queue.
 The entries of the playback queue are created via the file requester.
 More details can be found @{"here" LINK Chapter-1-4-1}.
 
 
-The intended implementation of ADL2 when used with the tool @{"Create Demo Playlist" LINK Chapter-2} is executing it from the startup-sequence like this:
+The intended implementation of ADL2 when used with the tool @{"Create Demo Playlist" LINK Chapter-2} is executing it from the user-startup like this:
 
 C:RSE-ADL2 SOFTRESET >NIL:
 
-The line from above should be inserted after the Setpatch command, because it is important, that SetPatch is run before to enlighten the AGA possibilities and initializing the 68040/060 properly.
-The ADL2 relies on these enabled AGA 68040/060 possibilities. Don't try to run the ADL2 without the SetPatch command executed before. Even on an AGA machine, the ADL2 would not detect it as such one and fail with an error message.
+With this implementation, any pending intro/demo in the ADL2 playback queue will be played during boot, and if the intro/demo exits by itself or by user interaction, the ADL2 will then do a software reset.
 
-With this implementation, any pending demo in the ADL2 playback queue will be started during boot, and if the demo exits by itself or by user interaction, the ADL2 will then do a software reset.
+For intros/demos without automatic exit, the @{"reset device" LINK Chapter-2-3-14} may be used, which will do a hardware reset instead.
+During the following boot the next item will be started, and so on, until all entries of the playback queue are played.
 
-For demos without automatic exit, the @{"reset device" LINK Chapter-2-3-14} may be used, which will do a hardware reset instead. During the following boot the next item will be started, and so on, until the playback queue is empty.
-
-When the playback queue is empty, the command from  above will not affect the normal booting.
+When the playback queue is empty, the file requester will open for new entries.
 @ENDNODE
 
 
@@ -203,9 +201,9 @@ When the playback queue is empty, the command from  above will not affect the no
 
 All arguments are optional. If no arguments are given, a file requester will open for a file selection and the entries maximum of 10 files will be used as default if there is no existing playback queue in memory.
 
-If there is already an existing playback queue, the first entry of the playback queue is played . If called again, the ADL2 will play the next sequential entry if no @{"RANDOM" LINK Chapter-1-5-12} argument was used.
+If there is already an existing playback queue, the first entry of the playback queue is played . If called again, the ADL2 will play the next sequential entry if no @{"RANDOM" LINK Chapter-1-5-14} argument was used.
 
-The ADL2 consists of a main, a demo charger and a demo player part.
+The ADL2 consists of a main, a intro/demo charger, a queue handler and a intro/demo player part.
 
 
 Main arguments:
@@ -215,7 +213,7 @@ Main arguments:
   @{" REMOVE " LINK Chapter-1-5-2}
 
 
-Arguments of the demo charger:
+Arguments of the intro/demo charger:
 
   @{" MAXENTRIES " LINK Chapter-1-5-3}
 
@@ -223,31 +221,37 @@ Arguments of the demo charger:
 
   @{" PLAYLIST " LINK Chapter-1-5-5}
 
-  @{" CLEARQUEUE " LINK Chapter-1-5-6}
+
+Arguments of the queue handler:
+
+  @{" SHOWQUEUE " LINK Chapter-1-5-6}
+
+  @{" EDITENTRY " LINK Chapter-1-5-7}
+
+  @{" EDITQUEUE " LINK Chapter-1-5-8}
+
+  @{" CLEARQUEUE " LINK Chapter-1-5-9}
+
+  @{" RESETQUEUE " LINK Chapter-1-5-10}
 
 
+Arguments of the intro/demo player:
 
-Arguments of the demo player:
+  @{" PLAYENTRY " LINK Chapter-1-5-11}
 
-  @{" SHOWQUEUE " LINK Chapter-1-5-7}
+  @{" PRERUNSCRIPT " LINK Chapter-1-5-12}
 
-  @{" PLAYENTRY " LINK Chapter-1-5-8}
+  @{" MINS/SECS " LINK Chapter-1-5-13}
 
-  @{" RESETQUEUEPOS " LINK Chapter-1-5-9}
+  @{" RANDOM " LINK Chapter-1-5-14}
 
-  @{" PRERUNSCRIPT " LINK Chapter-1-5-10}
+  @{" ENDLESS " LINK Chapter-1-5-15}
 
-  @{" MINS/SECS " LINK Chapter-1-5-11}
+  @{" LOOP " LINK Chapter-1-5-16}
 
-  @{" RANDOM " LINK Chapter-1-5-12}
+  @{" SCREENFADER " LINK Chapter-1-5-17}
 
-  @{" ENDLESS " LINK Chapter-1-5-13}
-
-  @{" LOOP " LINK Chapter-1-5-14}
-
-  @{" FADER " LINK Chapter-1-5-15}
-
-  @{" SOFTRESET " LINK Chapter-1-5-16}
+  @{" SOFTRESET " LINK Chapter-1-5-18}
 @ENDNODE
 
 
@@ -261,141 +265,156 @@ Displays a short description of all arguments.
 @NODE Chapter-1-5-2 "ADL2: List of arguments / REMOVE"
 @{B}REMOVE@{UB}
 
-The ADL2 will be removed from memory regardless of the fact that not all demos from the playback queue are played.
+The ADL2 will be removed from memory regardless of the fact that not all intros/demos of the playback queue are played.
 @ENDNODE
 
 
 @NODE Chapter-1-5-3 "ADL2: List of arguments / MAXENTRIES"
 @{B}MAXENTRIES@{I} number@{UI}@{UB}
 
-The argument  is given with a number which ranges from 1 to 99. This argument can be used only for the first time the ADL2 is called.
+The argument is given with a number which ranges from 1 to 99. This argument can be used only for the first time the ADL2 is called.
 
 Any other time, this argument will be ignored, because the maximum of entries of the playback queue is initialized once at the beginning and can't be changed after that.
 
-The higher the number of entries is, the more CHIP memory will be allocated for the playback queue.
+The higher the number of entries is, the more chip memory will be allocated for the playback queue.
 @ENDNODE
 
 
 @NODE Chapter-1-5-4 "ADL2: List of arguments / NEWENTRY"
 @{B}NEWENTRY@{UB}
 
-The argument NEWENTRY gives the user the chance to add a custom entry with the file requester to the playback queue with the ADL2 independent from a playlist created by the tool @{"Create Demo Playlist" LINK Chapter-2}.
+The argument gives the user the chance to add a custom entry with the file requester to the playback queue with the ADL2 independent of a playlist created by the tool @{"Create Demo Playlist" LINK Chapter-2}.
 @ENDNODE
 
 
 @NODE Chapter-1-5-5 "ADL2: List of arguments / PLAYLIST"
 @{B}PLAYLIST @{I}file path@{UI}@{UB}
 
-The argument PLAYLIST needs a full file path from where to find the playlist  which should be parsed and its entries copied into the playback queue. The keyword PLAYLIST must be given.
+The argument needs a full file path from where to find the playlist which should be parsed and its entries copied into the playback queue. The keyword PLAYLIST is mandatory.
 @ENDNODE
 
 
-@NODE Chapter-1-5-6 "ADL2: List of arguments / CLEARQUEUE"
-@{B}CLEARQUEUE@{UB}
-
-The argument CLEARQUEUE clears the content of the playback queue.
-@ENDNODE
-
-
-@NODE Chapter-1-5-7 "ADL2: List of arguments / SHOWQUEUE"
+@NODE Chapter-1-5-6 "ADL2: List of arguments / SHOWQUEUE"
 @{B}SHOWQUEUE@{UB}
 
-The argument SHOWQUEUE prints the content of the playback queue by
+The argument prints the content of the playback queue by
 
-@{I}entry number, demo name, play state@{UI}
+@{I}entry number, intro/demo name, play state@{UI}
 
 and informs about the free number of entries left in the playback queue.
 @ENDNODE
 
 
-@NODE Chapter-1-5-8 "ADL2: List of arguments / PLAYENTRY"
+@NODE Chapter-1-5-7 "ADL2: List of arguments / EDITENTRY"
+@{B}EDITENTRY@{UB} @{I}@{B}number@{UI}@{UB}
+
+With this argument you edit certain entries of the playback queue, change the run mode and the play state.
+@ENDNODE
+
+
+@NODE Chapter-1-5-8 "ADL2: List of arguments / EDITQUEUE"
+@{B}EDITQUEUE@{UB}
+
+With this argument you can edit all entries of the playback queue and change the run mode and the playstate.
+@ENDNODE
+
+
+@NODE Chapter-1-5-9 "ADL2: List of arguments / CLEARQUEUE"
+@{B}CLEARQUEUE@{UB}
+
+The argument clears the content of the playback queue.
+@ENDNODE
+
+
+@NODE Chapter-1-5-10 "ADL2: List of arguments / RESETQUEUE"
+@{B}RESETQUEUE@{UB}
+
+The argument resets the entry pointer of the playback queue to zero and resets all entry play states.
+@ENDNODE
+
+
+@NODE Chapter-1-5-11 "ADL2: List of arguments / PLAYENTRY"
 @{B}PLAYENTRY @{I}@{B}number@{UI}@{UB}
 
-With this argument a certain demo out of the playback queue can be played. The number ranges from 1 to 10 for a default maximum value or from 1 till @{I}numberr@{UI} if set by the argument @{"MAXENTRIES" LINK Chapter-1-5-3}.
+With this argument a certain intro/demo out of the playback queue can be played. The number ranges from 1 to 10 for a default maximum value or from 1 to @{I}number@{UI} if set by the argument @{"MAXENTRIES" LINK Chapter-1-5-3}.
 @ENDNODE
 
 
-@NODE Chapter-1-5-9 "ADL2: List of arguments / RESETQUEUEPOS"
-@{B}RESETQUEUEPOS@{UB}
-
-The argument RESETQUEUEPOS resets the entry pointer of the playback queue to zero and all entry tags are cleared.
-@ENDNODE
-
-
-@NODE Chapter-1-5-10 "ADL2: List of arguments / PRERUNSCRIPT"
+@NODE Chapter-1-5-12 "ADL2: List of arguments / PRERUNSCRIPT"
 @{B}PRERUNSCRIPT @{I}file path@{UI}@{UB}
 
-A prerun Amiga DOS script file can be run before the demo starts. The full file path where to find the script is needed and can't be longer than 63 characters. The keyword PRERUNSCRIPT must be given.
+A prerun Amiga DOS script file can be run before the intro/demo starts. The full file path where to find the script is needed and can't be longer than 63 characters. The keyword PRERUNSCRIPT is mandatory.
 
-The script can contain programs or tools to make some demos run better, like OxyPatcher or similar ones.
+The script can contain programs or tools to make some intros/demos run better, like OxyPatcher or similar ones.
 
-This argument has priority over an argument from the playback queue.
+This argument has priority over an argument of the playback queue.
 @ENDNODE
 
 
-@NODE Chapter-1-5-11 "ADL2: List of arguments / MINS/SECS"
+@NODE Chapter-1-5-13 "ADL2: List of arguments / MINS/SECS"
 @{B}MIN/MINS @{I}number@{UI}@{UB}
 @{B}SEC/SECS @{I}number@{UI}@{UB}
 
-With the argument MIN/MINS and SEC/SECS you set the duration of the demo to be shown and start the timer of the @{"reset device" LINK Chapter-2-3-14}. The connected reset device at the serial port will do a hardware reset after the playtime is over.
+With these arguments you set the duration of the intro/demo to be shown and start the timer of the @{"reset device" LINK Chapter-2-3-14}.
+The connected reset device at the serial port will do a hardware reset after the playtime is over.
 
-If the demos were transferred with own duration values via a playlist into the playback queue, this given argument has priority over the playback queue value.
+If the intros/demos were transferred with own duration values via a playlist into the playback queue, this given argument has priority over the playback queue value.
 
 You can give this argument in minutes, in seconds or as combined values.
 
 The minimum playtime could be given like:
 
-"MIN 1 SECS 0"
-"MIN 1"
-"MIN 0 SECS 1"
-"SEC 1"
+"MINS 1 SECS 0"
+"MINS 1"
+"MINS 0 SECS 1"
+"SECS 1"
 
 The maximum playtime is 99 minutes and 59 seconds.
 @ENDNODE
 
 
-@NODE Chapter-1-5-12 "ADL2: List of arguments / RANDOM"
+@NODE Chapter-1-5-14 "ADL2: List of arguments / RANDOM"
 @{B}RANDOM@{UB}
 
-The argument RANDOM uses a random function to select an entry out of the playback queue. Because of the fact that all played demos will be tagged, no demo will be played twice.
+The argument uses a random function to select an entry out of the playback queue. Because of the fact that all played intros/demos will be tagged, no intro/demo will be played twice.
 @ENDNODE
 
 
-@NODE Chapter-1-5-13 "ADL2: List of arguments / ENDLESS"
+@NODE Chapter-1-5-15 "ADL2: List of arguments / ENDLESS"
 @{B}ENDLESS@{UB}
 
-The argument ENDLESS prevents that the playback queue and all resident routines of the ADL2 are removed out of memory if there are no more demos left to play.
+The argument prevents that the playback queue and all resident routines of the ADL2 are removed out of memory if there are no more intros/demos left to play.
 
-The ADL2 will clear all tags of the demos in the playback queue and restart with the first entry.
+The ADL2 will clear all tags of the intros/demos in the playback queue and restart with the first entry.
 @ENDNODE
 
 
-@NODE Chapter-1-5-14 "ADL2: List of arguments / LOOP"
+@NODE Chapter-1-5-16 "ADL2: List of arguments / LOOP"
 @{B}LOOP@{UB}
 
-The argument LOOP prevents that the ADL2 returns to the Shell/Workbench after the demo is quit and will automatically select the next entry out of the playback queue. Normally this will be the sequential entry.
+The argument prevents that the ADL2 returns to the Shell/Workbench after the intro/demo is quit and will automatically select the next entry out of the playback queue. Normally this will be the sequential entry.
 
-Combined with the argument @{"RANDOM" LINK Chapter-1-5-12} this will be a random entry.
+Combined with the argument @{"RANDOM" LINK Chapter-1-5-14} this will be a random entry.
 
 You can always break a loop with the keys CTRL-C.
 @ENDNODE
 
 
-@NODE Chapter-1-5-15 "ADL2: List of arguments / FADER"
-@{B}FADER@{UB}
+@NODE Chapter-1-5-17 "ADL2: List of arguments / SCREENFADER"
+@{B}SCREENFADER@{UB}
 
-The argument FADER fades out the active screen to black before the demo starts.
+The argument fades out the active screen to black before the intro/demo starts.
 
 @{B}Caution: In most cases the active screen is the Workbench screen and there will be no system messages/requesters visible anymore.@{UB}
 
-After the demo is quit by the user the active screen is faded in from black to the original colours.
+After the intro/demo is quit by the user the active screen is faded in from black to the original colours.
 @ENDNODE
 
 
-@NODE Chapter-1-5-16 "Amiga Demo Launcher Version  2: List of the ADL2 arguments / SOFTRESET"
+@NODE Chapter-1-5-18 "Amiga Demo Launcher Version 2: List of the ADL2 arguments / SOFTRESET"
 @{B}SOFTRESET@{UB}
 
-The argument SOFTRESET does an automatic software reset after the running demo was quit manually regardless of any timer settings of the @{"reset device" LINK Chapter-2-3-14}.
+The argument does an automatic software reset after the running intro/demo was quit manually regardless of any timer settings of the @{"reset device" LINK Chapter-2-3-14}.
 @ENDNODE
 
 
@@ -430,7 +449,7 @@ Or you want to add a single entry in the playback queue:
 1> RSE-ADL2 @{"NEWENTRY" LINK Chapter-1-5-4}
 
 
-Fine, you think, but I want to start the show and replay only one demo of the playback queue.
+Fine, you think, but I want to start the show and replay only one intro/demo of the playback queue.
 
 Just to play one demo:
 
@@ -439,40 +458,40 @@ Just to play one demo:
 
 Or if you want to play entry number 3 you could do this:
 
-1> RSE-ADL2 @{"PLAYENTRY" LINK Chapter-1-5-8} 3
+1> RSE-ADL2 @{"PLAYENTRY" LINK Chapter-1-5-11} 3
 
 
-Or if you didn't select any playtime values while you created the playlist with @{"Create Demo Playlist" LINK Chapter-2}, call all demos in a loop:
+Or if you didn't select any playtime values while you created the playlist with @{"Create Demo Playlist" LINK Chapter-2}, call all intros/demos in a loop:
 
-1> RSE-ADL2 @{"LOOP" LINK Chapter-1-5-14}
-
-
-Or you decide to play the demos randomly:
-
-1> RSE-ADL2 @{"RANDOM" LINK Chapter-1-5-12}
+1> RSE-ADL2 @{"LOOP" LINK Chapter-1-5-16}
 
 
-Or if you didn't select any playtime values while you created the playlist with Create Demo Playlist, play all demos in a loop randomly:
+Or you decide to play the intros/demos randomly:
 
-1> RSE-ADL2 @{"LOOP" LINK Chapter-1-5-14} @{"RANDOM" LINK Chapter-1-5-12}
-
-
-Or you want to play the demos endlessly that after the last demo is played and restart with the first entry:
-
-1> RSE-ADL2 @{"ENDLESS" LINK Chapter-1-5-13}
+1> RSE-ADL2 @{"RANDOM" LINK Chapter-1-5-14}
 
 
-Or if you didn't select any playtime values while you created the playlist with @{"Create Demo Playlist" LINK Chapter-2}, play all demos in a loop endlessly:
+Or if you didn't select any playtime values while you created the playlist with Create Demo Playlist, play all intros/demos in a loop randomly:
 
-1> RSE-ADL2 @{"LOOP" LINK Chapter-1-5-14} @{"ENDLESS" LINK Chapter-1-5-13}
-
-
-Or if you didn't select any playtime values while you created the playlist with Create Demo Playlist, call all demos in a loop randomly and endlessly:
-
-1> RSE-ADL2 @{"LOOP" LINK Chapter-1-5-14} @{"RANDOM" LINK Chapter-1-5-12} @{"ENDLESS" LINK Chapter-1-5-13}
+1> RSE-ADL2 @{"LOOP" LINK Chapter-1-5-16} @{"RANDOM" LINK Chapter-1-5-14}
 
 
-Or you want to remove the ADL2 out of memory before all demos are played:
+Or you want to play the intros/demos endlessly that after the last intro/demo is played and restart with the first entry:
+
+1> RSE-ADL2 @{"ENDLESS" LINK Chapter-1-5-15}
+
+
+Or if you didn't select any playtime values while you created the playlist with @{"Create Demo Playlist" LINK Chapter-2}, play all intros/demos in a loop endlessly:
+
+1> RSE-ADL2 @{"LOOP" LINK Chapter-1-5-16} @{"ENDLESS" LINK Chapter-1-5-15}
+
+
+Or if you didn't select any playtime values while you created the playlist with Create Demo Playlist, call all intros/demos in a loop randomly and endlessly:
+
+1> RSE-ADL2 @{"LOOP" LINK Chapter-1-5-16} @{"RANDOM" LINK Chapter-1-5-14} @{"ENDLESS" LINK Chapter-1-5-15}
+
+
+Or you want to remove the ADL2 out of memory before all intros/demos are played:
 
 1> RSE-ADL2 @{"REMOVE" LINK Chapter-1-5-2}
 @ENDNODE
@@ -487,7 +506,7 @@ For those who are more interested in background information, here are some techn
 
     @{" How the ADL2 is nested in memory " LINK Chapter-1-7-2}
 
-    @{" Start modes " LINK Chapter-1-7-3}
+    @{" Run modes " LINK Chapter-1-7-3}
 @ENDNODE
 
 
@@ -500,8 +519,8 @@ If you use the RSE-ADL2 in a script you get these return values:
 Just what it says. Everything's fine.
 
 5 (WARN)
-- No more demos left to play from the playback queue
-- A demo was already played from the playlist queue
+- No more intros/demos of the playback queue are left to play
+- A intro/demo of the playback queue was already played
 - Playback queue is empty
 - Maximum entries for the playback queue reached
 
@@ -513,21 +532,21 @@ Any error that prevents an execution of the RSE-ADL2.
 @NODE Chapter-1-7-2 "ADL2: Technical details / How the ADL2 is nested in memory"
 @{B}How the ADL2 is nested in memory@{UB}
 
-The ADL2 is always nested in the upper space of chip memory. With this technique the ADL2 is safe and can't be overwritten by old nasty OCS demos which do not expect that there are more than 512KB or 1MB chip memory.
+The ADL2 is always nested in the upper space of chip memory. With this technique the ADL2 is safe and can't be overwritten by old nasty OCS intros/demos which do not expect that there are more than 512KB or 1MB chip memory.
 
 The ADL2 uses the Cool Capture vector of the Exec Base to stay resident in memory and to survive a reset.
 
-If there's a different program already using this vector, the ADL2 notices this and offers the user the choice whether this program should stay active and the ADL2 should not be installed or this peogram should be deactivated by the ADL2.
+If there's a different program already using this vector, the ADL2 notices this and offers the user the choice whether this program should stay active and the ADL2 should not be installed or this program should be deactivated by the ADL2.
 @ENDNODE
 
 
-@NODE Chapter-1-7-3 "ADL2: Technical details / Start modes"
-@{B}Start modes@{UB}
+@NODE Chapter-1-7-3 "ADL2: Technical details / Run modes"
+@{B}Run modes@{UB}
 
-The ADL2 has three start modes. "OCS vanilla" and "AGA vanilla" work like a degrader. Start mode "Turbo" leaves everything untouched.
+The ADL2 has three run modes. "OCS vanilla" and "AGA vanilla" work like a degrader. Run mode "Turbo" leaves everything untouched.
 
-For every start mode all important CUSTOM/CIA chip registers will be saved before the demo is played and restored after the demo returns.
-This ensures that demos which don't restore these registers properly will not freeze the system.
+For every run mode all important CUSTOM/CIA chip registers will be saved before the intro/demo is played and restored after the intro/demo returns.
+This ensures that intros/demos which don't restore these registers properly will not freeze the system.
 
   @{" OCS vanilla " LINK Chapter-1-7-3-1}
 
@@ -537,10 +556,10 @@ This ensures that demos which don't restore these registers properly will not fr
 @ENDNODE
 
 
-@NODE Chapter-1-7-3-1 "ADL2: Technical details / start modes / OCS vanilla"
+@NODE Chapter-1-7-3-1 "ADL2: Technical details / run modes / OCS vanilla"
 @{B}OCS vanilla@{UB}
 
-This mode is for old OCS demos mainly written for OCS machines like the Amiga 500 (late eighties/early nineties) ignoring the common programming guidelines:
+This mode is for old OCS intros/cracktros mainly written for OCS machines like a vanilla Amiga 500 (late eighties/early nineties) ignoring the common programming guidelines:
 
 - not using absolute memory addresses by a cruncher
 - not using absolute addresses itself
@@ -550,15 +569,15 @@ This mode is for old OCS demos mainly written for OCS machines like the Amiga 50
 
 AGA machines are degraded to be most compatible to a vanilla Amiga 500.
 
-The "OCS vanilla" start mode does the following:
+The "OCS vanilla" run mode does the following:
 
-Allocate all fast memory if available so that the demo is only loaded into chip memory and can only allocate chip memory itself.
-Some very old OCS demos don't expect that they could be loaded into fast memory and all data for the DMA be unaccessible. As a result, you won't hear any music and get a blanked display.
+Allocate all fast memory if available so that the intro/demo is only loaded into chip memory and can only allocate chip memory itself.
+Some very old OCS intros/cracktros from 1987 or early 1988 don't expect that they could be loaded into fast memory and all data for the DMA be unaccessible. As a result, you won't hear any music and get a blanked display.
 
-A two colour PAL 15 kHz lores screen with ECS/OCS bandwidth is opened in front of a potential graphic-card screen and all AGA registers are reset to OCS/ECS compatible values.
-Additionally the mouse pointer is blanked to avoid the vertical bar effect if a demo is played that doesn't turn off sprite DMA correctly.
+A two colour PAL 15 kHz lores screen is opened in front of a potential graphic-card screen and all AGA registers are reset to OCS/ECS compatible values.
+Additionally the mouse pointer is blanked to avoid the vertical bar effect if a intro/demo is played that doesn't turn off sprite DMA correctly.
 
-If the vector table base is moved into fast memory, the VBR register is moved to $00000000 so that old OCS demos can initialize their interrupts properly.
+If the vector table base is moved into fast memory, the VBR register is moved to $00000000 so that old OCS intros/cracktros can initialize their interrupts properly.
 
 These specific characteristics of 680x0 processors are disabled:
 
@@ -585,28 +604,27 @@ These specific characteristics of 680x0 processors are disabled:
 @ENDNODE
 
 
-@NODE Chapter-1-7-3-2 "ADL2: Technical details / start modes / AGA vanilla"
+@NODE Chapter-1-7-3-2 "ADL2: Technical details / run modes / AGA vanilla"
 @{B}AGA vanilla@{UB}
 
-This mode is for early AGA demos mainly written for vanilla AGA machines like the Amiga 1200 ignoring the common programming guidelines:
+This mode is for early AGA intros/demos mainly written for vanilla AGA machines like the Amiga 1200 ignoring the common programming guidelines:
 
 - not using absolute memory addresses by a cruncher
 - not using absolute addresses itself
-- not using self modifying code
 - not expecting that there could be a faster CPU than a 68020 with 14MHz
 - not expecting that fast memory could be available
 
 AGA 68030+ machines are degraded to be most compatible to a vanilla Amiga 1200.
 
-The "AGA vanilla" start mode does the following:
+The "AGA vanilla" run mode does the following:
 
-Allocate all fast memory if available so that the demo is only loaded into chip memory and can only allocate chip memory itself.
-Some old AGA demos don't expect that they could be loaded into fast memory and all data for the DMA be unaccessible. As a result, you won't hear any music and get a blanked display.
+Allocate all fast memory if available so that the intro/demo is only loaded into chip memory and can only allocate chip memory itself.
+Some old AGA intros/demos don't expect that they could be loaded into fast memory and all data for the DMA be unaccessible. As a result, you won't hear any music and get a blanked display.
 
-A two colour PAL 15 kHz lores screen with ECS/OCS bandwidth is opened in front of a potential graphic-card screen and all AGA registers are reset to OCS/ECS compatible values.
-Additionally the mouse pointer is blanked to avoid the vertical bar effect if a demo is played that doesn't turn off sprite DMA correctly.
+A two colour PAL 15 kHz lores screen is opened in front of a potential graphic-card screen and all AGA registers are reset to OCS/ECS compatible values.
+Additionally the mouse pointer is blanked to avoid the vertical bar effect if a intro/demo is played that doesn't turn off sprite DMA correctly.
 
-If the vector table base is moved into fast memory, the VBR register is moved to $0000000 that old OCS demos can initialize their interrupts properly.
+If the vector table base is moved into fast memory, the VBR register is moved to $0000000 that old intros can initialize their interrupts properly.
 
 These specific characteristics of the processors are disabled:
 
@@ -628,19 +646,19 @@ These specific characteristics of the processors are disabled:
 @ENDNODE
 
 
-@NODE Chapter-1-7-3-3 "ADL2: Technical details / start modes / Turbo"
+@NODE Chapter-1-7-3-3 "ADL2: Technical details / run modes / Turbo"
 @{B}Turbo@{UB}
 
-This mode is for OCS/ECS/AGA file demos, which don't have any problems with faster CPUs or available fast memory and observed common programming guidelines:
+This mode is for OCS/ECS/AGA file intros/demos, which don't have any problems with faster CPUs or available fast memory and observed common programming guidelines:
 
 - not using absolute memory addresses by a cruncher
 - absolute addresses itself
 - not using self modifying code
 
-The "Turbo" start mode does the following with your machine:
+The "Turbo" run mode does the following with your machine:
 
-A two colour PAL 15 kHz lores screen with ECS/OCS bandwidth is opened in front of a potential graphic-card screen and all AGA registers are reset to OCS/ECS compatible values.
-Additionally the mouse pointer is blanked to avoid the vertical bar effect if a demo is played that doesn't turn off sprite DMA correctly.
+A two colour PAL 15 kHz lores screen is opened in front of a potential graphic-card screen and all AGA registers are reset to OCS/ECS compatible values.
+Additionally the mouse pointer is blanked to avoid the vertical bar effect if a intro/demo is played that doesn't turn off sprite DMA correctly.
 @ENDNODE
 
 
@@ -651,7 +669,7 @@ During testing there were some problems in conjunction with the commodity
 @{B}Master Control Program (MCP)@{UB}.
 
 It seems the @{B}MCP@{UB} doesn't handle all ASL tags correctly if "ReqTools Patch" is enabled.
-This leads to the result that the negative button of the ADL2 file requester always shows the standard text "Cancel" and not "Quit" or "Reboot". Thanks to StingRay for finding this out.
+This leads to the result that the negative button of the ADL2 file requester always shows the standard text "Cancel" and not "Quit". Thanks to StingRay for finding this out.
 @ENDNODE
 
 
@@ -659,11 +677,11 @@ This leads to the result that the negative button of the ADL2 file requester alw
 @NODE Chapter-2 "Create Demo Playlist"
 @{B}Create Demo Playlist@{UB}
 
-  @{" Introduction for the Arexx script" LINK Chapter-2-1}
+  @{" Introduction for the Arexx script " LINK Chapter-2-1}
 
-  @{" Requirements for the Arexx script" LINK Chapter-2-2}
+  @{" Requirements for the Arexx script " LINK Chapter-2-2}
 
-  @{" How to use the Arexx script" LINK Chapter-2-3}
+  @{" How to use the Arexx script " LINK Chapter-2-3}
 @ENDNODE
 
 
@@ -676,18 +694,18 @@ With the Arexx script described here, it is possible to create a playlist to be 
 
 Runmode: @{"OCS vanilla" LINK Chapter-1-7-2-1}, @{"AGA vanilla" LINK Chapter-1-7-2-2} and @{"Turbo" LINK Chapter-1-7-2-3}.
 
-Playmode: Allows demos that lack automatic exit to be stopped after a user specified amount of time by the means of a hardware reset.
+Playmode: Allows intros/demos that lack automatic exit to be stopped after a user specified amount of time by the means of a hardware reset.
 Requires an external @{"reset device" LINK Chapter-2-3-14} connected to the Amiga`s serial port, see @{"own chapter" LINK Chapter-2-3-14} for more info.
 
 Prerun mode: An optional AmigaDOS script can be run before the actual demo.
 
 Furthermore, some global script configuration settings can be defined:
 
-The playlist supports the ADL2 @{"start modes" LINK Chapter-1-7-2}, the arguments @{"PRERUNSCRIPT" LINK Chapter-1-5-9} and @{"MINS/SECS" LINK Chapter-1-5-10} and can be automatically saved into a demo configuration file.
+The playlist supports the ADL2 @{"run modes" LINK Chapter-1-7-2}, the arguments @{"PRERUNSCRIPT" LINK Chapter-1-5-12} and @{"MINS/SECS" LINK Chapter-1-5-13} and can be automatically saved into a intro/demo configuration file.
 
 If enabled, one configuration file is created for each demo, with a filename syntax of @{I}_dl.demoname@{UI} (truncated to max 30 characters).
 
-The demo configuration files can be stored together with the demo executable, OR in a defined (global) folder (recommended).
+The intro/demo configuration files can be stored together with the intro/demo executable, OR in a defined (global) folder (recommended).
 
 When a playlist is transferred to the @{"ADL2" LINK Chapter-1} playback queue in memory, the playlist entries can either be inserted at the top of the playlist queue, OR added to the bottom.
 
@@ -717,35 +735,35 @@ The script might work if you use @{I}RequestFile@{UI} from Workbench 3.1 instead
 @NODE Chapter-2-3 "Create Demo Playlist: How to use the Arexx script"
 @{B}How to use the Arexx script@{UB}
 
-    @{" Launching the script" LINK Chapter-2-3-1}
+    @{" Launching the script " LINK Chapter-2-3-1}
 
-    @{" Script startup" LINK Chapter-2-3-2}
+    @{" Script startup " LINK Chapter-2-3-2}
 
-    @{" The script main menu" LINK Chapter-2-3-3}
+    @{" The script main menu " LINK Chapter-2-3-3}
 
-    @{" The script configuration menu 1" LINK Chapter-2-3-4}
+    @{" The script configuration menu 1 " LINK Chapter-2-3-4}
 
-    @{" The script configuration menu 2" LINK Chapter-2-3-5}
+    @{" The script configuration menu 2 " LINK Chapter-2-3-5}
 
-    @{" Creating a new playlist" LINK Chapter-2-3-6}
+    @{" Creating a new playlist " LINK Chapter-2-3-6}
 
-    @{" Run Mode" LINK Chapter-2-3-7}
+    @{" Run Mode " LINK Chapter-2-3-7}
 
-    @{" Play Mode" LINK Chapter-2-3-8}
+    @{" Play Mode " LINK Chapter-2-3-8}
 
-    @{" Prerun Mode" LINK Chapter-2-3-9}
+    @{" Prerun Mode " LINK Chapter-2-3-9}
 
-    @{" Adding additional demos" LINK Chapter-2-3-10}
+    @{" Adding additional intros/demos " LINK Chapter-2-3-10}
 
-    @{" Save and transfer of playlist" LINK Chapter-2-3-11}
+    @{" Save and transfer of playlist " LINK Chapter-2-3-11}
 
-    @{" Script definitions" LINK Chapter-2-3-12}
+    @{" Script definitions " LINK Chapter-2-3-12}
 
-    @{" Error messages" LINK Chapter-2-3-13}
+    @{" Error messages " LINK Chapter-2-3-13}
 
-    @{" Reset device" LINK Chapter-2-3-14}
+    @{" Reset device " LINK Chapter-2-3-14}
 
-    @{" Temporary files" LINK Chapter-2-3-15}
+    @{" Temporary files " LINK Chapter-2-3-15}
 @ENDNODE
 
 @NODE Chapter-2-3-1 "Create Demo Playlist: How to use the Arexx script / Launching the script"
@@ -778,8 +796,8 @@ Next, a requester is shown that contains the main menu.
 CREATE/APPEND
 
 Define a new playlist, or select an existing playlist to append new entries to.
-The user will then be taken through the process of selecting demo executable(s) for the playlist, and then configure the runmode, playmode, and prerun modes for each of them.
-If demo configuration files have been detected and loaded, the user can choose to use the loaded settings for the current or all selected demo executables instead of configuring them himself.
+The user will then be taken through the process of selecting intro/demo executable(s) for the playlist, and then configure the runmode, playmode, and prerun modes for each of them.
+If intro/demo configuration files have been detected and loaded, the user can choose to use the loaded settings for the current or all selected intro/demo executables instead of configuring them himself.
 
 
 TRANSFER
@@ -808,26 +826,26 @@ Quit the script
 
 DCF
 
-Enable automatic creation of a demo a configuration file each time the user has set up the runmode, playmode and prerun modes for a demo.
-This configuration file will be updated / rewritten at a later stage only if the user configures the same demo over again with different settings.
+Enable automatic creation of a intro/demo a configuration file each time the user has set up the runmode, playmode and prerun modes for a demo.
+This configuration file will be updated / rewritten at a later stage only if the user configures the same intro/demo over again with different settings.
 
 
 !DCF
 
-Disable automatic creation of demo configuration files. Please note that a demo configuration file will still be detected and loaded if its corresponding demo is used in an @{"ADL2" LINK Chapter-1} playlist.
+Disable automatic creation of intro/demo configuration files. Please note that a intro/demo configuration file will still be detected and loaded if its corresponding intro/demo is used in an @{"ADL2" LINK Chapter-1} playlist.
 
 
 CFP
 
-Save the individual demo configuration files in a user defined global directory.
-Please note that if, during the creation of a playlist, a specific demo configuration file is not found at this location, the script will also look for it in the demo executable`s home directory.
-Also worth noting is this special case: The demo configuration is loaded from the demo home directory, the automatic creation of demo configuration files is enabled and the user uses the ALLCFG function.
-In this case all the settings from the configuration files in the demo home directory will be rewritten to new configuration files in the user defined global demo configuration directory.
+Save the individual intro/demo configuration files in a user defined global directory.
+Please note that if, during the creation of a playlist, a specific intro/demo configuration file is not found at this location, the script will also look for it in the intro/demo executable`s home directory.
+Also worth noting is this special case: The intro/demo configuration is loaded from the intro/demo home directory, the automatic creation of intro/demo configuration files is enabled and the user uses the ALLCFG function.
+In this case all the settings from the configuration files in the intro/demo home directory will be rewritten to new configuration files in the user defined global intro/demo configuration directory.
 
 
 !CFP
 
-Save the individual demo configuration files into the demo executable`s home directory.
+Save the individual intro/demo configuration files into the intro/demo executable`s home directory.
 
 
 RSQ
@@ -902,20 +920,21 @@ Click on CREATE/APPEND in the main menu, and a file-requester will appear. Selec
 
 If you selected an existing playlist instead, you will be given the choice to overwrite it entirely, or append new entries to it.
 
-In the second file-requester that appears, navigate to a directory where one or more demos to be added to the playlist are located, and then select the demo(s).
+In the second file-requester that appears, navigate to a directory where one or more intros/demos to be added to the playlist are located, and then select the demo(s).
 
-If you have several demo executables in the same directory you wish to add, push the shift key while click-selecting the files to allow multi-selection. Click OK when done.
+If you have several intro/demo executables in the same directory you wish to add, push the shift key while click-selecting the files to allow multi-selection. Click OK when done.
 
-The 3 next requesters allows you to configure the runmode, playmode and prerun modes respectively for each demo executable.
-In the title-field of the 3 requesters, you can always see the sequence number of the demo you are configuring against the total number of demos selected.
+The 3 next requesters allows you to configure the runmode, playmode and prerun modes respectively for each intro/demo executable.
+In the title-field of the 3 requesters, you can always see the sequence number of the intro/demo you are configuring against the total number of intros/demos selected.
 
-The filename of the current demo is also shown in the requester body.
+The filename of the current intro/demo is also shown in the requester body.
 
-If the script has already detected and loaded a configuration file for the demo you are about to configure, 2 additional buttons are visible in those 3 requesters: CFG and ALLCFG.
+If the script has already detected and loaded a configuration file for the intro/demo you are about to configure, 2 additional buttons are visible in those 3 requesters: CFG and ALLCFG.
 
-If you click CFG, the script will pick the current requester setting (runmode, playmode or prerun mode) from the demo configuration file.
+If you click CFG, the script will pick the current requester setting (runmode, playmode or prerun mode) from the intro/demo configuration file.
 
-If you click ALLCFG, the script will pick all 3 settings from the demo configuration file, and it will do this for all other demos that have a configuration file as well. This leaves the user to configure only the demos that lack configuration files.
+If you click ALLCFG, the script will pick all 3 settings from the intro/demo configuration file, and it will do this for all other demos that have a configuration file as well.
+This leaves the user to configure only the demos that lack configuration files.
 
 This feature is beneficial if you have configured the same demo(s) at an earlier stage, and have allowed the script to save configuration files for those demos, as it can now save you some time in configuring the same demos for this playlist.
 @ENDNODE
@@ -927,7 +946,7 @@ This feature is beneficial if you have configured the same demo(s) at an earlier
 With this requester, you can select a runmode for the current demo, either @{"OCS vanilla" LINK Chapter-1-7-2-1}, @{"AGA vanilla" LINK Chapter-1-7-2-2} or @{"Turbo" LINK Chapter-1-7-2-3}.
 
 Please see the @{"ADL2" LINK Chapter-1} specific chapters of this guide for more information about the runmodes, but in general, select the runmode best suited for each demo.
-If the demo was created to run on a vanilla Amiga 500 or stock Amiga 1200, try the OCS vanilla or AGA vanilla modes respectively, or the Turbo mode for demos requiring accelerated Amigas.
+If the intro/demo was created to run on a vanilla Amiga 500 or a vanilla Amiga 1200, try the OCS vanilla or AGA vanilla modes respectively, or the Turbo mode for demos requiring fast memory or accelerated Amigas.
 @ENDNODE
 
 
@@ -936,9 +955,9 @@ If the demo was created to run on a vanilla Amiga 500 or stock Amiga 1200, try t
 
 With this requester, you can select the playmode for the current demo.
 
-Click INFINITE if the demo exits by itself, or if user interaction (mouse click or keyboard-reset) is an acceptable means to skip to the next demo in the playlist.
+Click INFINITE if the intro/demo exits by itself, or if user interaction (mouse click or keyboard-reset) is an acceptable means to skip to the next intro/demo in the playlist.
 
-Click DEFINED to have the demo terminate by the means of a timer automated hardware reset. In the requester that pops up, you can enter a 4-digit playtime (minutes and seconds) by clicking the numeric buttons.
+Click DEFINED to have the intro/demo terminate by the means of a timer automated hardware reset. In the requester that pops up, you can enter a 4-digit playtime (minutes and seconds) by clicking the numeric buttons.
 After 4 digits have been entered, the DONE button appears in the requester, which you click to continue, unless you did a mistake and wish to enter the 4-digit playtime over again.
 
 Please note that this feature requires an external @{"reset device" LINK Chapter-2-3-14} connected to your Amiga`s serial port, see own chapter for more information.
@@ -953,14 +972,14 @@ The script can contain programs / tools to make some demos run better, like OxyP
 
 Please note that the combined length of path and filename of the prerun script must not exceed 63 characters!
 
-If you initially selected more than one demo executable, the 3 mode-requesters will appear again for you to configure the next demo(s), and the sequence number of the title field of the requesters will be incremented.
+If you initially selected more than one intro/demo executable, the 3 mode-requesters will appear again for you to configure the next demo(s), and the sequence number of the title field of the requesters will be incremented.
 @ENDNODE
 
 
 @NODE Chapter-2-3-10 "Create Demo Playlist: How to use the Arexx script / Adding additional demos"
 @{B}Adding additional demos@{UB}
 
-When all demos have been configured, a file requester will appear and ask you to select even more demo executable(s). If you do not wish to add more demos to the playlist, click CANCEL in the file requester.
+When all demos have been configured, a file requester will appear and ask you to select even more intro/demo executable(s). If you do not wish to add more demos to the playlist, click CANCEL in the file requester.
 @ENDNODE
 
 
@@ -995,7 +1014,7 @@ If the script for some reason is unable to open a file for reading or writing, o
 @NODE Chapter-2-3-14 "Create Demo Playlist: How to use the Arexx script / Reset device"
 @{B}Reset device@{UB}
 
-A reset device is needed if you wish to automatically stop a demo after a certain amount of time, typically a demo that has no automatic exit.
+A reset device is needed if you wish to automatically stop a intro/demo after a certain amount of time, typically a intro/demo that has no automatic exit.
 
 The reset device itself, as we have built it, is a small circuit board soldered onto a 25-pin DSUB male connector, and housed inside a metal DSUB shell. The reset device is plugged into the Amiga serial port.
 
@@ -1006,7 +1025,7 @@ It consists of a small PIC microcontroller that listens to the RS232 TX line for
 - 1 long beep = reset signal issued
 - 1 long beep (lower frequency) = power up indication
 
-If a demo entry has a specified playtime set up, the ADL2 sends a small command string to the serial port that configures / starts the PIC timer, and when the timer has counted all down, it issues a 480ms reset signal that resets the Amiga.
+If a intro/demo entry has a specified playtime set up, the ADL2 sends a small command string to the serial port that configures / starts the PIC timer, and when the timer has counted all down, it issues a 480ms reset signal that resets the Amiga.
 
 Since the Amiga reset signal is not available on the Amiga serial port, an additional wire is needed inside the Amiga for this to work.
 In short, this wire needs to be connected between serial port pin 13 (easily available inside the Amiga), and the Amiga CPU reset line on the motherboard (not keyboard reset).

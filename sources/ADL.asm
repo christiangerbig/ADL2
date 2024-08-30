@@ -1,6 +1,6 @@
 ; AmigaDemoLauncher (ADL)
 ; Christian Gerbig
-; 28.08.2024
+; 30.08.2024
 ; V.2.0
 
 ; Requirements
@@ -189,11 +189,11 @@
 ; - Code komplett überarbeitet
 ; - DemoSelector = Demo-Charger
 ; - Texte geändert
-; - Umbenennung der Start-Modi für die Playlist:
+; - Umbenennung der Run-Modi für die Playlist:
 ;   "OCS" ->	"OCSVANILLA"
 ;   "AGA" ->	"AGAVANILLA"
 ;   "FAST" ->	"TURBO"
-; - Neue Werte und Bezeichnung der Start-Modi:
+; - Neue Werte und Bezeichnung der Run-Modi:
 ;   RUNMODE_TURBO	= $01
 ;   RUNMODE_OCS_VANILLA	= $02
 ;   RUNMODE_AGA_VANILLA	= $03
@@ -237,7 +237,9 @@
 ; - Edit-Window: Gadgets für Entry-Nummer, Runmode und Entry-Active,
 ;                Änderungrn können in der Playback-Queue gespeichert werden
 ; - Neues Argument: EDITENTRY n
-; - Umbenennung: FADER -> SCREENFADER
+; - Umbenennung des Arguments FADER in SCREENFADER
+; - Bugfix: Die Werte aus der Playlist für den Run-Modus und die Spielzeit wurden nicht mehr
+;           in die Playback-Queue übernommen
 
 
 	SECTION code_and_variables,CODE
@@ -356,6 +358,7 @@ qh_integer_gadget_x_size	EQU 30
 qh_integer_gadget_y_size	EQU 12
 qh_integer_gadget_x_position	EQU ((qh_edit_window_x_size-qh_integer_gadget_x_size)*50)/100
 qh_integer_gadget_y_position	EQU ((qh_edit_window_y_size-qh_integer_gadget_y_size)*20)/100
+qh_integer_gadget_digits_number	EQU 2
 qh_integer_gadget_id		EQU 2
 
 qh_fwd_button_x_size		EQU 30
@@ -381,33 +384,38 @@ qh_mx_gadget_id			EQU 5
 qh_positive_button_x_size	EQU 70
 qh_positive_button_y_size	EQU 12
 qh_positive_button_x_position	EQU ((qh_edit_window_x_size-qh_positive_button_x_size)*4)/100
-qh_positive_button_y_position	EQU ((qh_edit_window_y_size-qh_positive_button_y_size)*90)/100
+qh_positive_button_y_position	EQU ((qh_edit_window_y_size-qh_positive_button_y_size)*89)/100
 qh_positive_button_id		EQU 6
+
 qh_negative_button_x_size	EQU 70
 qh_negative_button_y_size	EQU 12
 qh_negative_button_x_position	EQU ((qh_edit_window_x_size-qh_negative_button_x_size)*96)/100
-qh_negative_button_y_position	EQU ((qh_edit_window_y_size-qh_negative_button_y_size)*90)/100
+qh_negative_button_y_position	EQU ((qh_edit_window_y_size-qh_negative_button_y_size)*89)/100
 qh_negative_button_id		EQU 7
 
 
 ; **** Run-Demo ****
-rd_output_string_duration_shift	EQU 10
 rd_cleared_sprite_x_size	EQU 16	; 1x Bandwidth
 rd_cleared_sprite_y_size	EQU 1
 rd_cleared_sprite_x_offset	EQU 0
 rd_cleared_sprite_y_offset	EQU 0
 rd_sprites_colors_number	EQU 16
+
 rd_pal_screen_left		EQU 0
 rd_pal_screen_top		EQU 0
 rd_pal_screen_x_size		EQU 2
 rd_pal_screen_y_size		EQU 2
 rd_pal_screen_depth		EQU 1
 rd_pal_screen_colors_number	EQU 2
+
 rd_invisible_window_left	EQU 0
 rd_invisible_window_top		EQU 0
 rd_invisible_window_x_size	EQU rd_pal_screen_x_size
 rd_invisible_window_y_size	EQU rd_pal_screen_y_size
+
 rd_monitor_switch_delay		EQU PAL_FPS*3 ; 3 Sekunden
+
+rd_output_string_duration_shift	EQU 10
 
 
 ; **** WHD-Load ****
@@ -545,6 +553,7 @@ qh_edit_window			RS.L 1
 
 qh_screen_visual_info		RS.L 1
 qh_context_gadget		RS.L 1
+
 qh_text_gadget_gadget		RS.L 1
 qh_bwd_button_gadget		RS.L 1
 qh_integer_gadget_gadget	RS.L 1
@@ -711,7 +720,7 @@ load_color_table_size		RS.B 0
 
 sprite_pointer_data		RS.B 0
 
-spd_control_word1		RS.W 1
+spd_control_word1		RS.W 1 ; 1x Bandwidth
 spd_control_word2		RS.W 1
 spd_color_descriptor		RS.W 2
 spd_end_of_data			RS.W 2
@@ -835,17 +844,16 @@ edit_window_tag_list_size	RS.B 0
 	bsr	adl_open_intuition_library
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_graphics_library
-	bsr	adl_open_gadtools_library
+	bsr	adl_check_cool_capture
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_intuition_library
-	bsr	adl_check_cool_capture
+	bsr	adl_open_gadtools_library
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_intuition_library
 
 	bsr	adl_check_cmd_line
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_read_arguments
-
 ; ** Amiga-Demo-Launcher Argumente **
 	tst.w	adl_arg_help_enabled(a3)
 	beq     adl_cleanup_read_arguments
@@ -938,18 +946,14 @@ dc_demo_charge_loop
 	CNOP 0,4
 dc_cleanup_file_request
 	bsr	dc_free_file_request
-
 dc_cleanup_asl_library
 	bsr	dc_close_asl_library
-
 dc_cleanup_reset_program
 	bsr	dc_init_reset_program
 	move.l	d0,adl_dos_return_code(a3)
 	bne  	adl_cleanup_read_arguments
-
 dc_cleanup_entries_buffer
 	bsr	dc_free_entries_buffer
-
 	bra	adl_cleanup_read_arguments
 
 ; ** Playlist-Datei angegeben **
@@ -958,46 +962,35 @@ dc_check_playlist
 	bsr	dc_lock_playlist_file
 	move.l	d0,adl_dos_return_code(a3)
 	bne	dc_cleanup_entries_buffer
-
 	bsr	dc_alloc_playlist_file_fib
 	move.l	d0,adl_dos_return_code(a3)
 	bne	dc_cleanup_locked_playlist_file
-
 	bsr	dc_get_playlist_file_length
 	move.l	d0,adl_dos_return_code(a3)
 	bne	dc_cleanup_playlist_file_fib
-
 	bsr	dc_alloc_playlist_file_buffer
 	move.l	d0,adl_dos_return_code(a3)
 	bne	dc_cleanup_playlist_file_fib
-
 	bsr	dc_open_playlist_file
 	move.l	d0,adl_dos_return_code(a3)
 	bne	dc_cleanup_playlist_file_buffer
-
 	bsr	dc_read_playlist_file
 	move.l	d0,adl_dos_return_code(a3)
 	bne	dc_cleanup_playlist_file
-
 	bsr	dc_parse_playlist_file
 	move.l	d0,adl_dos_return_code(a3)
         bne.s   dc_cleanup_playlist_file
-
 	bsr	dc_check_entries_number_min
 	move.l	d0,adl_dos_return_code(a3)
 
 dc_cleanup_playlist_file
 	bsr	dc_close_playlist_file
-
 dc_cleanup_playlist_file_buffer
 	bsr	dc_free_playlist_file_buffer
-
 dc_cleanup_playlist_file_fib
 	bsr	dc_free_playlist_file_fib
-
 dc_cleanup_locked_playlist_file
 	bsr	dc_unlock_playlist_file
-
         bra	dc_cleanup_reset_program
 
 
@@ -1006,22 +999,16 @@ dc_cleanup_locked_playlist_file
 adl_cleanup_read_arguments
 	bsr	adl_free_read_arguments
 	bsr	adl_print_io_error
-
 adl_cleanup_reset_program
 	bsr	adl_remove_reset_program
-
 adl_cleanup_gadtools_library
 	bsr	adl_close_gadtools_library
-
 adl_cleanup_intuition_library
 	bsr	adl_close_intuition_library
-
 adl_cleanup_graphics_library
 	bsr	adl_close_graphics_library
-
 adl_cleanup_dos_library
 	bsr	adl_close_dos_library
-
 adl_quit
 	move.l	adl_dos_return_code(a3),d0
 	movem.l (a7)+,d2-d7/a2-a6
@@ -1116,9 +1103,9 @@ adl_init_variables
 
 	CNOP 0,4
 adl_init_structures
-	bsr	adl_init_cool_capture_request
-	bsr	adl_init_output_string
-	bsr     dc_init_runmode_request
+	bsr.s	adl_init_cool_capture_request
+	bsr.s	adl_init_output_string
+	bsr.s	dc_init_runmode_request
 	bsr	dc_init_file_request_tags
 	bsr	qh_init_get_visual_info_tags
 	bsr	qh_init_edit_window_tags
@@ -1136,11 +1123,11 @@ adl_init_cool_capture_request
 	move.l	d2,(a0)+		; Größe der Struktur
 	moveq	#0,d0
 	move.l	d0,(a0)+		; Keine Flags
-	lea	adl_cool_capture_request_title(pc),a1
+	lea	adl_resident_request_title(pc),a1
 	move.l	a1,(a0)+		; Zeiger auf Titeltext
-	lea	adl_cool_capture_request_body(pc),a1
+	lea	adl_resident_request_text(pc),a1
 	move.l	a1,(a0)+		; Zeiger auf Text in Requester
-	lea	adl_cool_capture_request_gadgets(pc),a1
+	lea	adl_resident_request_gadget_text(pc),a1
 	move.l	a1,(a0)			; Zeiger auf Gadgettexte
 	rts
 
@@ -1161,9 +1148,9 @@ dc_init_runmode_request
 	move.l	d0,(a0)+		; Keine Flags
 	lea	dc_runmode_request_title(pc),a1
 	move.l	a1,(a0)+		; Zeiger auf Titeltext
-	lea	dc_runmode_request_body(pc),a1
+	lea	dc_runmode_request_text(pc),a1
 	move.l	a1,(a0)+		; Zeiger auf Text in Requester
-	lea	dc_runmode_request_gadgets(pc),a1
+	lea	dc_runmode_request_gadget_text(pc),a1
 	move.l	a1,(a0)			; Zeiger auf Gadgettexte
 	rts
 
@@ -1180,10 +1167,10 @@ dc_init_file_request_tags
 	lea	dc_file_request_title(pc),a1
 	move.l	a1,(a0)+
 	move.l	#ASLFR_PositiveText,(a0)+
-	lea	dc_file_request_ok(pc),a1
+	lea	dc_file_request_positive_text(pc),a1
 	move.l	a1,(a0)+
 	move.l	#ASLFR_NegativeText,(a0)+
-	lea	dc_file_request_quit(pc),a1
+	lea	dc_file_request_negative_text(pc),a1
 	move.l	a1,(a0)+
 ; ** Grundparameter für File-Requester **
 	move.l	#ASLFR_InitialLeftEdge,(a0)+
@@ -1273,7 +1260,7 @@ qh_init_gadgets
 	lea	qh_gadget_list(pc),a0
 	clr.l	(a0)
 
-; ** NewGadget **
+; ** NewGadget allgemein **
 	lea	qh_topaz_80(pc),a0
 	lea	topaz_font_name(pc),a1
 	move.l	a1,ta_name(a0)
@@ -1328,7 +1315,7 @@ qh_init_gadgets
 	move.w	qh_edit_entry_offset(a3),d0
 	move.l	d0,(a0)+
 	move.l	#GTIN_MaxChars,(a0)+
-	moveq	#2,d0			; 2 Stellen
+	moveq	#qh_integer_gadget_digits_number,d0
 	move.l	d0,(a0)+
 	moveq	#TAG_DONE,d0
 	move.l	d0,(a0)
@@ -1370,9 +1357,9 @@ qh_init_gadgets
 
 ; ** Mutually-Exclusive Gadget **
 	lea	qh_mx_gadget_array(pc),a0
-	lea	qh_mx_gadget_text1(pc),a1
+	lea	qh_mx_gadget_choice_text1(pc),a1
 	move.l	a1,(a0)+
-	lea	qh_mx_gadget_text2(pc),a1
+	lea	qh_mx_gadget_choice_text2(pc),a1
 	move.l	a1,(a0)+
 	moveq	#0,d0
 	move.l	d0,(a0)
@@ -1401,7 +1388,7 @@ rd_init_pal_screen_colors
 	lea	rd_pal_screen_colors(pc),a0
 	move.w	#rd_pal_screen_colors_number,(a0)+
 	moveq	#0,d0
-	move.w	d0,(a0)+		; Erste Farbe COLOR00 / Farbwert schwarz
+	move.w	d0,(a0)+		; Erste Farbe COLOR00
 	move.l	d0,(a0)+		; COLOR00 32-Bit Rotwert
 	move.l	d0,(a0)+		; COLOR00 32-Bit Grünwert
 	move.l	d0,(a0)+		; COLOR00 32-Bit Blauwert
@@ -1640,28 +1627,6 @@ adl_check_system_ok
 ; Result
 ; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
-adl_open_gadtools_library
-	lea	gadtools_library_name(pc),a1
-	moveq	#OS_VERSION_MIN,d0
-	CALLEXEC OpenLibrary
-	lea	_GadToolsBase(pc),a0
-	move.l	d0,(a0)
-	bne.s	adl_open_gadtools_library_ok
-	lea	adl_error_text6(pc),a0
-	moveq	#adl_error_text6_end-adl_error_text6,d0
-	bsr	adl_print_text
-	moveq	#RETURN_FAIL,d0
-	rts
-	CNOP 0,4
-adl_open_gadtools_library_ok
-	moveq	#RETURN_OK,d0
-	rts
-
-
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
-	CNOP 0,4
 adl_open_intuition_library
 	lea	intuition_library_name(pc),a1
 	moveq	#OS_VERSION_MIN,d0
@@ -1690,7 +1655,7 @@ adl_check_cool_capture
 	beq.s   adl_set_default_values
 	move.l	d0,a0
 	cmp.w	#"DL",2(a0)
-	beq.s	adl_update_variables
+	beq.s	adl_update_values
 	move.l	a3,-(a7)
 	sub.l	a0,a0			; Requester erscheint auf Workbench
 	lea	adl_cool_capture_request(pc),a1
@@ -1703,7 +1668,7 @@ adl_check_cool_capture
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
-adl_update_variables
+adl_update_values
 	GET_RESIDENT_ENTRIES_NUMBER_MAX
 	move.l	d0,a0
 	move.w	(a0),adl_entries_number_max(a3)
@@ -1724,6 +1689,28 @@ adl_set_default_values
 	move.w	d2,adl_entries_number_max(a3)
 	lea	rp_entries_number_max(pc),a0
 	move.w	d2,(a0)
+	moveq	#RETURN_OK,d0
+	rts
+
+
+; Input
+; Result
+; d0.l	... Rückgabewert: Return-Code
+	CNOP 0,4
+adl_open_gadtools_library
+	lea	gadtools_library_name(pc),a1
+	moveq	#OS_VERSION_MIN,d0
+	CALLEXEC OpenLibrary
+	lea	_GadToolsBase(pc),a0
+	move.l	d0,(a0)
+	bne.s	adl_open_gadtools_library_ok
+	lea	adl_error_text6(pc),a0
+	moveq	#adl_error_text6_end-adl_error_text6,d0
+	bsr	adl_print_text
+	moveq	#RETURN_FAIL,d0
+	rts
+	CNOP 0,4
+adl_open_gadtools_library_ok
 	moveq	#RETURN_OK,d0
 	rts
 
@@ -1922,7 +1909,7 @@ adl_check_arg_mins
 	CNOP 0,4
 adl_calculate_playtime
 	mulu.w	#adl_seconds_factor,d1	; Umrechnung Minuten in Sekunden
-	add.l	d0,d1		; Gesamtwert in Sekunden
+	add.l	d0,d1			; Gesamtwert in Sekunden
 	mulu.w	#rd_output_string_duration_shift,d1
 	move.w	d1,rd_play_duration(a3)
 
@@ -2094,13 +2081,13 @@ dc_get_program_dir_name_ok
 
 	CNOP 0,4
 dc_display_remaining_files
-	lea	dc_remaining_files(pc),a0 ; Stringadresse
+	lea	dc_file_request_remaining_files(pc),a0
 	moveq	#0,d1
 	move.w	adl_entries_number_max(a3),d1
 	sub.w	adl_entries_number(a3),d1 ; Verbleibende Anzahl der zu ladenden Dateien berechnen
-	cmp.w	#adl_entries_number_min,d1 ; Nur noch ein File?
-	bne.s	dc_request_title_skip	; Nein -> verzweige
-	clr.b	dc_character_s-dc_remaining_files(a0) ; "s" von Demo"s" löschen
+	cmp.w	#adl_entries_number_min,d1
+	bne.s	dc_request_title_skip
+	clr.b	dc_file_request_character_s-dc_file_request_remaining_files(a0) ; "s" von Demo"s" löschen
 dc_request_title_skip
 	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
 	bra	rp_dec_to_ascii
@@ -2347,8 +2334,7 @@ dc_check_reset_program_active
 	lea	rp_entry_offset(pc),a0
 	move.w	rd_entry_offset(a3),(a0)
 	move.l	#rp_entries_buffer-rp_start,d0 ; Programmgröße
-	move.w	d0,d7		
-	moveq	#0,d1
+	move.w	d0,d7
 	move.w	adl_entries_number_max(a3),d1
 	mulu.w	#playback_queue_entry_size,d1 ; Größe des Puffers berechnen
 	add.l	d1,d0			; Gesamtlänge inkusive Puffergröße
@@ -2648,7 +2634,7 @@ dc_copy_demofile_path_skip
 	tst.l	pra_OCSVANILLA(a5)
 	beq.s	dc_check_arg_AGAVANILLA
 	move.b	#RUNMODE_OCS_VANILLA,pqe_runmode(a1)
-	bra.s	dc_check_entry_start_mode
+	bra.s	dc_check_entry_run_mode
 
 ; ** Playlist-Argument AGAVANILLA **
 	CNOP 0,4
@@ -2656,16 +2642,17 @@ dc_check_arg_agavanilla
 	tst.l	pra_AGAVANILLA(a5)
 	beq.s	dc_check_arg_turbo
 	move.b	#RUNMODE_AGA_VANILLA,pqe_runmode(a1)
-	bra.s	dc_check_entry_start_mode
+	bra.s	dc_check_entry_run_mode
 
 ; ** Playlist-Argument TURBO **
 	CNOP 0,4
 dc_check_arg_turbo
 	tst.l	pra_TURBO(a5)
-	beq.s	dc_check_entry_start_mode
+	beq.s	dc_check_entry_run_mode
 	move.b	#RUNMODE_TURBO,pqe_runmode(a1)
 
-dc_check_entry_start_mode
+dc_check_entry_run_mode
+	move.l	d6,a1			; Zeiger auf Eintrag im Puffer
 	tst.b	pqe_runmode(a1)
 	bne.s   dc_check_arg_secs
 	move.l	d6,a0			; Zeiger auf Eintrag im Puffer
@@ -2675,6 +2662,7 @@ dc_check_entry_start_mode
 ; ** Playlist-Argument SECS **
 	CNOP 0,4
 dc_check_arg_secs
+	move.l	d6,a1			; Zeiger auf Eintrag im Puffer
 	move.l	pra_SECS(a5),d0
 	beq.s	dc_check_arg_mins
 	move.l	d0,a0
@@ -2711,26 +2699,27 @@ dc_calculate_playtime
 ; ** Playlist-Argument LMBEXIT **
 ;		CNOP 0,4
 ;dc_check_arg_lmbexit
+		move.l	d6,a1		; Zeiger auf Eintrag im Puffer
 		move.l	pra_LMBEXIT(a5),d0
 		beq.s	dc_check_arg_prerunscript
 		move.l	d0,a0
 		move.l	(a0),d0		; Anzahl der Demoteile
 		bne.s	dc_check_demo_parts_number_min
-		move.l	d6,a0			; Zeiger auf Eintrag im Puffer
+		move.l	d6,a0		; Zeiger auf Eintrag im Puffer
 		bsr	dc_parse_playlist_entry_error
 		bra	dc_free_custom_arguments
 		CNOP 0,4
 dc_check_demo_parts_number_min
 		cmp.w	#adl_lmbexit_parts_number_min,d0
 		bge.s	dc_check_demo_parts_number_max
-		move.l	d6,a0			; Zeiger auf Eintrag im Puffer
+		move.l	d6,a0		; Zeiger auf Eintrag im Puffer
 		bsr	dc_parse_playlist_entry_error
 		bra	dc_free_custom_arguments
 		CNOP 0,4
 dc_check_demo_parts_number_max
 		cmp.w	#adl_lmbexit_parts_number_max,d0
 		ble.s	dc_arg_lmbexit_save_playtime
-		move.l	d6,a0			; Zeiger auf Eintrag im Puffer
+		move.l	d6,a0		; Zeiger auf Eintrag im Puffer
 		bsr	dc_parse_playlist_entry_error
 		bra.s	dc_free_custom_arguments
 		CNOP 0,4
@@ -3572,11 +3561,11 @@ qh_ascii_to_dec_skip
 	moveq	#0,d0			; Dezimalzahl
 	subq.w	#1,d7			; wegen dbf
 qh_ascii_to_dec_loop
-	move.l	(a1)+,d2
+	move.l	(a1)+,d2                ; Dezimal-Stellenwert (1,10,..)
 	moveq	#0,d3
 	move.b	-(a0),d3		; ASCII-Wert lesen
 	sub.b	#"0",d3			; ASCII-Wert "0" abziehen = 0..9
-	mulu.w	d2,d3			; Dezimal-Stellenwert (1,10,..)
+	mulu.w	d2,d3			; Dezimal-Basis
 	add.l	d3,d0			; Stelle zum Ergebnis addieren
 	dbf	d7,qh_ascii_to_dec_loop
 	rts
@@ -5097,14 +5086,15 @@ adl_wait_drives_motor
 rd_init_timer_start
 	moveq	#0,d1
 	move.w	rd_play_duration(a3),d1
-	move.w	d1,rd_timer_delay(a3)
 	beq.s	rd_check_queue_playtime
+	move.w	d1,rd_timer_delay(a3)
 	bra	rp_create_output_string
 	CNOP 0,4
 rd_check_queue_playtime
 	move.l	rd_demofile_path(a3),a0
 	add.w	pqe_playtime(a0),d1
 	beq.s	rd_init_timer_start_quit
+	move.w	d1,rd_timer_delay(a3)
 	bra	rp_create_output_string
 	CNOP 0,4
 rd_init_timer_start_quit
@@ -5374,8 +5364,8 @@ rd_run_demofile
 	ENDC
 	tst.w	whdl_slave_enabled(a3)
 	beq.s	rd_execute_whdload_slave
-	moveq	#rd_shell_cmd_line_end-rd_shell_cmd_line,d0
-	lea	rd_shell_cmd_line(pc),a0
+	moveq	#rd_shell_no_op_cmd_line_end-rd_shell_no_op_cmd_line,d0
+	lea	rd_shell_no_op_cmd_line(pc),a0
 	move.l	a3,-(a7)
 	move.l	rd_demofile_seglist(a3),a3
 	add.l	a3,a3			; BCPL-Zeiger
@@ -6813,15 +6803,15 @@ adl_intro_message_text_end
 	EVEN
 
 
-adl_cool_capture_request_title
+adl_resident_request_title
 	DC.B "Amiga Demo Launcher message",0
 	EVEN
-adl_cool_capture_request_body
+adl_resident_request_text
 	DC.B "The CoolCapture vector is already used.",ASCII_LINE_FEED,ASCII_LINE_FEED
 	DC.B "Should the Amiga Demo Launcher be installed",ASCII_LINE_FEED
 	DC.B "and the other program be disabled?",ASCII_LINE_FEED,0
 	EVEN
-adl_cool_capture_request_gadgets
+adl_resident_request_gadget_text
 	DC.B "Proceed|Quit",0
 	EVEN
 
@@ -6889,12 +6879,12 @@ adl_cmd_template
 
 
 adl_message_text1
-	DC.B ASCII_LINE_FEED,"Amiga Demo Launcher now removed from memory",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Amiga Demo Launcher now removed from memory.",ASCII_LINE_FEED,ASCII_LINE_FEED
 adl_message_text1_end
 	EVEN
 
 adl_message_text2
-	DC.B ASCII_LINE_FEED,"Amiga Demo Launcher not found",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Amiga Demo Launcher not found in memory.",ASCII_LINE_FEED,ASCII_LINE_FEED
 adl_message_text2_end
 	EVEN
 
@@ -6992,10 +6982,10 @@ dc_current_dir_name
 
 dc_file_request_title
 	DC.B "Choose up to "
-dc_remaining_files
+dc_file_request_remaining_files
 	DC.B "   "
 	DC.B "demo"
-dc_character_s
+dc_file_request_character_s
 	DC.B "s",0
 	EVEN
 
@@ -7013,10 +7003,10 @@ dc_file_request_pattern
 	DC.B "#?.vars|"
 	DC.B "_dl.#?)",0
 	EVEN
-dc_file_request_ok
+dc_file_request_positive_text
 	DC.B "Use",0
 	EVEN
-dc_file_request_quit
+dc_file_request_negative_text
 	DC.B "Quit",0
 	EVEN
 
@@ -7024,16 +7014,16 @@ dc_file_request_quit
 dc_runmode_request_title
 	DC.B "Define run mode",0
 	EVEN
-dc_runmode_request_body
+dc_runmode_request_text
 	DC.B "In which mode should the demo run?",ASCII_LINE_FEED,0
 	EVEN
-dc_runmode_request_gadgets
+dc_runmode_request_gadget_text
 	DC.B "OCS vanilla|AGA vanilla|turbo",0
 	EVEN
 
 
 dc_message_text
-	DC.B ASCII_LINE_FEED,"Maximum number of entries in playback queue already reached",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Maximum number of entries in playback queue already reached.",ASCII_LINE_FEED,ASCII_LINE_FEED
 dc_message_text_end
 	EVEN
 
@@ -7120,7 +7110,14 @@ qh_get_visual_info_tag_list	DS.L 1
 
 
 	CNOP 0,4
-qh_edit_window_tag_list		DS.B edit_window_tag_list_size
+qh_gadget_list			DS.L 1
+
+
+	CNOP 0,4
+qh_new_gadget			DS.B gng_SIZEOF
+
+	CNOP 0,4
+qh_topaz_80			DS.B ta_SIZEOF
 
 
 	CNOP 0,4
@@ -7147,10 +7144,8 @@ qh_set_integer_gadget_tag_list	DS.L 3
 	CNOP 0,4
 qh_cycle_gadget_tag_list	DS.L 5
 
-
 	CNOP 0,4
 qh_set_cycle_gadget_tag_list	DS.L 3
-
 
 	CNOP 0,4
 qh_cycle_gadget_array		DS.L 4
@@ -7167,15 +7162,8 @@ qh_mx_gadget_array		DS.L 3
 
 
 	CNOP 0,4
-qh_gadget_list			DS.L 1
+qh_edit_window_tag_list		DS.B edit_window_tag_list_size
 
-
-	CNOP 0,4
-qh_new_gadget			DS.B gng_SIZEOF
-
-
-	CNOP 0,4
-qh_topaz_80			DS.B ta_SIZEOF
 
 
 qh_bwd_button_text		DC.B "<",0
@@ -7183,6 +7171,7 @@ qh_bwd_button_text		DC.B "<",0
 
 qh_fwd_button_text		DC.B ">",0
 	EVEN
+
 
 qh_cycle_gadget_choice_text1	DC.B "Turbo",0
 	EVEN
@@ -7194,10 +7183,10 @@ qh_cycle_gadget_choice_text3	DC.B "AGA vanilla",0
 	EVEN
 
 
-qh_mx_gadget_text1		DC.B "Not played",0
+qh_mx_gadget_choice_text1	DC.B "Not played",0
 	EVEN
 
-qh_mx_gadget_text2		DC.B "Played",0
+qh_mx_gadget_choice_text2	DC.B "Played",0
 	EVEN
 
 
@@ -7236,26 +7225,26 @@ qh_edit_window_name2		DC.B "Edit queue",0
 
 
 qh_message_text1
-	DC.B ASCII_LINE_FEED,"Playback queue is empty",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Playback queue is empty.",ASCII_LINE_FEED,ASCII_LINE_FEED
 qh_message_text1_end
 	EVEN
 qh_message_text2
 	DC.B ASCII_LINE_FEED,ASCII_LINE_FEED,"Playback queue has "
 qh_not_used_entries_string
 	DC.B "   "
-	DC.B "unused entries left",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B "unused entries left.",ASCII_LINE_FEED,ASCII_LINE_FEED
 qh_message_text2_end
 	EVEN
 qh_message_text3
-	DC.B ASCII_LINE_FEED,"The playback queue is empty",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"The playback queue is empty.",ASCII_LINE_FEED,ASCII_LINE_FEED
 qh_message_text3_end
 	EVEN
 qh_message_text4
-	DC.B ASCII_LINE_FEED,"No playback queue entries to clear",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"No playback queue entries to clear.",ASCII_LINE_FEED,ASCII_LINE_FEED
 qh_message_text4_end
 	EVEN
 qh_message_text5
-	DC.B ASCII_LINE_FEED,"Playback queue entries cleared",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Playback queue entries cleared.",ASCII_LINE_FEED,ASCII_LINE_FEED
 qh_message_text5_end
 	EVEN
 qh_message_text6
@@ -7263,10 +7252,9 @@ qh_message_text6
 qh_message_text6_end
 	EVEN
 qh_message_text7
-	DC.B ASCII_LINE_FEED,"Queue position set back to first entry. All demo play states cleared",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Queue position set back to first entry. All demo play states cleared.",ASCII_LINE_FEED,ASCII_LINE_FEED
 qh_message_text7_end
 	EVEN
-
 
 
 qh_error_text1
@@ -7306,9 +7294,11 @@ rd_pal_screen_colors
 rd_pal_screen_tag_list
 	DS.B screen_tag_list_size
 
+
 	CNOP 0,4
 rd_invisible_window_tag_list
 	DS.B window_tag_list_size
+
 
 	CNOP 0,4
 rd_video_control_tag_list
@@ -7327,10 +7317,14 @@ rd_old_chips_registers
 
 rd_pal_screen_name		DC.B "Amiga Demo Launcher 2",0
 	EVEN
+
+
 rd_invisible_window_name	DC.B "Amiga Demo Launcher 2",0
 	EVEN
 
+
 rd_demo_dir_path		DS.B adl_demofile_path_length
+	EVEN
 
 
 rd_demofile_name_header
@@ -7350,19 +7344,18 @@ rd_prerunscript_cmd_line_path
 	EVEN
 
 
-; ** Pseudo-Shell-Befehlszeile **
-rd_shell_cmd_line
+rd_shell_no_op_cmd_line
 	DC.B ASCII_LINE_FEED,0
-rd_shell_cmd_line_end
+rd_shell_no_op_cmd_line_end
 	EVEN
 
 
 rd_message_text1
-	DC.B "No more demos left to play",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B "No more demos left to play.",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_message_text1_end
 	EVEN
 rd_message_text2
-	DC.B "Replay loop stopped",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B "Replay loop stopped.",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_message_text2_end
 	EVEN
 
@@ -7478,7 +7471,9 @@ rd_error_text23_end
 
 ; **** WHD-Load ****
 whdl_tooltype_PRELOAD		DC.B "PRELOAD",0
+	EVEN
 whdl_tooltype_PRELOADSIZE	DC.B "PRELOADSIZE",0
+	EVEN
 whdl_tooltype_QUITKEY		DC.B "QUITKEY",0
 	EVEN
 
@@ -7500,7 +7495,7 @@ whdl_slave_cmd_line_path
 
 
 ; **** Main ****
-	DC.B "$VER: Amiga Demo Launcher 2.0 (28.8.24)",0
+	DC.B "$VER: Amiga Demo Launcher 2.0 (30.8.24)",0
 	EVEN
 
 
