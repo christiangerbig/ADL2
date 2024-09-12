@@ -395,12 +395,6 @@ qh_negative_button_id		EQU 7
 
 
 ; **** Run-Demo ****
-rd_cleared_sprite_x_size	EQU 16	; 1x Bandwidth
-rd_cleared_sprite_y_size	EQU 1
-rd_cleared_sprite_x_offset	EQU 0
-rd_cleared_sprite_y_offset	EQU 0
-rd_sprites_colors_number	EQU 16
-
 rd_degrade_screen_left		EQU 0
 rd_degrade_screen_top		EQU 0
 rd_degrade_screen_x_size	EQU 2
@@ -412,6 +406,12 @@ rd_invisible_window_left	EQU 0
 rd_invisible_window_top		EQU 0
 rd_invisible_window_x_size	EQU rd_degrade_screen_x_size
 rd_invisible_window_y_size	EQU rd_degrade_screen_y_size
+
+rd_cleared_sprite_x_size	EQU 16	; 1x Bandwidth
+rd_cleared_sprite_y_size	EQU 1
+rd_cleared_sprite_x_offset	EQU 0
+rd_cleared_sprite_y_offset	EQU 0
+rd_sprites_colors_number	EQU 16
 
 rd_monitor_switch_delay		EQU PAL_FPS*3 ; 3 Sekunden
 
@@ -477,16 +477,12 @@ wm
 	ENDM
 
 
-
 	INCLUDE "except-vectors-offsets.i"
-
 
 	INCLUDE "screen-taglist-offsets.i"
 	INCLUDE "screen-colors.i"
 
-
 	INCLUDE "window-taglist-offsets.i"
-
 
 	INCLUDE "videocontrol-taglist-offsets.i"
 
@@ -3982,6 +3978,7 @@ rd_start
 	bsr	rd_get_active_screen_mode
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_screen_color_table
+	bsr	rd_get_sprite_resolution
 	bsr	sf_get_active_screen_colors
 	bsr	sf_copy_screen_color_table
 
@@ -4027,7 +4024,6 @@ rd_play_loop
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_degrade_screen
 	bsr	rd_clear_mousepointer
-	bsr	rd_get_sprite_resolution
 	bsr	rd_set_ocs_sprite_resolution
  	bsr	rd_blank_display
 	bsr	rd_wait_monitor_switch
@@ -4712,6 +4708,22 @@ rd_get_active_screen_mode_ok
 
 ; Input
 ; Result
+; d0.l	... Kein Rückgabewert
+	CNOP 0,4
+rd_get_sprite_resolution
+	move.l	rd_active_screen(a3),a0
+	move.l  sc_ViewPort+vp_ColorMap(a0),a0
+	lea	rd_video_control_tags(pc),a1
+	move.l	#VTAG_SPRITERESN_GET,vctl_VTAG_SPRITERESN+ti_tag(a1)
+	clr.l	vctl_VTAG_SPRITERESN+ti_Data(a1)
+	CALLGRAF VideoControl
+	lea     rd_video_control_tags(pc),a0
+	move.l  vctl_VTAG_SPRITERESN+ti_Data(a0),rd_old_sprite_resolution(a3)
+	rts
+
+
+; Input
+; Result
 ; d0.l	... keine Rückgabewert
 	CNOP 0,4
 sf_fade_out_active_screen
@@ -4926,22 +4938,6 @@ rd_clear_mousepointer
 	moveq	#rd_cleared_sprite_x_offset,d2
 	moveq	#rd_cleared_sprite_y_offset,d3
 	CALLINTQ SetPointer
-
-
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
-	CNOP 0,4
-rd_get_sprite_resolution
-	move.l	rd_degrade_screen(a3),a0
-	move.l  sc_ViewPort+vp_ColorMap(a0),a0
-	lea	rd_video_control_tags(pc),a1
-	move.l	#VTAG_SPRITERESN_GET,vctl_VTAG_SPRITERESN+ti_tag(a1)
-	clr.l	vctl_VTAG_SPRITERESN+ti_Data(a1)
-	CALLGRAF VideoControl
-	lea     rd_video_control_tags(pc),a0
-	move.l  vctl_VTAG_SPRITERESN+ti_Data(a0),rd_old_sprite_resolution(a3)
-	rts
 
 
 ; Input
