@@ -401,17 +401,17 @@ rd_cleared_sprite_x_offset	EQU 0
 rd_cleared_sprite_y_offset	EQU 0
 rd_sprites_colors_number	EQU 16
 
-rd_pal_screen_left		EQU 0
-rd_pal_screen_top		EQU 0
-rd_pal_screen_x_size		EQU 2
-rd_pal_screen_y_size		EQU 2
-rd_pal_screen_depth		EQU 1
-rd_pal_screen_colors_number	EQU 2
+rd_degrade_screen_left		EQU 0
+rd_degrade_screen_top		EQU 0
+rd_degrade_screen_x_size	EQU 2
+rd_degrade_screen_y_size	EQU 2
+rd_degrade_screen_depth		EQU 1
+rd_degrade_screen_colors_number	EQU 2
 
 rd_invisible_window_left	EQU 0
 rd_invisible_window_top		EQU 0
-rd_invisible_window_x_size	EQU rd_pal_screen_x_size
-rd_invisible_window_y_size	EQU rd_pal_screen_y_size
+rd_invisible_window_x_size	EQU rd_degrade_screen_x_size
+rd_invisible_window_y_size	EQU rd_degrade_screen_y_size
 
 rd_monitor_switch_delay		EQU PAL_FPS*3 ; 3 Sekunden
 
@@ -432,17 +432,6 @@ rp_rasterlines_delay		EQU 5
 
 rp_color_okay			EQU $68b
 rp_color_error			EQU $d74
-
-
-; **** Screen-Fader ****
-sf_colors_number		EQU 256
-
-; **** Screen-Fader-Out ****
-sfo_fader_speed			EQU 6
-
-; **** Screen-Fader-In ****
-sfi_fader_speed			EQU 10
-
 
 
 GET_RESIDENT_ENTRIES_NUMBER	MACRO
@@ -480,7 +469,7 @@ SET_RESTORE_ADL_ACTIVE		MACRO
 	ENDC
 
 
-WAIT_MOUSE		MACRO
+WAIT_MOUSE			MACRO
 wm
 	move.w	$dff006,$dff180
 	btst	#2,$dff016
@@ -493,6 +482,7 @@ wm
 
 
 	INCLUDE "screen-taglist-offsets.i"
+	INCLUDE "screen-colors.i"
 
 
 	INCLUDE "window-taglist-offsets.i"
@@ -600,7 +590,7 @@ rd_prerunscript_path		RS.L 1
 
 rd_active_screen		RS.L 1
 rd_active_screen_mode		RS.L 1
-rd_pal_screen			RS.L 1
+rd_degrade_screen		RS.L 1
 rd_invisible_window		RS.L 1
 rd_cleared_sprite_pointer_data	RS.L 1
 rd_old_sprite_resolution	RS.L 1
@@ -706,18 +696,6 @@ playback_queue_entry_size 	RS.B 0
 
 	RSRESET
 
-load_color_table		RS.B 0
-
-lct_colors_number		RS.W 1
-lct_start_color			RS.W 1
-lct_color00                     RS.L 3	; 3 x 32 Bit
-lct_end				RS.L 1
-
-load_color_table_size		RS.B 0
-
-
-	RSRESET
-
 sprite_pointer_data		RS.B 0
 
 spd_control_word1		RS.W 1 ; 1x Bandwidth
@@ -726,19 +704,6 @@ spd_color_descriptor		RS.W 2
 spd_end_of_data			RS.W 2
 
 sprite_pointer_data_size	RS.B 0
-
-
-	RSRESET
-
-pal_screen_colors		RS.B 0
-
-psc_colors_number		RS.W 1
-psc_start_color			RS.W 1
-psc_color00			RS.L 3
-psc_color01			RS.L 3
-psc_end				RS.L 1
-
-pal_screen_colors_size		RS.B 0
 
 
 	RSRESET
@@ -838,16 +803,16 @@ edit_window_tag_list_size	RS.B 0
 	bsr	adl_open_graphics_library
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_dos_library
-	bsr	adl_check_system
+	bsr	adl_check_system_requirements
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_graphics_library
 	bsr	adl_open_intuition_library
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_graphics_library
-	bsr	adl_check_cool_capture
+	bsr	adl_open_gadtools_library
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_intuition_library
-	bsr	adl_open_gadtools_library
+	bsr	adl_check_cool_capture
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_intuition_library
 
@@ -1015,6 +980,9 @@ adl_quit
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 adl_init_variables
 ; **** Main ****
@@ -1101,6 +1069,9 @@ adl_init_variables
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 adl_init_structures
 	bsr.s	adl_init_cool_capture_request
@@ -1110,12 +1081,15 @@ adl_init_structures
 	bsr	qh_init_get_visual_info_tags
 	bsr	qh_init_edit_window_tags
 	bsr	qh_init_gadgets
-	bsr	rd_init_pal_screen_colors
-	bsr	rd_init_pal_screen_tags
+	bsr	rd_init_degrade_screen_colors
+	bsr	rd_init_degrade_screen_tags
 	bsr	rd_init_invisible_window_tags
 	bra	rd_init_video_control_tags
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 adl_init_cool_capture_request
 	lea	adl_cool_capture_request(pc),a0
@@ -1132,6 +1106,9 @@ adl_init_cool_capture_request
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 adl_init_output_string
 	lea	rp_output_string(pc),a0
@@ -1141,6 +1118,9 @@ adl_init_output_string
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 dc_init_runmode_request
 	lea	dc_runmode_request(pc),a0
@@ -1155,9 +1135,12 @@ dc_init_runmode_request
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 dc_init_file_request_tags
-	lea	dc_file_request_init_tag_list(pc),a0
+	lea	dc_file_request_init_tags(pc),a0
 ; ** Tags für Fensterbeeinflussung **
 	move.l	#ASLFR_Window,(a0)+
 	moveq	#0,d0
@@ -1193,7 +1176,7 @@ dc_init_file_request_tags
 	moveq	#TAG_DONE,d2
 	move.l	d2,(a0)
 
-	lea	dc_file_request_display_tag_list(pc),a0
+	lea	dc_file_request_display_tags(pc),a0
 	move.l	#ASLFR_InitialDrawer,(a0)+
 	lea	dc_current_dir_name(pc),a1
 	move.l	a1,(a0)+
@@ -1202,17 +1185,23 @@ dc_init_file_request_tags
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 qh_init_get_visual_info_tags
-	lea	qh_get_visual_info_tag_list(pc),a0
+	lea	qh_get_visual_info_tags(pc),a0
 	moveq	#TAG_DONE,d2
 	move.l	d2,(a0)
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 qh_init_edit_window_tags
-	lea	qh_edit_window_tag_list(pc),a0
+	lea	qh_edit_window_tags(pc),a0
 	move.l	#WA_Left,(a0)+
 	moveq	#qh_edit_window_left,d2
 	move.l	d2,(a0)+
@@ -1254,6 +1243,9 @@ qh_init_edit_window_tags
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 qh_init_gadgets
 ; ** CreateContext() **
@@ -1276,7 +1268,7 @@ qh_init_gadgets
    	move.l	d0,gng_UserData(a0)
 
 ; ** Text Gadget **
-	lea	qh_text_gadget_tag_list(pc),a0
+	lea	qh_text_gadget_tags(pc),a0
 	move.l	#GTTX_Text,(a0)+
 	moveq	#0,d0
 	move.l	d0,(a0)+
@@ -1286,7 +1278,7 @@ qh_init_gadgets
 	moveq	#TAG_DONE,d0
 	move.l	d0,(a0)
 
-	lea	qh_set_text_gadget_tag_list(pc),a0
+	lea	qh_set_text_gadget_tags(pc),a0
 	move.l	#GTTX_Text,(a0)+
 	moveq	#0,d0
 	move.l	d0,(a0)+
@@ -1294,14 +1286,14 @@ qh_init_gadgets
 	move.l	d0,(a0)
 
 ; ** Button Gadgets **
-	lea	qh_button_tag_list(pc),a0
+	lea	qh_button_tags(pc),a0
 	move.l	#GA_Disabled,(a0)+
 	moveq	#BOOL_FALSE,d0
 	move.l	d0,(a0)+
 	moveq	#TAG_DONE,d0
 	move.l	d0,(a0)
 
-	lea	qh_set_button_tag_list(pc),a0
+	lea	qh_set_button_tags(pc),a0
 	move.l	#GA_Disabled,(a0)+
 	moveq	#BOOL_FALSE,d0
 	move.l	d0,(a0)+
@@ -1309,7 +1301,7 @@ qh_init_gadgets
 	move.l	d0,(a0)
 
 ; ** Integer Gadget **
-	lea	qh_integer_gadget_tag_list(pc),a0
+	lea	qh_integer_gadget_tags(pc),a0
 	move.l	#GTIN_Number,(a0)+
 	moveq	#0,d0
 	move.w	qh_edit_entry_offset(a3),d0
@@ -1320,7 +1312,7 @@ qh_init_gadgets
 	moveq	#TAG_DONE,d0
 	move.l	d0,(a0)
 
-	lea	qh_set_integer_gadget_tag_list(pc),a0
+	lea	qh_set_integer_gadget_tags(pc),a0
 	move.l	#GTIN_Number,(a0)+
 	moveq	#0,d0
 	move.l	d0,(a0)+
@@ -1338,7 +1330,7 @@ qh_init_gadgets
 	moveq	#0,d0
 	move.w	d0,(a0)
 
-	lea	qh_cycle_gadget_tag_list(pc),a0
+	lea	qh_cycle_gadget_tags(pc),a0
 	move.l	#GTCY_Labels,(a0)+
 	lea	qh_cycle_gadget_array(pc),a1
 	move.l	a1,(a0)+
@@ -1348,7 +1340,7 @@ qh_init_gadgets
 	moveq	#TAG_DONE,d0
 	move.l	d0,(a0)
 
-	lea	qh_set_cycle_gadget_tag_list(pc),a0
+	lea	qh_set_cycle_gadget_tags(pc),a0
 	move.l	#GTCY_Active,(a0)+
 	moveq	#0,d0
 	move.l	d0,(a0)+
@@ -1364,7 +1356,7 @@ qh_init_gadgets
 	moveq	#0,d0
 	move.l	d0,(a0)
 
-	lea	qh_mx_gadget_tag_list(pc),a0
+	lea	qh_mx_gadget_tags(pc),a0
 	move.l	#GTMX_Labels,(a0)+
 	lea	qh_mx_gadget_array(pc),a1
 	move.l	a1,(a0)+
@@ -1374,7 +1366,7 @@ qh_init_gadgets
 	moveq	#TAG_DONE,d0
 	move.l	d0,(a0)
 
-	lea	qh_set_mx_gadget_tag_list(pc),a0
+	lea	qh_set_mx_gadget_tags(pc),a0
 	move.l	#GTMX_Active,(a0)+
 	moveq	#0,d0
 	move.l	d0,(a0)+
@@ -1383,10 +1375,13 @@ qh_init_gadgets
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-rd_init_pal_screen_colors
-	lea	rd_pal_screen_colors(pc),a0
-	move.w	#rd_pal_screen_colors_number,(a0)+
+rd_init_degrade_screen_colors
+	lea	rd_degrade_screen_colors(pc),a0
+	move.w	#rd_degrade_screen_colors_number,(a0)+
 	moveq	#0,d0
 	move.w	d0,(a0)+		; Erste Farbe COLOR00
 	move.l	d0,(a0)+		; COLOR00 32-Bit Rotwert
@@ -1399,23 +1394,26 @@ rd_init_pal_screen_colors
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-rd_init_pal_screen_tags
-	lea	rd_pal_screen_tag_list(pc),a0
+rd_init_degrade_screen_tags
+	lea	rd_degrade_screen_tags(pc),a0
 	move.l	#SA_Left,(a0)+
-     	moveq	#rd_pal_screen_left,d2
+     	moveq	#rd_degrade_screen_left,d2
 	move.l	d2,(a0)+
 	move.l	#SA_Top,(a0)+
-     	moveq	#rd_pal_screen_top,d2
+     	moveq	#rd_degrade_screen_top,d2
 	move.l	d2,(a0)+
 	move.l	#SA_Width,(a0)+
-	moveq	#rd_pal_screen_x_size,d2
+	moveq	#rd_degrade_screen_x_size,d2
 	move.l	d2,(a0)+
 	move.l	#SA_Height,(a0)+
-	moveq	#rd_pal_screen_y_size,d2
+	moveq	#rd_degrade_screen_y_size,d2
 	move.l	d2,(a0)+
 	move.l	#SA_Depth,(a0)+
-	moveq	#rd_pal_screen_depth,d2
+	moveq	#rd_degrade_screen_depth,d2
 	move.l	d2,(a0)+
 	move.l	#SA_DisplayID,(a0)+
 	move.l	#PAL_MONITOR_ID|LORES_KEY,(a0)+
@@ -1425,10 +1423,10 @@ rd_init_pal_screen_tags
 	move.l	#SA_BlockPen,(a0)+
 	move.l	d0,(a0)+
 	move.l	#SA_Title,(a0)+
-	lea	rd_pal_screen_name(pc),a1
+	lea	rd_degrade_screen_name(pc),a1
 	move.l	a1,(a0)+
 	move.l	#SA_Colors32,(a0)+
-	lea	rd_pal_screen_colors(pc),a1
+	lea	rd_degrade_screen_colors(pc),a1
 	move.l	a1,(a0)+
 	move.l	#SA_Font,(a0)+
 	move.l	d0,(a0)+
@@ -1453,9 +1451,12 @@ rd_init_pal_screen_tags
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_init_invisible_window_tags
-	lea	rd_invisible_window_tag_list(pc),a0
+	lea	rd_invisible_window_tags(pc),a0
 	move.l	#WA_Left,(a0)+
 	moveq	#rd_invisible_window_left,d2
 	move.l	d2,(a0)+
@@ -1502,9 +1503,12 @@ rd_init_invisible_window_tags
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_init_video_control_tags
-	lea	rd_video_control_tag_list(pc),a0
+	lea	rd_video_control_tags(pc),a0
 	moveq	#TAG_DONE,d2
 	move.l	d2,vctl_TAG_DONE(a0)
 	rts
@@ -1570,37 +1574,37 @@ adl_open_graphics_library_ok
 ; Result
 ; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
-adl_check_system
+adl_check_system_requirements
 	move.l	_SysBase(pc),a0
 	cmp.w	#OS_VERSION_MIN,Lib_Version(a0)
-	bge.s	adl_check_system_cpu_min
+	bge.s	adl_check_cpu_requirement
 	lea	adl_error_text2(pc),a0
 	moveq	#adl_error_text2_end-adl_error_text2,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
-adl_check_system_cpu_min
+adl_check_cpu_requirement
 	btst	#AFB_68020,AttnFlags+1(a0)
-	bne.s	adl_check_aga_chipset
+	bne.s	adl_check_chipset_requirement
 	lea	adl_error_text3(pc),a0
 	move.l	#adl_error_text3_end-adl_error_text3,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
-adl_check_aga_chipset
+adl_check_chipset_requirement
 	move.l	_GfxBase(pc),a1
 	move.b	gb_ChipRevBits0(a1),d0
 	btst	#GFXB_AA_ALICE,d0
-	bne.s   adl_check_lisa
+	bne.s   adl_check_lisa_chip
 	lea	adl_error_text4(pc),a0
 	move.l	#adl_error_text4_end-adl_error_text4,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
-adl_check_lisa
+adl_check_lisa_chip
 	btst	#GFXB_AA_LISA,d0
 	bne.s	adl_check_pal
 	lea	adl_error_text4(pc),a0
@@ -1611,14 +1615,14 @@ adl_check_lisa
 	CNOP 0,4
 adl_check_pal
 	btst	#REALLY_PALn,gb_DisplayFlags+1(a1)
-	bne.s	adl_check_system_ok
+	bne.s	adl_check_system_requirements_ok
 	lea	adl_error_text5(pc),a0
 	move.l	#adl_error_text5_end-adl_error_text5,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
-adl_check_system_ok
+adl_check_system_requirements_ok
 	moveq	#RETURN_OK,d0
 	rts
 
@@ -1643,6 +1647,28 @@ adl_open_intuition_library
 adl_open_intuition_library_ok
 	moveq	#RETURN_OK,d0
 	rts
+
+
+; Input
+; Result
+; d0.l	... Rückgabewert: Return-Code
+	CNOP 0,4
+adl_open_gadtools_library
+	lea	gadtools_library_name(pc),a1
+	moveq	#OS_VERSION_MIN,d0
+	CALLEXEC OpenLibrary
+	lea	_GadToolsBase(pc),a0
+	move.l	d0,(a0)
+	bne.s	adl_open_gadtools_library_ok
+	lea	adl_error_text6(pc),a0
+	moveq	#adl_error_text6_end-adl_error_text6,d0
+	bsr	adl_print_text
+	moveq	#RETURN_FAIL,d0
+	rts
+	CNOP 0,4
+adl_open_gadtools_library_ok
+	moveq	#RETURN_OK,d0
+	rts	
 
 
 ; Input
@@ -1697,28 +1723,6 @@ adl_set_default_values
 ; Result
 ; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
-adl_open_gadtools_library
-	lea	gadtools_library_name(pc),a1
-	moveq	#OS_VERSION_MIN,d0
-	CALLEXEC OpenLibrary
-	lea	_GadToolsBase(pc),a0
-	move.l	d0,(a0)
-	bne.s	adl_open_gadtools_library_ok
-	lea	adl_error_text6(pc),a0
-	moveq	#adl_error_text6_end-adl_error_text6,d0
-	bsr	adl_print_text
-	moveq	#RETURN_FAIL,d0
-	rts
-	CNOP 0,4
-adl_open_gadtools_library_ok
-	moveq	#RETURN_OK,d0
-	rts
-
-
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
-	CNOP 0,4
 adl_check_cmd_line
 	lea	adl_cmd_template(pc),a0
 	move.l	a0,d1			; Zeiger auf Befelsschablone
@@ -1738,6 +1742,9 @@ adl_check_cmd_line_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 adl_print_cmd_usage
 	lea	adl_cmd_usage_text(pc),a0
@@ -1982,6 +1989,9 @@ adl_check_arg_softreset_skip
 	bra	adl_check_cmd_line_ok
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 adl_print_intro_message_text
 	tst.w	adl_reset_program_active(a3)
@@ -2079,6 +2089,9 @@ dc_get_program_dir_name_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 dc_display_remaining_files
 	lea	dc_file_request_remaining_files(pc),a0
@@ -2099,7 +2112,7 @@ dc_request_title_skip
 	CNOP 0,4
 dc_make_file_request
 	moveq	#ASL_FileRequest,d0
-	lea	dc_file_request_init_tag_list(pc),a0
+	lea	dc_file_request_init_tags(pc),a0
 	CALLASL AllocAslRequest
 	move.l	d0,dc_file_request(a3)
 	bne.s	dc_make_file_request_ok
@@ -2120,7 +2133,7 @@ dc_make_file_request_ok
 	CNOP 0,4
 dc_display_file_request
 	move.l	dc_file_request(a3),a0
-	lea	dc_file_request_display_tag_list(pc),a1
+	lea	dc_file_request_display_tags(pc),a1
 	CALLASL AslRequest
 	tst.l   d0
 	bne.s	dc_display_file_request_ok
@@ -2267,12 +2280,18 @@ dc_check_demofile_nullbyte
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 dc_free_file_request
 	move.l	dc_file_request(a3),a0
 	CALLASLQ FreeAslRequest
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 dc_display_runmode_request
 	move.l	a3,-(a7)
@@ -2311,6 +2330,9 @@ dc_check_entries_number_max_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 dc_print_entries_max_message_text
 	lea     dc_message_text(pc),a0
@@ -2394,6 +2416,9 @@ dc_update_entries_number
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 dc_close_asl_library
 	move.l	_ASLBase(pc),a1
@@ -2768,6 +2793,9 @@ dc_free_DosObject
 	bra	dc_parse_playlist_file_loop1
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 dc_parse_playlist_file_result
 	moveq	#0,d1
@@ -2789,7 +2817,7 @@ dc_parse_playlist_file_result
 ; Input
 ; a0	... Zeiger auf Eintrag im Puffer
 ; Result
-; d0	... Kein Rückgabewert
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 dc_parse_playlist_entry_error
 	bsr.s	dc_clear_playlist_entry
@@ -2799,7 +2827,7 @@ dc_parse_playlist_entry_error
 ; Input
 ; a0	... Zeiger auf den Eintrag zum Löschen
 ; Result
-; d0	... Kein Rückgabewert
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 dc_clear_playlist_entry
 	moveq	#0,d0
@@ -2810,6 +2838,9 @@ dc_clear_playlist_entry_loop
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 dc_parse_entry_syntax_error
 	moveq	#0,d1
@@ -2839,12 +2870,18 @@ dc_check_entries_number_min_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 dc_close_playlist_file
 	move.l	dc_playlist_file_handle(a3),d1
 	CALLDOSQ Close
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 dc_free_playlist_file_buffer
 	move.l	dc_playlist_file_buffer(a3),a1
@@ -2852,6 +2889,9 @@ dc_free_playlist_file_buffer
 	CALLEXECQ FreeMem
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 dc_free_playlist_file_fib
 	move.l	dc_playlist_file_fib(a3),a1
@@ -2859,12 +2899,18 @@ dc_free_playlist_file_fib
 	CALLEXECQ FreeMem
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 dc_unlock_playlist_file
 	move.l dc_playlist_file_lock(a3),d1
 	CALLDOSQ UnLock
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 dc_free_entries_buffer
 	tst.w	adl_reset_program_active(a3)
@@ -2880,6 +2926,9 @@ dc_do_free_entries_buffer
 
 
 ; **** Queue-Handler ****
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 qh_show_queue
 	move.l	adl_entries_buffer(a3),a2
@@ -2922,9 +2971,9 @@ qh_show_queue_loop
 
 
 ; Input
-; a2 ... Zeiger auf Eintrag in Playback-Queue
+; a2	... Zeiger auf Eintrag in Playback-Queue
 ; Result
-; d0 ... kein Rückgabewert
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 qh_get_entry_filename
 	moveq	#0,d0			; Zähler für Demo-Dateinamen-Länge
@@ -2970,6 +3019,9 @@ qh_print_entry_active_text2
 	bra	adl_print_text
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 qh_edit_single_entry
 	bsr	qh_lock_workbench
@@ -3000,6 +3052,9 @@ qh_edit_entry_quit
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 qh_edit_queue
 	move.l	adl_entries_buffer(a3),a0
@@ -3067,7 +3122,7 @@ qh_lock_workbench_ok
 	CNOP 0,4
 qh_get_screen_visual_info
 	move.l	qh_workbench_screen(a3),a0
-	lea	qh_get_visual_info_tag_list(pc),a1
+	lea	qh_get_visual_info_tags(pc),a1
 	CALLGADTOOLS GetVisualInfoA
 	move.l	d0,qh_screen_visual_info(a3)
 	bne.s	qh_get_screen_visual_info_ok
@@ -3135,7 +3190,7 @@ qh_create_gadgets
 	bsr	qh_get_demofile_title
 	move.l	d0,qh_edit_entry_demofile_name(a3)
 	move.l	qh_context_gadget(a3),a0 ; vorheriges Gadget
-	lea	qh_text_gadget_tag_list(pc),a2
+	lea	qh_text_gadget_tags(pc),a2
 	move.l	d0,ti_data(a2)		; Name des Demos
 	move.l	#TEXT_KIND,d0
 	CALLGADTOOLS CreateGadgetA
@@ -3163,7 +3218,7 @@ qh_create_gadgets
 	moveq	#BOOL_TRUE,d0		; Gadget inaktiv
 qh_create_bwd_button_skip
 	move.l	a4,a0			; vorheriges Gadget
-	lea	qh_button_tag_list(pc),a2
+	lea	qh_button_tags(pc),a2
   	move.l	d0,ti_data(a2)		; Gadget-Status
 	move.l	#BUTTON_KIND,d0
 	CALLGADTOOLS CreateGadgetA
@@ -3183,7 +3238,7 @@ qh_create_bwd_button_skip
         move.w	#qh_integer_gadget_id,gng_GadgetID(a1)
 	move.l	d0,gng_Flags(a1)
 	move.l	a4,a0			; vorheriges Gadget
-	lea	qh_integer_gadget_tag_list(pc),a2
+	lea	qh_integer_gadget_tags(pc),a2
 	move.l	#INTEGER_KIND,d0
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,a4
@@ -3209,7 +3264,7 @@ qh_create_bwd_button_skip
 	moveq	#BOOL_TRUE,d0		; Gadget inaktiv
 qh_create_fwd_button_skip
 	move.l	a4,a0			; vorheriges Gadget
-	lea	qh_button_tag_list(pc),a2
+	lea	qh_button_tags(pc),a2
   	move.l	d0,ti_data(a2)		; Gadget-Status
 	move.l	#BUTTON_KIND,d0
 	CALLGADTOOLS CreateGadgetA
@@ -3243,7 +3298,7 @@ qh_create_cycle_gadget_skip
 	move.b	pqe_runmode(a0),d0
 	subq.b	#1,d0			; Ordnungsnummer Auswahltext
 	move.l	a4,a0			; vorheriges Gadget
-	lea	qh_cycle_gadget_tag_list(pc),a2
+	lea	qh_cycle_gadget_tags(pc),a2
 	move.l	d0,(1*ti_SIZEOF)+ti_Data(a2) ; Ordnungsnummer Auswahltext
 	move.l	#CYCLE_KIND,d0
 	CALLGADTOOLS CreateGadgetA
@@ -3274,7 +3329,7 @@ qh_create_mx_gadget_skip
 	move.b	pqe_entry_active(a0),d0
         neg.b	d0			; Ordnungsnummer Auswahltext
 	move.l	a4,a0			; vorheriges Gadget
-	lea	qh_mx_gadget_tag_list(pc),a2
+	lea	qh_mx_gadget_tags(pc),a2
 	move.l	d0,(1*ti_SIZEOF)+ti_Data(a2) ; Ordnungsnummer Auswahltext
 	move.l	#MX_KIND,d0
 	CALLGADTOOLS CreateGadgetA
@@ -3295,7 +3350,7 @@ qh_create_mx_gadget_skip
 	moveq	#0,d0
 	move.l	d0,gng_Flags(a1)
 	move.l	a4,a0			; vorheriges Gadget
-	lea	qh_button_tag_list(pc),a2
+	lea	qh_button_tags(pc),a2
 	moveq	#BOOL_FALSE,d0		; Gadget aktiv
   	move.l	d0,ti_data(a2)		; Gadget-Status
 	move.l	#BUTTON_KIND,d0
@@ -3312,7 +3367,7 @@ qh_create_mx_gadget_skip
 	moveq	#0,d0
 	move.l	d0,gng_Flags(a1)
 	move.l	a4,a0			; vorheriges Gadget
-	lea	qh_button_tag_list(pc),a2
+	lea	qh_button_tags(pc),a2
 	move.l	#BUTTON_KIND,d0
 	CALLGADTOOLS CreateGadgetA
 
@@ -3357,7 +3412,7 @@ qh_get_demofile_title_skip
 	CNOP 0,4
 qh_open_edit_window
 	sub.l	a0,a0			; Keine NewWindow-Struktur
-	lea	qh_edit_window_tag_list(pc),a1
+	lea	qh_edit_window_tags(pc),a1
 	move.l	qh_gadget_list(pc),ewtl_WA_Gadgets+ti_Data(a1)
 	CALLINT OpenWindowTagList
 	move.l	d0,qh_edit_window(a3)
@@ -3385,6 +3440,9 @@ qh_open_edit_window_skip
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 qh_process_window_events
 	move.l	qh_edit_window(a3),a0
@@ -3398,7 +3456,6 @@ qh_process_window_events
 	CALLGADTOOLS GT_GetIMsg
 	move.l	d0,a4			; Intuition-Message
 	move.l 	im_Class(a4),d0		; IDCMP
-
 ; ** Event Gadget-Up **
 	cmp.l	#IDCMP_GADGETUP,d0
 	bne	qh_check_event_gadget_down
@@ -3501,7 +3558,6 @@ qh_check_negative_button_event
 	bne.s	qh_process_window_events_ok
 	move.w	#FALSE,qh_check_window_events_active(a3)
 	bra.s	qh_process_window_events_ok
-
 ; ** Gadget-Down **
 	CNOP 0,4
 qh_check_event_gadget_down
@@ -3514,7 +3570,6 @@ qh_check_event_gadget_down
 	neg.b	d0
 	move.b	d0,qh_edit_entry_active(a3)
 	bra.s	qh_process_window_events_ok
-
 ; ** Close_window **
 	CNOP 0,4
 qh_check_event_close_window
@@ -3522,7 +3577,6 @@ qh_check_event_close_window
 	bne.s	qh_check_event_refresh_window
 	move.w	#FALSE,qh_check_window_events_active(a3)
        	bra.s	qh_process_window_events_ok
-
 ; ** Refresh-Window **
 	CNOP 0,4
 qh_check_event_refresh_window
@@ -3574,7 +3628,7 @@ qh_ascii_to_dec_loop
 ; Input
 ; d0.l	... Nummer des Eintrags (1..n)
 ; Result
-; d0	... Kein Rückgabewert
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 qh_edit_fetch_entry
 	subq.w	#1,d0			; Zählung ab 0
@@ -3592,13 +3646,13 @@ qh_edit_fetch_entry
 ; a2	... Zeiger auf Dateinamen des Demos
 ; a5	... Zeiger auf Eintrag
 ; Result
-; d0	... Kein Rückgabewert
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 qh_update_gadgets
 	move.l	qh_text_gadget_gadget(a3),a0
 	move.l	qh_edit_window(a3),a1
 	move.l	a3,-(a7)
-	lea	qh_set_text_gadget_tag_list(pc),a3
+	lea	qh_set_text_gadget_tags(pc),a3
 	move.l	a2,ti_data(a3)		; Zeiger auf Dateinamen des Demos
 	sub.l	a2,a2			; Kein Requester
   	CALLGADTOOLS GT_SetGadgetAttrsA
@@ -3613,7 +3667,7 @@ qh_update_gadgets
 	moveq	#BOOL_TRUE,d0		; Gadget inaktiv
 qh_update_gadgets_skip1
 	move.l	a3,-(a7)
-	lea	qh_set_button_tag_list(pc),a3
+	lea	qh_set_button_tags(pc),a3
 	move.l	d0,ti_data(a3)		; Gadget-Status
   	CALLLIBS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
@@ -3622,7 +3676,7 @@ qh_update_gadgets_skip1
 	move.l	qh_edit_window(a3),a1
 	sub.l	a2,a2			; Kein Requester
 	move.l	a3,-(a7)
-	lea	qh_set_integer_gadget_tag_list(pc),a3
+	lea	qh_set_integer_gadget_tags(pc),a3
 	move.l	d2,ti_data(a3)
   	CALLLIBS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
@@ -3637,7 +3691,7 @@ qh_update_gadgets_skip1
 	moveq	#BOOL_TRUE,d0		; Gadget inaktiv
 qh_update_gadgets_skip2
 	move.l	a3,-(a7)
-	lea	qh_set_button_tag_list(pc),a3
+	lea	qh_set_button_tags(pc),a3
 	move.l	d0,ti_data(a3)		; Gadget-Status
   	CALLLIBS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
@@ -3646,7 +3700,7 @@ qh_update_gadgets_skip2
 	move.l	qh_edit_window(a3),a1
 	sub.l	a2,a2			; Kein Requester
 	move.l	a3,-(a7)
-	lea	qh_set_cycle_gadget_tag_list(pc),a3
+	lea	qh_set_cycle_gadget_tags(pc),a3
 	moveq	#0,d0
 	move.b	pqe_runmode(a5),d0
 	subq.b	#1,d0
@@ -3658,7 +3712,7 @@ qh_update_gadgets_skip2
 	move.l	qh_edit_window(a3),a1
 	sub.l	a2,a2			; Kein Requester
 	move.l	a3,-(a7)
-	lea	qh_set_mx_gadget_tag_list(pc),a3
+	lea	qh_set_mx_gadget_tags(pc),a3
 	moveq	#0,d0
 	move.b	pqe_entry_active(a5),d0
 	neg.b	d0
@@ -3668,24 +3722,36 @@ qh_update_gadgets_skip2
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 qh_close_edit_window
 	move.l	qh_edit_window(a3),a0
 	CALLINTQ CloseWindow
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 qh_free_gadgets
 	move.l	qh_gadget_list(pc),a0
 	CALLGADTOOLSQ FreeGadgets
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 qh_free_screen_visual_info
 	move.l	qh_screen_visual_info(a3),a0
 	CALLGADTOOLSQ FreeVisualInfo
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 qh_unlock_workbench
 	sub.l	a0,a0			; Kein Name
@@ -3693,6 +3759,9 @@ qh_unlock_workbench
 	CALLINTQ UnLockPubScreen
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 qh_clear_queue
 	move.l	adl_entries_buffer(a3),a0
@@ -3724,13 +3793,18 @@ qh_clear_queue_skip
 	bra	adl_print_text
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 qh_free_visual_info
 	move.l	qh_screen_visual_info(a3),a0
 	CALLGADTOOLSQ FreeVisualInfo
 
 
-
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 qh_reset_queue
 	cmp.w	#adl_entries_number_min,rd_entry_offset(a3)
@@ -3747,6 +3821,9 @@ qh_reset_queue_ok
 	bra	adl_print_text
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 qh_check_queue_empty
 	move.l	adl_entries_buffer(a3),a2
@@ -3762,6 +3839,9 @@ qh_check_queue_empty_ok
 
 
 ; **** Amiga-Demo-Launcher ****
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 adl_free_read_arguments
 	move.l	adl_read_arguments(a3),d1
@@ -3772,6 +3852,9 @@ adl_free_read_arguments_skip
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 adl_print_io_error
 	move.l	adl_dos_return_code(a3),d1
@@ -3786,6 +3869,9 @@ adl_print_io_error_skip
 	CALLDOSQ PrintFault
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 adl_remove_reset_program
 	tst.w	adl_arg_remove_enabled(a3)
@@ -3810,24 +3896,36 @@ adl_free_reset_programm_memory
 	bra	adl_print_text
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 adl_close_gadtools_library
 	move.l	_GadToolsBase(pc),a1
 	CALLEXECQ CloseLibrary
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 adl_close_intuition_library
 	move.l	_IntuitionBase(pc),a1
 	CALLEXECQ CloseLibrary
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 adl_close_graphics_library
 	move.l	_GfxBase(pc),a1
 	CALLEXECQ CloseLibrary
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 adl_close_dos_library
 	move.l	_DOSBase(pc),a1
@@ -3838,7 +3936,7 @@ adl_close_dos_library
 ; a0	... Zeiger auf Fehlertext
 ; d0.l	... Länge des Textes
 ; Result
-; d0	... Kein Rückgabewert
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 adl_print_text
 	move.l	adl_output_handle(a3),d1
@@ -3919,15 +4017,15 @@ rd_play_loop
 	bne	rd_cleanup_current_dir
 
 	bsr	sf_fade_out_active_screen
-	bsr	rd_open_pal_screen
+	bsr	rd_open_degrade_screen
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_active_screen_colors
-	bsr	rd_check_pal_screen_mode
+	bsr	rd_check_degrade_screen_mode
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_active_screen_colors
 	bsr	rd_open_invisible_window
 	move.l	d0,adl_dos_return_code(a3)
-	bne	rd_cleanup_pal_screen
+	bne	rd_cleanup_degrade_screen
 	bsr	rd_clear_mousepointer
 	bsr	rd_get_sprite_resolution
 	bsr	rd_set_ocs_sprite_resolution
@@ -3976,8 +4074,8 @@ rd_cleanup_display
 	bsr	rd_wait_monitor_switch
 rd_cleanup_invisible_window
 	bsr	rd_close_invisible_window
-rd_cleanup_pal_screen
-	bsr	rd_close_pal_screen
+rd_cleanup_degrade_screen
+	bsr	rd_close_degrade_screen
 rd_cleanup_active_screen_colors
 	bsr	sf_fade_in_screen
 	bsr	rd_check_active_screen_priority
@@ -4113,6 +4211,9 @@ rd_create_serial_message_port_ok
 	rts
 
 
+; Input
+; Result
+; d0.l ... Kein Rückgabewert
 	CNOP 0,4
 rd_init_serial_io
 	lea	rd_serial_io(pc),a0
@@ -4214,6 +4315,9 @@ sf_alloc_screen_color_cache_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 sf_get_active_screen_colors
 	tst.w	rd_arg_screenfader_enabled(a3)
@@ -4231,6 +4335,9 @@ sf_get_active_screen_colors_skip
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 sf_copy_screen_color_table
 	tst.w	rd_arg_screenfader_enabled(a3)
@@ -4253,6 +4360,9 @@ sf_copy_screen_color_table_loop
         rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_get_demofile_name
 	tst.w	rd_arg_random_enabled(a3)
@@ -4301,10 +4411,12 @@ rd_demofile_name_skip
 	GET_RESIDENT_ENTRY_OFFSET
 	move.l	d0,a0
 	addq.w	#1,(a0)
-	moveq	#RETURN_OK,d0
 	rts
 
 
+; Input
+; Result
+; d0.l ... Kein Rückgabewert
 	CNOP 0,4
 rd_print_demofile_start_message
 	lea	rd_demofile_name_header(pc),a0
@@ -4381,6 +4493,9 @@ rd_open_demofile_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_read_demofile_header
 	move.l	rd_demofile_handle(a3),d1
@@ -4390,6 +4505,9 @@ rd_read_demofile_header
 	CALLDOSQ Read
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_close_demofile
 	move.l	rd_demofile_handle(a3),d1
@@ -4414,6 +4532,9 @@ rd_check_demofile_header_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	... keine Rückgabewert
 	CNOP 0,4
 rd_get_demofile_dir_path
 	moveq	#adl_demofile_path_length-1,d7
@@ -4468,6 +4589,9 @@ rd_set_new_current_dir_skip
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_get_prerunscript_path
 	tst.w	rd_arg_prerunscript_enabled(a3)
@@ -4548,15 +4672,16 @@ rd_execute_prerunscript_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_get_active_screen
 	moveq	#0,d0			; Alle Locks
 	CALLINT LockIBase
 	move.l	d0,a0
-	move.l	ib_ActiveScreen(a6),a2
-	CALLLIBS UnlockIBase
-	move.l	a2,rd_active_screen(a3)
-	rts
+	move.l	ib_ActiveScreen(a6),rd_active_screen(a3)
+	CALLLIBQ UnlockIBase
 
 
 ; Input
@@ -4585,6 +4710,9 @@ rd_get_active_screen_mode_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	... keine Rückgabewert
 	CNOP 0,4
 sf_fade_out_active_screen
 	tst.w	rd_arg_screenfader_enabled(a3)
@@ -4600,6 +4728,9 @@ sf_fade_out_active_screen_loop
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
       CNOP 0,4
 screen_fader_out
 	MOVEF.W	sf_colors_number*3,d6 ; Zähler
@@ -4612,11 +4743,11 @@ screen_fader_out_loop
 	moveq   #0,d0
 	move.b  (a0),d0			; 8-Bit Rot-Istwert
 	move.l  a1,d3			
-	swap    d3                      ; 8-Bit Rot-Sollwert
+	swap    d3			; 8-Bit Rot-Sollwert
 	moveq   #0,d1
 	move.b  4(a0),d1		; 8-Bit Grün-Istwert
 	move.w  a1,d4			
-	lsr.w   #8,d4                   ; 8-Bit Grün-Sollwert
+	lsr.w   #8,d4			; 8-Bit Grün-Sollwert
 	moveq   #0,d2
 	move.b  8(a0),d2		; 8-Bit Blau-Istwert
 	move.w  a1,d5
@@ -4702,6 +4833,9 @@ sfo_increase_blue
 	bra.s	sfo_matched_blue
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 sf_set_new_colors
 	move.l	rd_active_screen(a3),d0
@@ -4719,40 +4853,41 @@ sf_set_new_colors_skip
 ; Result
 ; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
-rd_open_pal_screen
-	lea	rd_pal_screen_tag_list(pc),a1
+rd_open_degrade_screen
+	lea	rd_degrade_screen_tags(pc),a1
 	sub.l	a0,a0			; Keine NewScreen-Struktur
 	CALLINT OpenScreenTagList
-	move.l	d0,rd_pal_screen(a3)
-	bne.s	rd_open_pal_screen_ok
+	move.l	d0,rd_degrade_screen(a3)
+	bne.s	rd_open_degrade_screen_ok
 	lea	rd_error_text16(pc),a0
 	moveq	#rd_error_text16_end-rd_error_text16,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
-rd_open_pal_screen_ok
+rd_open_degrade_screen_ok
 	moveq	#RETURN_OK,d0
 	rts
+
 
 ; Input
 ; Result
 ; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
-rd_check_pal_screen_mode
-	move.l	rd_pal_screen(a3),d0
-	beq.s	rd_check_pal_screen_mode_ok
+rd_check_degrade_screen_mode
+	move.l	rd_degrade_screen(a3),d0
+	beq.s	rd_check_degrade_screen_mode_ok
 	move.l	d0,a0
 	ADDF.W	sc_ViewPort,a0
 	CALLGRAF GetVPModeID
 	cmp.l	#PAL_MONITOR_ID|LORES_KEY,d0
-	beq.s	rd_check_pal_screen_mode_ok
+	beq.s	rd_check_degrade_screen_mode_ok
 	lea	rd_error_text17(pc),a0
 	moveq	#rd_error_text17_end-rd_error_text17,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
-rd_check_pal_screen_mode_ok
+rd_check_degrade_screen_mode_ok
 	moveq	#RETURN_OK,d0
 	rts
 
@@ -4763,8 +4898,8 @@ rd_check_pal_screen_mode_ok
 	CNOP 0,4
 rd_open_invisible_window
 	sub.l	a0,a0			; Keine NewWindow-Struktur
-	lea	rd_invisible_window_tag_list(pc),a1
-	move.l	rd_pal_screen(a3),wtl_WA_CustomScreen+ti_data(a1)
+	lea	rd_invisible_window_tags(pc),a1
+	move.l	rd_degrade_screen(a3),wtl_WA_CustomScreen+ti_data(a1)
 	CALLINT OpenWindowTagList
 	move.l	d0,rd_invisible_window(a3)
 	bne.s	rd_open_invisible_window_ok
@@ -4779,6 +4914,9 @@ rd_open_invisible_window_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_clear_mousepointer
 	move.l	rd_invisible_window(a3),a0
@@ -4790,24 +4928,30 @@ rd_clear_mousepointer
 	CALLINTQ SetPointer
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_get_sprite_resolution
-	move.l	rd_pal_screen(a3),a0
+	move.l	rd_degrade_screen(a3),a0
 	move.l  sc_ViewPort+vp_ColorMap(a0),a0
-	lea	rd_video_control_tag_list(pc),a1
+	lea	rd_video_control_tags(pc),a1
 	move.l	#VTAG_SPRITERESN_GET,vctl_VTAG_SPRITERESN+ti_tag(a1)
 	clr.l	vctl_VTAG_SPRITERESN+ti_Data(a1)
 	CALLGRAF VideoControl
-	lea     rd_video_control_tag_list(pc),a0
+	lea     rd_video_control_tags(pc),a0
 	move.l  vctl_VTAG_SPRITERESN+ti_Data(a0),rd_old_sprite_resolution(a3)
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_set_ocs_sprite_resolution
-	move.l	rd_pal_screen(a3),a2
+	move.l	rd_degrade_screen(a3),a2
 	move.l	sc_ViewPort+vp_ColorMap(a2),a0
-	lea	rd_video_control_tag_list(pc),a1
+	lea	rd_video_control_tags(pc),a1
 	move.l	#VTAG_SPRITERESN_SET,+vctl_VTAG_SPRITERESN+ti_tag(a1)
 	move.l	#SPRITERESN_140NS,vctl_VTAG_SPRITERESN+ti_data(a1)
 	CALLGRAF VideoControl		; Sprite-Auflösung auf 140 ns Pixel zurücksetzen
@@ -4816,6 +4960,9 @@ rd_set_ocs_sprite_resolution
 	CALLLIBQ RethinkDisplay
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_blank_display
 	sub.l	a1,a1			; View auf ECS-Werte zurücksetzen
@@ -4833,6 +4980,9 @@ rd_blank_display_skip
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_wait_monitor_switch
 	move.l	rd_active_screen_mode(a3),d0
@@ -4849,6 +4999,9 @@ rd_wait_monitor_switch_skip2
 	CALLDOSQ Delay
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_turn_off_fast_memory
 	move.l	rd_demofile_path(a3),a0
@@ -5033,7 +5186,7 @@ rd_free_whdload_disk_object
 ; a0	... Zeiger auf String
 ; a2	... Zeiger auf Kommando-String
 ; Result
-; d0	... Kein Rückgabewert
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_convert_quitkey_hexvalue
 	addq.w	#1,a0			; "$"-Zeichen in String überspringen
@@ -5076,12 +5229,18 @@ rd_ascii_to_hex_skip
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 adl_wait_drives_motor
 	MOVEF.L	adl_drives_motor_delay,d1
 	CALLDOSQ Delay
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_init_timer_start
 	moveq	#0,d1
@@ -5209,6 +5368,9 @@ rd_write_timer_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_save_custom_trap_vectors
 	GET_CUSTOM_TRAP_VECTORS
@@ -5216,6 +5378,9 @@ rd_save_custom_trap_vectors
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_downgrade_cpu
 	lea	rp_read_vbr(pc),a5
@@ -5281,6 +5446,9 @@ rd_disable_030_mmu
 	CALLLIBQ Supervisor
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_save_chips_registers
 	CALLEXEC Disable
@@ -5414,6 +5582,9 @@ rd_execute_whdload_slave_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_clear_chips_registers
 	CALLEXEC Disable
@@ -5442,6 +5613,9 @@ rd_clear_chips_registers
 	CALLLIBQ Enable
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_restore_chips_registers
 	CALLEXEC Disable
@@ -5515,6 +5689,9 @@ rd_set_ciab_crb2
 	CALLLIBQ Enable
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_upgrade_cpu
 	move.l	rd_demofile_path(a3),a0
@@ -5564,6 +5741,9 @@ rd_enable_030_mmu
 	CALLLIBQ Supervisor
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_restore_custom_trap_vectors
 	move.l	rd_old_vbr(a3),d0
@@ -5577,6 +5757,9 @@ rd_restore_only_chip_memory
 	CALLEXECQ CacheClearU
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_copy_custom_trap_vectors
 	move.l	rd_custom_trap_vectors(a3),a0
@@ -5591,6 +5774,9 @@ rd_copy_custom_trap_vectors_loop
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_init_timer_stop
 	tst.w	rd_timer_delay(a3)
@@ -5604,7 +5790,7 @@ rd_init_timer_stop_skip
 
 ; Input
 ; Result
-; d0.l	... Rückgabewert: Return-Code
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_stop_timer
 	bsr	rd_set_timer
@@ -5613,6 +5799,9 @@ rd_stop_timer
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_unload_demofile
 	move.l	rd_demofile_seglist(a3),d1
@@ -5623,6 +5812,9 @@ rd_unload_demofile_skip
 	CALLDOSQ UnLoadSeg
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_free_fast_memory
 	move.l	rd_demofile_path(a3),a0
@@ -5651,31 +5843,43 @@ rd_free_first_memory_block
 	CALLLIBQ FreeMem
 
 
+; Input
+; Result
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 rd_restore_sprite_resolution
-	move.l	rd_pal_screen(a3),a2
+	move.l	rd_degrade_screen(a3),a2
 	move.l	sc_ViewPort+vp_ColorMap(a2),a0
-	lea	rd_video_control_tag_list(pc),a1
+	lea	rd_video_control_tags(pc),a1
 	move.l	#VTAG_SPRITERESN_SET,vctl_VTAG_SPRITERESN+ti_tag(a1)
 	move.l	rd_old_sprite_resolution(a3),vctl_VTAG_SPRITERESN+ti_data(a1)
-	CALLGRAF VideoControl		; Sprite-Auflösung zurücksetzen
+	CALLGRAF VideoControl
 	move.l	a2,a0			; Zeiger auf Screen
 	CALLINT MakeScreen
 	CALLLIBQ RethinkDisplay
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_close_invisible_window
 	move.l	rd_invisible_window(a3),a0
 	CALLINTQ CloseWindow
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-rd_close_pal_screen
-	move.l	rd_pal_screen(a3),a0
+rd_close_degrade_screen
+	move.l	rd_degrade_screen(a3),a0
 	CALLINTQ CloseScreen
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 sf_fade_in_screen
 	tst.w	rd_arg_screenfader_enabled(a3)
@@ -5691,14 +5895,17 @@ sf_fade_in_screen_loop
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 screen_fader_in
 	MOVEF.W	sf_colors_number*3,d6	; Zähler
 	move.l	sf_screen_color_cache(a3),a0 ; Puffer für Farbwerte
-	addq.w	#4,a0                   ; Offset überspringen
+	addq.w	#4,a0			; Offset überspringen
 	move.w	#sfi_fader_speed,a4	; Additions-/Subtraktionswert für RGB-Werte
 	move.l	sf_screen_color_table(a3),a1 ; Sollwerte
-	MOVEF.W	sf_colors_number-1,d7 ; Anzahl der Farben
+	MOVEF.W	sf_colors_number-1,d7	; Anzahl der Farben
 screen_fader_in_loop
 	moveq	#0,d0
 	move.b	(a0),d0			; 8-Bit Rot-Istwert
@@ -5797,6 +6004,9 @@ sfi_increase_blue
 	bra.s	sfi_matched_blue
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_check_active_screen_priority
 	tst.l	rd_active_screen(a3)
@@ -5818,6 +6028,9 @@ rd_active_screen_to_front
 	CALLLIBQ ScreenToFront
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_restore_current_dir
 	move.l	rd_old_current_dir_lock(a3),d1
@@ -5828,7 +6041,7 @@ rd_restore_current_dir
 
 ; Input
 ; Result
-; d0.l	... Rückgabewert: Return-Code
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_check_queue
 	move.l	adl_entries_buffer(a3),a0
@@ -5856,6 +6069,9 @@ rd_queue_played
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_deactivate_queue
 	moveq 	#0,d0
@@ -5896,6 +6112,9 @@ rd_check_user_break_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_reset_demo_variables
 	tst.w	rd_arg_loop_enabled(a3)
@@ -5930,6 +6149,9 @@ rd_check_loop_mode_ok
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 sf_free_screen_color_cache
 	move.l	sf_screen_color_cache(a3),d0
@@ -5942,6 +6164,9 @@ sf_free_screen_color_cache_skip
 	CALLEXECQ FreeMem
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 sf_free_screen_color_table
 	move.l	sf_screen_color_table(a3),d0
@@ -5954,6 +6179,9 @@ sf_free_screen_color_table_skip
 	CALLEXECQ FreeMem
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_free_cleared_sprite_data
 	move.l	rd_cleared_sprite_pointer_data(a3),a1
@@ -5961,18 +6189,27 @@ rd_free_cleared_sprite_data
 	CALLEXECQ FreeMem
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_close_serial_device
 	lea	rd_serial_io(pc),a1
 	CALLEXECQ CloseDevice
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_delete_serial_message_port
 	move.l	rd_serial_message_port(a3),a0
 	CALLEXECQ DeleteMsgPort
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_close_icon_library
 	move.l	_IconBase(pc),a1
@@ -5984,7 +6221,7 @@ rd_close_icon_library
 ; Input
 ; d0.l	... neuer Inhalt von VBR
 ; Result
-; d0	... Kein Rückgabewert
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_write_vbr
 	or.w	#SRF_I0+SRF_I1+SRF_I2,SR ; Level-7-Interruptebene
@@ -6016,7 +6253,7 @@ rd_060_set_cacr
 ; a1	... Zeiger auf Speicherbereich für alte Werte
 ; a3	... Zeiger auf Variablen-Base
 ; Result
-; d0	... Kein Rückgabewert
+; d0.l	... Kein Rückgabewert
 	MC68040
 	CNOP 0,4
 rd_040_060_mmu_off
@@ -6069,7 +6306,7 @@ rd_040_060_mmu_off_skip
 ; Input
 ; a1	... Zeiger auf Speicherbereich für alte Werte
 ; Result
-; d0	... Kein Rückgabewert
+; d0.l	... Kein Rückgabewert
 	MC68030
 	CNOP 0,4
 rd_030_mmu_off
@@ -6112,7 +6349,7 @@ rd_060_set_pcr
 ; Input
 ; a1	... Zeiger auf Speicherbereich für alte Werte
 ; Result
-; d0	... Kein Rückgabewert
+; d0.l	... Kein Rückgabewert
 	MC68040
 	CNOP 0,4
 rd_040_060_mmu_on
@@ -6146,7 +6383,7 @@ rd_040_060_mmu_on
 ; Input
 ; a1	... Zeiger auf Speicherbereich für alte Werte
 ; Result
-; d0	... Kein Rückgabewert
+; d0.l	... Kein Rückgabewert
 	MC68030
 	CNOP 0,4
 rd_030_mmu_on
@@ -6210,7 +6447,7 @@ rp_quit
 ; Input
 ; d7.l	... Anzahl der Rasterzeilen
 ; Result
-; d0	... Kein Rückgabewert
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rp_wait_rasterline
 	move.l	#$0001ff00,d2		; Maske für vertikale Position V0-V8 des Rasterstrahls
@@ -6234,7 +6471,7 @@ rp_wait_rasterline_loop2
 ; Input
 ; a6	... Exec-Base
 ; Result
-; d0	... Kein Rückgabewert
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rp_clear_cool_capture
 	moveq	#0,d0
@@ -6243,12 +6480,18 @@ rp_clear_cool_capture
 	CALLLIBQ CacheClearU
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rp_init_timer_stop
 	moveq	#0,d1			; Timer stoppen
 	bra.s	rp_create_output_string
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rp_stop_timer
 	bsr	rp_set_timer
@@ -6257,7 +6500,7 @@ rp_stop_timer
 
 ; Input
 ; d1.l	... Timer-Wert
-; d0	... Kein Rückgabewert
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rp_create_output_string
 	lea	rp_output_string(pc),a2
@@ -6302,7 +6545,7 @@ rp_dec_to_hex_loop
 ; d1.l	... Dezimalzahl
 ; d7.l	... Anzahl der Stellen zum Umwandeln
 ; Result
-; d0	... Kein Rückgabewert
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rp_dec_to_ascii
 	lea	rp_dec_table(pc),a1	; Stellentabelle
@@ -6327,7 +6570,7 @@ rp_dec_to_ascii_loop2
 ; d1.l	... Hexadezimalzahl
 ; d7.l	... Anzahl der Stellen zum Umwandeln
 ; Result
-; d0	... Kein Rückgabewert
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rp_hex_to_ascii
 	add.l	d7,a0			; Zeiger auf Ende des Strings
@@ -6365,6 +6608,9 @@ rp_update_output_checksum_loop
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rp_set_timer
 	CALLLIBS Disable
@@ -6376,6 +6622,9 @@ rp_set_timer
 	CALLLIBQ Enable
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rp_write_timer
 	CALLLIBS Disable
@@ -6399,7 +6648,7 @@ rp_write_timer_loop
 ; Input
 ; d3.l	... RBG4-Farbwert
 ; Result
-; d0	... Kein Rückgabewert
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rp_screen_colour_flash
 	moveq	#$0001,d2		; Maske für vertikale Position Bit 8
@@ -6417,6 +6666,9 @@ rp_wait_tick
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rp_restore_custom_cool_capture
 	move.l	rp_reset_program_memory(pc),CoolCapture(a6)
@@ -6427,7 +6679,7 @@ rp_restore_custom_cool_capture
 ; Input
 ; a6	... Exec-Base
 ; Result
-; d0	... Kein Rückgabewert
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rp_update_exec_checksum
 	moveq	#0,d0
@@ -6442,6 +6694,9 @@ rp_update_exec_checksum_loop
 	rts
 
 
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rp_init_custom_exceptions
 	lea	rp_read_vbr(pc),a5
@@ -6515,7 +6770,7 @@ rp_init_custom_exceptions
 ; Input
 ; a6	... Exec-Base
 ; Result
-; d0	... Kein Rückgabewert
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rp_restore_old_exceptions
 	lea	rp_read_vbr(pc),a5
@@ -6541,7 +6796,7 @@ rp_restore_chip_memory
 ; Input
 ; a1	... Ziel: Trap#0-Vektor
 ; Result
-; d0	... Kein Rückgabewert
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rp_copy_old_trap_vectors
 	lea	rp_old_trap_0_vector(pc),a0
@@ -6561,7 +6816,7 @@ rd_copy_old_trap_vectors_loop
 ; Input
 ; a6	... Exec-Base
 ; Result
-; d0	... Kein Rückgabewert
+; d0.l	... Kein Rückgabewert
 		CNOP 0,4
 rp_level_7_program
 		movem.l d0-d1/a0-a1/a6,-(a7)
@@ -6936,11 +7191,11 @@ dc_runmode_request
 
 
 	CNOP 0,4
-dc_file_request_init_tag_list
+dc_file_request_init_tags
 	DS.B ti_SIZEOF*11
 
 	CNOP 0,4
-dc_file_request_display_tag_list
+dc_file_request_display_tags
 	DS.B ti_SIZEOF*2
 
 
@@ -7106,7 +7361,7 @@ dc_error_text18_end
 
 ; **** Queue-Handler ****
 	CNOP 0,4
-qh_get_visual_info_tag_list	DS.L 1
+qh_get_visual_info_tags		DS.L 1
 
 
 	CNOP 0,4
@@ -7121,48 +7376,48 @@ qh_topaz_80			DS.B ta_SIZEOF
 
 
 	CNOP 0,4
-qh_button_tag_list		DS.L 3
+qh_button_tags			DS.L 3
 
 	CNOP 0,4
-qh_set_button_tag_list		DS.L 3
-
-
-	CNOP 0,4
-qh_text_gadget_tag_list		DS.L 5
-
-	CNOP 0,4
-qh_set_text_gadget_tag_list	DS.L 3
+qh_set_button_tags		DS.L 3
 
 
 	CNOP 0,4
-qh_integer_gadget_tag_list	DS.L 5
+qh_text_gadget_tags		DS.L 5
 
 	CNOP 0,4
-qh_set_integer_gadget_tag_list	DS.L 3
+qh_set_text_gadget_tags		DS.L 3
 
 
 	CNOP 0,4
-qh_cycle_gadget_tag_list	DS.L 5
+qh_integer_gadget_tags		DS.L 5
 
 	CNOP 0,4
-qh_set_cycle_gadget_tag_list	DS.L 3
+qh_set_integer_gadget_tags	DS.L 3
+
+
+	CNOP 0,4
+qh_cycle_gadget_tags		DS.L 5
+
+	CNOP 0,4
+qh_set_cycle_gadget_tags	DS.L 3
 
 	CNOP 0,4
 qh_cycle_gadget_array		DS.L 4
 
 
 	CNOP 0,4
-qh_mx_gadget_tag_list		DS.L 5
+qh_mx_gadget_tags		DS.L 5
 
 	CNOP 0,4
-qh_set_mx_gadget_tag_list 	DS.L 3
+qh_set_mx_gadget_tags	 	DS.L 3
 
 	CNOP 0,4
 qh_mx_gadget_array		DS.L 3
 
 
 	CNOP 0,4
-qh_edit_window_tag_list		DS.B edit_window_tag_list_size
+qh_edit_window_tags		DS.B edit_window_tag_list_size
 
 
 
@@ -7287,21 +7542,21 @@ rd_serial_io
 
 
 	CNOP 0,4
-rd_pal_screen_colors
-	DS.B pal_screen_colors_size
+rd_degrade_screen_colors
+	DS.B screen_02_colors_size
 
 	CNOP 0,4
-rd_pal_screen_tag_list
+rd_degrade_screen_tags
 	DS.B screen_tag_list_size
 
 
 	CNOP 0,4
-rd_invisible_window_tag_list
+rd_invisible_window_tags
 	DS.B window_tag_list_size
 
 
 	CNOP 0,4
-rd_video_control_tag_list
+rd_video_control_tags
 	DS.B video_control_tag_list_size
 
 
@@ -7315,7 +7570,7 @@ rd_old_chips_registers
 	DS.B old_chips_registers_size
 
 
-rd_pal_screen_name		DC.B "Amiga Demo Launcher 2",0
+rd_degrade_screen_name		DC.B "Amiga Demo Launcher 2",0
 	EVEN
 
 
