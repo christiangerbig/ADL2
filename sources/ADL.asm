@@ -240,6 +240,11 @@
 ; - Umbenennung des Arguments FADER in SCREENFADER
 ; - Bugfix: Die Werte aus der Playlist für den Run-Modus und die Spielzeit wurden nicht mehr
 ;           in die Playback-Queue übernommen
+; - Bugfix: Wenn der letzte Eintrag der Liste wieder manuell auf "not played"
+;           gesetzt wird und der ADL danach erneut gestartet wird, dann wird
+;           nicht mehr der folgende leere Eintrag gespielt, sondern es erfolgt
+;           eine Warnmeldung
+; - Screen-Degrader-Routine komplett überarbeitet
 
 
 	SECTION code_and_variables,CODE
@@ -479,12 +484,11 @@ wm
 
 	INCLUDE "except-vectors-offsets.i"
 
-	INCLUDE "screen-taglist-offsets.i"
+
 	INCLUDE "screen-colors.i"
 
-	INCLUDE "window-taglist-offsets.i"
 
-	INCLUDE "videocontrol-taglist-offsets.i"
+	INCLUDE "taglists-offsets.i"
 
 
 	RSRESET
@@ -1080,8 +1084,9 @@ adl_init_structures
 	bsr	rd_init_degrade_screen_colors
 	bsr	rd_init_degrade_screen_tags
 	bsr	rd_init_invisible_window_tags
-	bra	rd_init_video_control_tags
-
+	bsr	rd_init_video_control_tags
+        bsr	rd_init_sprite_tags
+	bra	rd_init_no_op_tags
 
 ; Input
 ; Result
@@ -1505,6 +1510,30 @@ rd_init_invisible_window_tags
 	CNOP 0,4
 rd_init_video_control_tags
 	lea	rd_video_control_tags(pc),a0
+	moveq	#TAG_DONE,d2
+	move.l	d2,vctl_TAG_DONE(a0)
+	rts
+
+
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
+	CNOP 0,4
+rd_init_sprite_tags
+	lea	rd_pointer_tags(pc),a0
+	move.l	#WA_POINTER,(a0)+
+	clr.l	(a0)+
+	moveq	#TAG_DONE,d2
+	move.l	d2,vctl_TAG_DONE(a0)
+	rts
+
+
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
+	CNOP 0,4
+rd_init_no_op_tags
+	lea	rd_no_op_tags(pc),a0
 	moveq	#TAG_DONE,d2
 	move.l	d2,vctl_TAG_DONE(a0)
 	rts
@@ -2015,7 +2044,7 @@ dc_alloc_entries_buffer
 	beq.s	dc_alloc_entries_buffer_ok
 	move.w	adl_entries_number_max(a3),d0
 	mulu.w	#playback_queue_entry_size,d0 Größe des Puffers berechnen
-	MOVEF.L MEMF_CLEAR|MEMF_PUBLIC|MEMF_ANY,d1
+	move.l	#MEMF_CLEAR|MEMF_ANY|MEMF_PUBLIC|MEMF_REVERSE,d1
 	CALLEXEC AllocMem
 	move.l	d0,adl_entries_buffer(a3)
 	bne.s	dc_alloc_entries_buffer_ok
@@ -2358,7 +2387,7 @@ dc_check_reset_program_active
 	add.l	d1,d0			; Gesamtlänge inkusive Puffergröße
 	lea	rp_reset_program_size(pc),a0
 	move.l	d0,(a0)
-	MOVEF.L	MEMF_PUBLIC+MEMF_CHIP+MEMF_CLEAR+MEMF_REVERSE,d1
+	move.l	#MEMF_CLEAR+MEMF_CHIP+MEMF_PUBLIC+MEMF_REVERSE,d1
 	CALLEXEC AllocMem
 	lea	rp_reset_program_memory(pc),a0
 	move.l	d0,(a0)
@@ -2448,7 +2477,7 @@ dc_lock_playlist_file_ok
 	CNOP 0,4
 dc_alloc_playlist_file_fib
 	MOVEF.L fib_SIZEOF,d0
-	MOVEF.L	MEMF_CLEAR|MEMF_PUBLIC|MEMF_ANY,d1
+	move.l	#MEMF_CLEAR|MEMF_ANY|MEMF_PUBLIC|MEMF_REVERSE,d1
 	CALLEXEC AllocMem
 	move.l	d0,dc_playlist_file_fib(a3)
 	bne.s	dc_alloc_playlist_file_fib_ok
@@ -2492,7 +2521,7 @@ dc_get_playlist_file_length_ok
 	CNOP 0,4
 dc_alloc_playlist_file_buffer
 	move.l	dc_playlist_file_length(a3),d0
-	MOVEF.L	MEMF_CLEAR|MEMF_PUBLIC|MEMF_ANY,d1
+	move.l	#MEMF_CLEAR|MEMF_ANY|MEMF_PUBLIC|MEMF_REVERSE,d1
 	CALLEXEC AllocMem
 	move.l	d0,dc_playlist_file_buffer(a3)
 	bne.s	dc_alloc_playlist_file_buffer_ok
@@ -3963,31 +3992,33 @@ rd_start
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_serial_message_port
 
-	bsr	rd_alloc_cleared_sprite_data
-	move.l	d0,adl_dos_return_code(a3)
-	bne	rd_cleanup_serial_device
-
 	bsr	sf_alloc_screen_color_table
 	move.l	d0,adl_dos_return_code(a3)
-	bne     rd_cleanup_cleared_sprite_data
+	bne     rd_cleanup_serial_device
 	bsr	sf_alloc_screen_color_cache
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_screen_color_table
 
+	bsr	rd_alloc_cleared_sprite_data
+	move.l	d0,adl_dos_return_code(a3)
+	bne	rd_cleanup_screen_color_cache
+
 	bsr	rd_get_active_screen
 	bsr	rd_get_active_screen_mode
 	move.l	d0,adl_dos_return_code(a3)
-	bne	rd_cleanup_screen_color_table
-	bsr	rd_get_sprite_resolution
+	bne	rd_cleanup_cleared_sprite_data
 	bsr	sf_get_active_screen_colors
-	bsr	sf_copy_screen_color_table
+	bsr	sf_copy_active_screen_colors
 
 rd_play_loop
 	bsr	rd_check_queue
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_screen_color_cache
 
+	bsr	rd_get_new_entry_offset
 	bsr	rd_get_demofile_name
+	move.l	d0,adl_dos_return_code(a3)
+	bne	rd_cleanup_io_error
 	bsr	rd_print_demofile_start_message
 	bsr	rd_check_demofile_play_state
 	move.l	d0,adl_dos_return_code(a3)
@@ -4020,11 +4051,12 @@ rd_play_loop
 	bsr	rd_check_degrade_screen_mode
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_active_screen_colors
+	bsr	rd_get_sprite_resolution
+	bsr	rd_set_lores_sprite_resolution
 	bsr	rd_open_invisible_window
 	move.l	d0,adl_dos_return_code(a3)
-	bne	rd_cleanup_degrade_screen
+	bne	rd_cleanup_display
 	bsr	rd_clear_mousepointer
-	bsr	rd_set_ocs_sprite_resolution
  	bsr	rd_blank_display
 	bsr	rd_wait_monitor_switch
 
@@ -4041,15 +4073,20 @@ rd_play_loop
 	bsr	rd_init_timer_start
 	bsr	rd_start_timer
 	move.l	d0,adl_dos_return_code(a3)
-	bne.s	rd_cleanup_demofile
+	bne	rd_cleanup_demofile
 
 	bsr	rd_save_custom_trap_vectors
 	bsr	rd_downgrade_CPU
 	bsr	rd_save_chips_registers
 
-	bsr	rd_run_demofile
+	IFEQ adl_restore_adl_code_enabled
+		SET_RESTORE_ADL_ACTIVE ; Reset-Level-7-Interrupt aktivieren
+	ENDC
+	bsr	rd_run_dos_file
+	bsr	rd_execute_whdload_slave
 	move.l	d0,adl_dos_return_code(a3)
-	bne.s	rd_cleanup_demofile
+	bne	rd_cleanup_demofile
+	bsr	rd_check_softreset
 
 	bsr	rd_clear_chips_registers
 	bsr	rd_restore_chips_registers
@@ -4065,16 +4102,17 @@ rd_cleanup_demofile
 
 rd_cleanup_fast_memory
 	bsr	rd_free_fast_memory
+
+rd_cleanup_invisible_window
+	bsr	rd_close_invisible_window
 rd_cleanup_display
 	bsr	rd_restore_sprite_resolution
 	bsr	rd_wait_monitor_switch
-rd_cleanup_invisible_window
-	bsr	rd_close_invisible_window
 rd_cleanup_degrade_screen
 	bsr	rd_close_degrade_screen
 rd_cleanup_active_screen_colors
-	bsr	sf_fade_in_screen
 	bsr	rd_check_active_screen_priority
+	bsr	sf_fade_in_active_screen
 
 rd_cleanup_current_dir
 	bsr	rd_restore_current_dir
@@ -4085,11 +4123,11 @@ rd_cleanup_io_error
 
 	bsr	rd_check_queue
 	move.l	d0,adl_dos_return_code(a3)
-	bne.s	rd_cleanup_screen_color_cache
+	bne.s	rd_cleanup_cleared_sprite_data
 
 	bsr	rd_check_user_break
 	move.l	d0,adl_dos_return_code(a3)
-	bne.s	rd_cleanup_screen_color_cache
+	bne.s	rd_cleanup_cleared_sprite_data
 
 	bsr	rd_reset_demo_variables
 
@@ -4097,12 +4135,13 @@ rd_cleanup_io_error
 	tst.l	d0
 	beq	rd_play_loop
 
+
+rd_cleanup_cleared_sprite_data
+	bsr	rd_free_cleared_sprite_data
 rd_cleanup_screen_color_cache
 	bsr	sf_free_screen_color_cache
 rd_cleanup_screen_color_table
 	bsr	sf_free_screen_color_table
-rd_cleanup_cleared_sprite_data
-	bsr	rd_free_cleared_sprite_data
 
 rd_cleanup_serial_device
 	bsr	rd_close_serial_device
@@ -4248,32 +4287,11 @@ rd_open_serial_device_ok
 ; Result
 ; d0.l	... Rückgabewert: Return-Code/Error-Code
 	CNOP 0,4
-rd_alloc_cleared_sprite_data
-	moveq	#sprite_pointer_data_size,d0
-	MOVEF.L	MEMF_CLEAR|MEMF_CHIP|MEMF_PUBLIC|MEMF_REVERSE,d1
-	CALLEXEC AllocMem
-	move.l	d0,rd_cleared_sprite_pointer_data(a3)
-	bne.s	rd_alloc_cleared_sprite_data_ok
-	lea	rd_error_text6(pc),a0
-	moveq	#rd_error_text6_end-rd_error_text6,d0
-	bsr	adl_print_text
-	moveq	#ERROR_NO_FREE_STORE,d0
-	rts
-	CNOP 0,4
-rd_alloc_cleared_sprite_data_ok
-	moveq	#RETURN_OK,d0
-	rts
-
-
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code/Error-Code
-	CNOP 0,4
 sf_alloc_screen_color_table
 	tst.w	rd_arg_screenfader_enabled(a3)
 	bne.s	sf_alloc_screen_color_table_ok
 	MOVEF.L	sf_colors_number*3*LONGWORD_SIZE,d0
-	MOVEF.L	MEMF_CLEAR|MEMF_ANY|MEMF_PUBLIC|MEMF_REVERSE,d1
+	move.l	#MEMF_CLEAR|MEMF_ANY|MEMF_PUBLIC|MEMF_REVERSE,d1
 	CALLEXEC AllocMem
 	move.l	d0,sf_screen_color_table(a3)
 	bne.s	sf_alloc_screen_color_table_ok
@@ -4296,7 +4314,7 @@ sf_alloc_screen_color_cache
 	tst.w	rd_arg_screenfader_enabled(a3)
 	bne.s	sf_alloc_screen_color_cache_ok
 	MOVEF.L	(1+(sf_colors_number*3)+1)*LONGWORD_SIZE,d0
-	MOVEF.L	MEMF_CLEAR|MEMF_ANY|MEMF_PUBLIC|MEMF_REVERSE,d1
+	move.l	#MEMF_CLEAR|MEMF_ANY|MEMF_PUBLIC|MEMF_REVERSE,d1
 	CALLEXEC AllocMem
 	move.l	d0,sf_screen_color_cache(a3)
 	bne.s	sf_alloc_screen_color_cache_ok
@@ -4313,21 +4331,22 @@ sf_alloc_screen_color_cache_ok
 
 ; Input
 ; Result
-; d0.l	... Kein Rückgabewert
+; d0.l	... Rückgabewert: Return-Code/Error-Code
 	CNOP 0,4
-sf_get_active_screen_colors
-	tst.w	rd_arg_screenfader_enabled(a3)
-	bne.s	sf_get_active_screen_colors_skip
-	move.l	rd_active_screen(a3),d0
-	beq.s	sf_get_active_screen_colors_skip
-	move.l	d0,a0
-	move.l	sc_ViewPort+vp_ColorMap(a0),a0
-	move.l	sf_screen_color_table(a3),a1 ; 32-Bit RGB-Werte
-	moveq	#0,d0			; Ab COLOR00
-	MOVEF.L	sf_colors_number,d1 	; Alle 256 Farben
- 	CALLGRAFQ GetRGB32
+rd_alloc_cleared_sprite_data
+	moveq	#sprite_pointer_data_size,d0
+	move.l	#MEMF_CLEAR|MEMF_CHIP|MEMF_PUBLIC|MEMF_REVERSE,d1
+	CALLEXEC AllocMem
+	move.l	d0,rd_cleared_sprite_pointer_data(a3)
+	bne.s	rd_alloc_cleared_sprite_data_ok
+	lea	rd_error_text6(pc),a0
+	moveq	#rd_error_text6_end-rd_error_text6,d0
+	bsr	adl_print_text
+	moveq	#ERROR_NO_FREE_STORE,d0
+	rts
 	CNOP 0,4
-sf_get_active_screen_colors_skip
+rd_alloc_cleared_sprite_data_ok
+	moveq	#RETURN_OK,d0
 	rts
 
 
@@ -4335,23 +4354,83 @@ sf_get_active_screen_colors_skip
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-sf_copy_screen_color_table
-	tst.w	rd_arg_screenfader_enabled(a3)
-	beq.s	sf_copy_screen_color_table_skip
+rd_get_active_screen
+	moveq	#0,d0			; Alle Locks
+	CALLINT LockIBase
+	move.l	d0,a0
+	move.l	ib_ActiveScreen(a6),rd_active_screen(a3)
+	CALLLIBQ UnlockIBase
+
+
+; Input
+; Result
+; d0.l	... Rückgabewert: Return-Code
+	CNOP 0,4
+rd_get_active_screen_mode
+	move.l	rd_active_screen(a3),d0
+	beq.s	rd_get_active_screen_mode_ok
+	move.l	d0,a0
+	ADDF.W	sc_ViewPort,a0
+	CALLGRAF GetVPModeID
+	cmp.l	#INVALID_ID,d0
+	bne.s	rd_get_active_screen_mode_save
+	lea	rd_error_text9(pc),a0
+	moveq	#rd_error_text9_end-rd_error_text9,d0
+	bsr	adl_print_text
+	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
-sf_copy_screen_color_table_skip
+rd_get_active_screen_mode_save
+	and.l	#MONITOR_ID_MASK,d0	; Ohne Auflösung
+	move.l	d0,rd_active_screen_mode(a3)
+rd_get_active_screen_mode_ok
+	moveq	#RETURN_OK,d0
+	rts
+
+
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
+	CNOP 0,4
+sf_get_active_screen_colors
+	tst.w	rd_arg_screenfader_enabled(a3)
+	bne.s	sf_get_active_screen_colors_quit
+	move.l	rd_active_screen(a3),d0
+	bne.s	sf_get_active_screen_colors_skip
+sf_get_active_screen_colors_quit
+	rts
+	CNOP 0,4
+sf_get_active_screen_colors_skip
+	move.l	d0,a0
+	move.l	sc_ViewPort+vp_ColorMap(a0),a0
+	move.l	sf_screen_color_table(a3),a1 ; 32-Bit RGB-Werte
+	moveq	#0,d0			; Ab COLOR00
+	MOVEF.L	sf_colors_number,d1 	; Alle 256 Farben
+ 	CALLGRAFQ GetRGB32
+	CNOP 0,4
+
+
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
+	CNOP 0,4
+sf_copy_active_screen_colors
+	tst.w	rd_arg_screenfader_enabled(a3)
+	beq.s	sf_do_copy_screen_colors
+	rts
+	CNOP 0,4
+sf_do_copy_screen_colors
 	move.l	sf_screen_color_table(a3),a0 ; Quelle 32-Bit RGB-Werte
 	move.l	sf_screen_color_cache(a3),a1 ; Ziel 32-Bit RGB-Werte
 	move.w	#sf_colors_number,(a1)+ ; Anzahl der Farben
 	moveq	#0,d0
 	move.w	d0,(a1)+		; Ab COLOR00
-	MOVEF.W	sf_colors_number-1,d7 ; Anzahl der Farbwerte
-sf_copy_screen_color_table_loop
+	MOVEF.W	sf_colors_number-1,d7
+sf_do_copy_screen_colors_loop
 	move.l	(a0)+,(a1)+		; 32-Bit-Rotwert
 	move.l	(a0)+,(a1)+		; 32-Bit-Grünwert
 	move.l	(a0)+,(a1)+		; 32-Bit-Blauwert
-	dbf	d7,sf_copy_screen_color_table_loop
+	dbf	d7,sf_do_copy_screen_colors_loop
 	move.l	d0,(a1)			; Listenende
         rts
 
@@ -4360,7 +4439,7 @@ sf_copy_screen_color_table_loop
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-rd_get_demofile_name
+rd_get_new_entry_offset
 	tst.w	rd_arg_random_enabled(a3)
 	bne.s	rd_get_fixed_entry
 rd_get_random_entry_loop
@@ -4372,7 +4451,7 @@ rd_get_random_entry_loop
 	add.l	d0,a0
 	tst.b	pqe_entry_active(a0)	; Demo bereits ausgeführt ?
 	bne.s	rd_get_random_entry_loop ; Ja -> neue Berechnung
-	bra.s	rd_check_demofile_path
+	bra.s	rd_get_new_entry_offset_skip
 	CNOP 0,4
 rd_get_fixed_entry
 	move.w	rd_entry_offset(a3),d0
@@ -4380,8 +4459,26 @@ rd_get_fixed_entry
 	mulu.w	#playback_queue_entry_size,d0 ; Offset in Puffer berechnen
 	move.l	adl_entries_buffer(a3),a0
 	add.l	d0,a0
-rd_check_demofile_path
+rd_get_new_entry_offset_skip
 	move.l	a0,rd_demofile_path(a3)
+	rts
+
+
+; Input
+; Result
+; d0.l	... Rückgabewert: Return-Code
+	CNOP 0,4
+rd_get_demofile_name
+	move.l	a0,rd_demofile_path(a3)
+	tst.b	(a0)			; Name vorhanden ?
+	bne.s	rd_get_demofile_name_skip1
+	lea	rd_message_text1(pc),a0
+	moveq	#rd_message_text1_end-rd_message_text1,d0
+	bsr	adl_print_text
+	moveq	#RETURN_WARN,d0
+	rts
+	CNOP 0,4
+rd_get_demofile_name_skip1
 	moveq	#0,d0			; Zähler für Länge des Dateinamens
 	moveq	#"/",d2
 	moveq	#":",d3
@@ -4389,16 +4486,16 @@ rd_check_demofile_path
 	add.l	d7,a0			; Zeiger auf letztes Zeichen (Nullbyte)
 rd_get_demofile_name_loop
 	tst.b	(a0)
-	beq.s	rd_get_demofile_name_skip
+	beq.s	rd_get_demofile_name_skip2
 	addq.w	#1,d0
-rd_get_demofile_name_skip
+rd_get_demofile_name_skip2
 	cmp.b	(a0),d2			; "/" gefunden ?
-	beq.s	rd_demofile_name_skip	; Ja -> verzweige
+	beq.s	rd_get_demofile_name_skip3
 	cmp.b	(a0),d3			; ":" gefunden ?
-	beq.s	rd_demofile_name_skip	; Ja -> verzweige
+	beq.s	rd_get_demofile_name_skip3
 	subq.w	#1,a0			; vorgeriges Zeichen in Dateipfad
 	dbf	d7,rd_get_demofile_name_loop
-rd_demofile_name_skip
+rd_get_demofile_name_skip3
 	addq.w	#1,a0			; "/" oder ":" überspringen
 	move.l	a0,rd_demofile_name(a3) ; Zeiger auf Dateinamen retten
 	subq.w	#1,d0			; "/" oder ":" abziehen
@@ -4407,6 +4504,7 @@ rd_demofile_name_skip
 	GET_RESIDENT_ENTRY_OFFSET
 	move.l	d0,a0
 	addq.w	#1,(a0)
+	moveq	#RETURN_OK,d0
 	rts
 
 
@@ -4434,8 +4532,8 @@ rd_check_demofile_play_state
 	move.l	rd_demofile_path(a3),a0
 	tst.b	pqe_entry_active(a0)
 	beq.s   rd_check_demofile_play_state_ok
-	lea	rd_error_text9(pc),a0
-	moveq	#rd_error_text9_end-rd_error_text9,d0
+	lea	rd_message_text2(pc),a0
+	moveq	#rd_message_text2_end-rd_message_text2,d0
 	bsr	adl_print_text
 	moveq	#RETURN_WARN,d0
 	rts
@@ -4670,60 +4768,6 @@ rd_execute_prerunscript_ok
 
 ; Input
 ; Result
-; d0.l	... Kein Rückgabewert
-	CNOP 0,4
-rd_get_active_screen
-	moveq	#0,d0			; Alle Locks
-	CALLINT LockIBase
-	move.l	d0,a0
-	move.l	ib_ActiveScreen(a6),rd_active_screen(a3)
-	CALLLIBQ UnlockIBase
-
-
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
-	CNOP 0,4
-rd_get_active_screen_mode
-	move.l	rd_active_screen(a3),d0
-	beq.s	rd_get_active_screen_mode_ok
-	move.l	d0,a0
-	ADDF.W	sc_ViewPort,a0
-	CALLGRAF GetVPModeID
-	cmp.l	#INVALID_ID,d0
-	bne.s	rd_get_active_screen_mode_save
-	lea	rd_error_text15(pc),a0
-	moveq	#rd_error_text15_end-rd_error_text15,d0
-	bsr	adl_print_text
-	moveq	#RETURN_FAIL,d0
-	rts
-	CNOP 0,4
-rd_get_active_screen_mode_save
-	and.l	#MONITOR_ID_MASK,d0	; Ohne Auflösung
-	move.l	d0,rd_active_screen_mode(a3)
-rd_get_active_screen_mode_ok
-	moveq	#RETURN_OK,d0
-	rts
-
-
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
-	CNOP 0,4
-rd_get_sprite_resolution
-	move.l	rd_active_screen(a3),a0
-	move.l  sc_ViewPort+vp_ColorMap(a0),a0
-	lea	rd_video_control_tags(pc),a1
-	move.l	#VTAG_SPRITERESN_GET,vctl_VTAG_SPRITERESN+ti_tag(a1)
-	clr.l	vctl_VTAG_SPRITERESN+ti_Data(a1)
-	CALLGRAF VideoControl
-	lea     rd_video_control_tags(pc),a0
-	move.l  vctl_VTAG_SPRITERESN+ti_Data(a0),rd_old_sprite_resolution(a3)
-	rts
-
-
-; Input
-; Result
 ; d0.l	... keine Rückgabewert
 	CNOP 0,4
 sf_fade_out_active_screen
@@ -4871,8 +4915,8 @@ rd_open_degrade_screen
 	CALLINT OpenScreenTagList
 	move.l	d0,rd_degrade_screen(a3)
 	bne.s	rd_open_degrade_screen_ok
-	lea	rd_error_text16(pc),a0
-	moveq	#rd_error_text16_end-rd_error_text16,d0
+	lea	rd_error_text15(pc),a0
+	moveq	#rd_error_text15_end-rd_error_text15,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -4894,14 +4938,46 @@ rd_check_degrade_screen_mode
 	CALLGRAF GetVPModeID
 	cmp.l	#PAL_MONITOR_ID|LORES_KEY,d0
 	beq.s	rd_check_degrade_screen_mode_ok
-	lea	rd_error_text17(pc),a0
-	moveq	#rd_error_text17_end-rd_error_text17,d0
+	lea	rd_error_text16(pc),a0
+	moveq	#rd_error_text16_end-rd_error_text16,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
 rd_check_degrade_screen_mode_ok
 	moveq	#RETURN_OK,d0
 	rts
+
+
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
+	CNOP 0,4
+rd_get_sprite_resolution
+	move.l	rd_degrade_screen(a3),a0
+	move.l  sc_ViewPort+vp_ColorMap(a0),a0
+	lea	rd_video_control_tags(pc),a1
+	move.l	#VTAG_SPRITERESN_GET,vctl_VTAG_SPRITERESN+ti_tag(a1)
+	clr.l	vctl_VTAG_SPRITERESN+ti_Data(a1)
+	CALLGRAF VideoControl
+	lea     rd_video_control_tags(pc),a0
+	move.l  vctl_VTAG_SPRITERESN+ti_Data(a0),rd_old_sprite_resolution(a3)
+	rts
+
+
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
+	CNOP 0,4
+rd_set_lores_sprite_resolution
+	move.l	rd_degrade_screen(a3),a2
+	move.l	sc_ViewPort+vp_ColorMap(a2),a0
+	lea	rd_video_control_tags(pc),a1
+	move.l	#VTAG_SPRITERESN_SET,+vctl_VTAG_SPRITERESN+ti_tag(a1)
+	move.l	#SPRITERESN_140NS,vctl_VTAG_SPRITERESN+ti_data(a1)
+	CALLGRAF VideoControl		; Sprite-Auflösung auf 140 ns Pixel zurücksetzen
+	move.l	a2,a0			; Zeiger auf Screen
+	CALLINT MakeScreen
+	CALLLIBQ RethinkDisplay
 
 
 ; Input
@@ -4915,8 +4991,8 @@ rd_open_invisible_window
 	CALLINT OpenWindowTagList
 	move.l	d0,rd_invisible_window(a3)
 	bne.s	rd_open_invisible_window_ok
-	lea	rd_error_text18(pc),a0
-	moveq	#rd_error_text18_end-rd_error_text18,d0
+	lea	rd_error_text17(pc),a0
+	moveq	#rd_error_text17_end-rd_error_text17,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -4944,22 +5020,6 @@ rd_clear_mousepointer
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-rd_set_ocs_sprite_resolution
-	move.l	rd_degrade_screen(a3),a2
-	move.l	sc_ViewPort+vp_ColorMap(a2),a0
-	lea	rd_video_control_tags(pc),a1
-	move.l	#VTAG_SPRITERESN_SET,+vctl_VTAG_SPRITERESN+ti_tag(a1)
-	move.l	#SPRITERESN_140NS,vctl_VTAG_SPRITERESN+ti_data(a1)
-	CALLGRAF VideoControl		; Sprite-Auflösung auf 140 ns Pixel zurücksetzen
-	move.l	a2,a0			; Zeiger auf Screen
-	CALLINT MakeScreen
-	CALLLIBQ RethinkDisplay
-
-
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
-	CNOP 0,4
 rd_blank_display
 	sub.l	a1,a1			; View auf ECS-Werte zurücksetzen
 	CALLGRAF LoadView
@@ -4970,7 +5030,7 @@ rd_blank_display
 	move.l	rd_demofile_path(a3),a0
 	cmp.b	#RUNMODE_OCS_VANILLA,pqe_runmode(a0)
 	bne.s	rd_blank_display_skip
-	moveq	#0,d0			; OCS Standart` Screen-Moduli
+	moveq	#0,d0			; OCS Standart Screen-Moduli
 	move.l	d0,_CUSTOM+BPL1MOD
 rd_blank_display_skip
 	rts
@@ -5006,7 +5066,7 @@ rd_turn_off_fast_memory
 	rts
 	CNOP 0,4
 rd_turn_off_fast_memory_skip
-	MOVEF.L	MEMF_FAST|MEMF_LARGEST,d1
+	move.l	#MEMF_FAST|MEMF_LARGEST,d1
 	move.l	d1,d2
 	CALLEXEC AvailMem
 	move.l	d0,rd_available_fast_memory_size(a3)
@@ -5094,8 +5154,8 @@ rd_check_icon_tooltypes
 	CALLICON GetDiskObject
 	move.l	d0,whdl_disk_object(a3)
 	bne.s	rd_check_tooltype_preload
-	lea	rd_error_text20(pc),a0
-	moveq	#rd_error_text20_end-rd_error_text20,d0
+	lea	rd_error_text19(pc),a0
+	moveq	#rd_error_text19_end-rd_error_text19,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -5291,8 +5351,8 @@ rd_set_timer
 	beq.s	rd_set_timer_ok
 	cmp.b	#SerErr_DevBusy,d0	; Serial-Device bereits in Benutzung ?
 	bne.s	rd_check_baud_mismatch	; Ja -> verzweige
-	lea	rd_error_text21a(pc),a0
-	moveq	#rd_error_text21a_end-rd_error_text21a,d0
+	lea	rd_error_text20a(pc),a0
+	moveq	#rd_error_text20a_end-rd_error_text20a,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -5300,8 +5360,8 @@ rd_set_timer
 rd_check_baud_mismatch
 	cmp.b	#SerErr_BaudMismatch,d0	; Baudrate nicht von der Hardware unterstützt ?
 	bne.s	rd_check_invalid_parameters
-	lea	rd_error_text21b(pc),a0
-	moveq	#rd_error_text21b_end-rd_error_text21b,d0
+	lea	rd_error_text20b(pc),a0
+	moveq	#rd_error_text20b_end-rd_error_text20b,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -5309,8 +5369,8 @@ rd_check_baud_mismatch
 rd_check_invalid_parameters
 	cmp.b	#SerErr_InvParam,d0	; Falsche Parameter ?
 	bne.s	rd_check_line_error
-	lea	rd_error_text21c(pc),a0
-	moveq	#rd_error_text21c_end-rd_error_text21c,d0
+	lea	rd_error_text20c(pc),a0
+	moveq	#rd_error_text20c_end-rd_error_text20c,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -5318,8 +5378,8 @@ rd_check_invalid_parameters
 rd_check_line_error
 	cmp.b	#SerErr_LineErr,d0 	; Überlauf der Daten ?
 	bne.s	rd_check_no_data_set_ready
-	lea	rd_error_text21d(pc),a0
-	moveq	#rd_error_text21d_end-rd_error_text21d,d0
+	lea	rd_error_text20d(pc),a0
+	moveq	#rd_error_text20d_end-rd_error_text20d,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -5327,8 +5387,8 @@ rd_check_line_error
 rd_check_no_data_set_ready
 	cmp.b	#SerErr_NoDSR,d0	; Data-Set nicht bereit ?
 	bne.s	rd_set_timer_ok
-	lea	rd_error_text21e(pc),a0
-	moveq	#rd_error_text21e_end-rd_error_text21e,d0
+	lea	rd_error_text20e(pc),a0
+	moveq	#rd_error_text20e_end-rd_error_text20e,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -5353,8 +5413,8 @@ rd_write_timer
 	CALLEXEC DoIO
 	move.b	io_Error(a2),d0
 	beq.s	rd_write_timer_ok
-	lea	rd_error_text22(pc),a0
-	moveq	#rd_error_text22_end-rd_error_text22,d0
+	lea	rd_error_text21(pc),a0
+	moveq	#rd_error_text21_end-rd_error_text21,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -5520,34 +5580,23 @@ rd_set_ciab_crb1
 
 ; Input
 ; Result
-; d0.l	... Rückgabewert: Return-Code
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-rd_run_demofile
-	IFEQ adl_restore_adl_code_enabled
-		SET_RESTORE_ADL_ACTIVE ; Reset-Level-7-Interrupt aktivieren
-	ENDC
+rd_run_dos_file
 	tst.w	whdl_slave_enabled(a3)
-	beq.s	rd_execute_whdload_slave
+	bne.s	rd_do_run_dos_file
+	rts
+	CNOP 0,4
+rd_do_run_dos_file
 	moveq	#rd_shell_no_op_cmd_line_end-rd_shell_no_op_cmd_line,d0
 	lea	rd_shell_no_op_cmd_line(pc),a0
 	move.l	a3,-(a7)
 	move.l	rd_demofile_seglist(a3),a3
 	add.l	a3,a3			; BCPL-Zeiger
 	add.l	a3,a3
-	jsr	FirstCode(a3)		; Demo ausführen
+	jsr	FirstCode(a3)		; Executable-File ausführen
 	move.l	(a7)+,a3
-	move.l	#_CUSTOM+DMACONR,a0
-rd_run_demofile_loop
-	btst	#DMAB_BLTDONE-8,(a0)	; Eventuell noch auf Blitteraktivität warten
-	bne.s	rd_run_demofile_loop
-	tst.w	rd_arg_softreset_enabled(a3)
-	bne.s   rd_run_demofile_ok
-	move.l	rd_demofile_path(a3),a0
-	CALLEXECQ ColdReboot
-	CNOP 0,4
-rd_run_demofile_ok
-	moveq	#RETURN_OK,d0
-	rts
+	CALLGRAFQ WaitBlit
 
 
 ; Input
@@ -5555,27 +5604,38 @@ rd_run_demofile_ok
 ; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 rd_execute_whdload_slave
+	tst.w	whdl_slave_enabled(a3)
+	bne.s	rd_execute_whdload_slave_ok
 	lea	whdl_slave_cmd_line(pc),a0
 	move.l	a0,d1			; Zeiger auf Kommandozeile
 	moveq	#0,d2			; Keine Tags
 	CALLDOS SystemTagList
 	tst.l	d0
-	beq.s	rd_check_arg_softreset_enabled
-	lea	rd_error_text23(pc),a0
-	moveq	#rd_error_text23_end-rd_error_text23,d0
+	beq.s	rd_execute_whdload_slave_skip
+	lea	rd_error_text22(pc),a0
+	moveq	#rd_error_text22_end-rd_error_text22,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
-rd_check_arg_softreset_enabled
-	tst.w	rd_arg_softreset_enabled(a3)
-	bne.s	rd_execute_whdload_slave_ok
-	move.l	rd_demofile_path(a3),a0
-	CALLEXECQ ColdReboot
-	CNOP 0,4
+rd_execute_whdload_slave_skip
+	CALLGRAF WaitBlit
 rd_execute_whdload_slave_ok
 	moveq	#RETURN_OK,d0
 	rts
+
+
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
+	CNOP 0,4
+rd_check_softreset
+	tst.w	rd_arg_softreset_enabled(a3)
+	beq.s	rd_do_softreset
+	rts
+	CNOP 0,4
+rd_do_softreset
+	CALLEXECQ ColdReboot
 
 
 ; Input
@@ -5841,6 +5901,15 @@ rd_free_first_memory_block
 
 ; Input
 ; Result
+; d0.l	... Kein Rückgabewert
+	CNOP 0,4
+rd_close_invisible_window
+	move.l	rd_invisible_window(a3),a0
+	CALLINTQ CloseWindow
+
+
+; Input
+; Result
 ; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 rd_restore_sprite_resolution
@@ -5859,15 +5928,6 @@ rd_restore_sprite_resolution
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-rd_close_invisible_window
-	move.l	rd_invisible_window(a3),a0
-	CALLINTQ CloseWindow
-
-
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
-	CNOP 0,4
 rd_close_degrade_screen
 	move.l	rd_degrade_screen(a3),a0
 	CALLINTQ CloseScreen
@@ -5877,17 +5937,41 @@ rd_close_degrade_screen
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-sf_fade_in_screen
-	tst.w	rd_arg_screenfader_enabled(a3)
-	beq.s	sf_fade_in_screen_loop
+rd_check_active_screen_priority
+	tst.l	rd_active_screen(a3)
+	bne.s	rd_get_first_screen
 	rts
 	CNOP 0,4
-sf_fade_in_screen_loop
+rd_get_first_screen
+	moveq	#0,d0			; alle Locks
+	CALLINT LockIBase
+	move.l	d0,a0
+	move.l	ib_FirstScreen(a6),a2
+	CALLLIBS UnLockIBase
+	cmp.l	rd_active_screen(a3),a2
+	bne.s	rd_active_screen_to_front
+	rts
+	CNOP 0,4
+rd_active_screen_to_front
+	move.l	rd_active_screen(a3),a0
+	CALLLIBQ ScreenToFront
+
+
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
+	CNOP 0,4
+sf_fade_in_active_screen
+	tst.w	rd_arg_screenfader_enabled(a3)
+	beq.s	sf_fade_in_active_screen_loop
+	rts
+	CNOP 0,4
+sf_fade_in_active_screen_loop
 	CALLGRAF WaitTOF
 	bsr	screen_fader_in
 	bsr	sf_set_new_colors
 	tst.w	sfi_active(a3)
-	beq.s	sf_fade_in_screen_loop
+	beq.s	sf_fade_in_active_screen_loop
 	rts
 
 
@@ -6004,30 +6088,6 @@ sfi_increase_blue
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-rd_check_active_screen_priority
-	tst.l	rd_active_screen(a3)
-	bne.s	rd_get_first_screen
-	rts
-	CNOP 0,4
-rd_get_first_screen
-	moveq	#0,d0			; alle Locks
-	CALLINT LockIBase
-	move.l	d0,a0
-	move.l	ib_FirstScreen(a6),a2
-	CALLLIBS UnLockIBase
-	cmp.l	rd_active_screen(a3),a2
-	bne.s	rd_active_screen_to_front
-	rts
-	CNOP 0,4
-rd_active_screen_to_front
-	move.l	rd_active_screen(a3),a0
-	CALLLIBQ ScreenToFront
-
-
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
-	CNOP 0,4
 rd_restore_current_dir
 	move.l	rd_old_current_dir_lock(a3),d1
 	CALLDOS CurrentDir
@@ -6058,8 +6118,8 @@ rd_check_queue_ok
 	rts
 	CNOP 0,4
 rd_queue_played
-	lea	rd_message_text1(pc),a0
-	moveq	#rd_message_text1_end-rd_message_text1,d0
+	lea	rd_message_text3(pc),a0
+	moveq	#rd_message_text3_end-rd_message_text3,d0
 	bsr	adl_print_text
 	moveq	#RETURN_WARN,d0
 	rts
@@ -6097,8 +6157,8 @@ rd_check_user_break
 	CALLEXEC SetSignal
 	btst	#SIGBREAKB_CTRL_C,d0
 	beq.s	rd_check_user_break_ok
-	lea	rd_message_text2(pc),a0
-	moveq	#rd_message_text2_end-rd_message_text2,d0
+	lea	rd_message_text4(pc),a0
+	moveq	#rd_message_text4_end-rd_message_text4,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -6149,6 +6209,16 @@ rd_check_loop_mode_ok
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
+rd_free_cleared_sprite_data
+	move.l	rd_cleared_sprite_pointer_data(a3),a1
+	moveq	#sprite_pointer_data_size,d0
+	CALLEXECQ FreeMem
+
+
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
+	CNOP 0,4
 sf_free_screen_color_cache
 	move.l	sf_screen_color_cache(a3),d0
 	bne.s	sf_free_screen_color_cache_skip
@@ -6172,16 +6242,6 @@ sf_free_screen_color_table
 sf_free_screen_color_table_skip
 	move.l	d0,a1
 	MOVEF.L	sf_colors_number*3*LONGWORD_SIZE,d0
-	CALLEXECQ FreeMem
-
-
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
-	CNOP 0,4
-rd_free_cleared_sprite_data
-	move.l	rd_cleared_sprite_pointer_data(a3),a1
-	moveq	#sprite_pointer_data_size,d0
 	CALLEXECQ FreeMem
 
 
@@ -7556,6 +7616,16 @@ rd_video_control_tags
 	DS.B video_control_tag_list_size
 
 
+	CNOP 0,4
+rd_pointer_tags
+	DS.B pointer_tag_list_size
+
+
+	CNOP 0,4
+rd_no_op_tags
+	DS.L 1
+
+
         CNOP 0,4
 rd_old_mmu_registers
  	DS.B old_mmu_registers_size
@@ -7602,13 +7672,22 @@ rd_shell_no_op_cmd_line_end
 
 
 rd_message_text1
-	DC.B "No more demos left to play.",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"End of playback queue reached.",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_message_text1_end
 	EVEN
 rd_message_text2
-	DC.B "Replay loop stopped.",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Demo already played.",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_message_text2_end
 	EVEN
+rd_message_text3
+	DC.B "No more demos left to play.",ASCII_LINE_FEED,ASCII_LINE_FEED
+rd_message_text3_end
+	EVEN
+rd_message_text4
+	DC.B "Replay loop stopped.",ASCII_LINE_FEED,ASCII_LINE_FEED
+rd_message_text4_end
+	EVEN
+
 
 rd_error_text1
 	DC.B ASCII_LINE_FEED,"Couldn't open ciaa.resource",ASCII_LINE_FEED
@@ -7643,7 +7722,7 @@ rd_error_text8
 rd_error_text8_end
 	EVEN
 rd_error_text9
-	DC.B ASCII_LINE_FEED,"Demo already played",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Invalid monitor ID",ASCII_LINE_FEED
 rd_error_text9_end
 	EVEN
 rd_error_text10
@@ -7667,56 +7746,52 @@ rd_error_text14
 rd_error_text14_end
 	EVEN
 rd_error_text15
-	DC.B ASCII_LINE_FEED,"Invalid monitor ID",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't open degrade screen",ASCII_LINE_FEED
 rd_error_text15_end
 	EVEN
 rd_error_text16
-	DC.B ASCII_LINE_FEED,"Couldn't open pal screen",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Lores PAL screen not supported",ASCII_LINE_FEED
 rd_error_text16_end
 	EVEN
 rd_error_text17
-	DC.B ASCII_LINE_FEED,"Pal screen not supported",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't open invisible window",ASCII_LINE_FEED
 rd_error_text17_end
 	EVEN
 rd_error_text18
-	DC.B ASCII_LINE_FEED,"Couldn't open invisible window",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't load demo file",ASCII_LINE_FEED
 rd_error_text18_end
 	EVEN
 rd_error_text19
-	DC.B ASCII_LINE_FEED,"Couldn't load demo file",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't open WHDLoad .info file",ASCII_LINE_FEED
 rd_error_text19_end
 	EVEN
-rd_error_text20
-	DC.B ASCII_LINE_FEED,"Couldn't open WHDLoad .info file",ASCII_LINE_FEED
-rd_error_text20_end
-	EVEN
-rd_error_text21a
+rd_error_text20a
 	DC.B ASCII_LINE_FEED,"Serial device in use",ASCII_LINE_FEED
-rd_error_text21a_end
+rd_error_text20a_end
 	EVEN
-rd_error_text21b
+rd_error_text20b
 	DC.B ASCII_LINE_FEED,"Baud rate not supported by hardware",ASCII_LINE_FEED
-rd_error_text21b_end
+rd_error_text20b_end
 	EVEN
-rd_error_text21c
+rd_error_text20c
 	DC.B ASCII_LINE_FEED,"Bad parameter",ASCII_LINE_FEED
-rd_error_text21c_end
+rd_error_text20c_end
 	EVEN
-rd_error_text21d
+rd_error_text20d
 	DC.B ASCII_LINE_FEED,"Hardware data overrun",ASCII_LINE_FEED
-rd_error_text21d_end
+rd_error_text20d_end
 	EVEN
-rd_error_text21e
+rd_error_text20e
 	DC.B ASCII_LINE_FEED,"No data set ready",ASCII_LINE_FEED
-rd_error_text21e_end
+rd_error_text20e_end
+	EVEN
+rd_error_text21
+	DC.B ASCII_LINE_FEED,"Write to serial port failed",ASCII_LINE_FEED
+rd_error_text21_end
 	EVEN
 rd_error_text22
-	DC.B ASCII_LINE_FEED,"Write to serial port failed",ASCII_LINE_FEED
-rd_error_text22_end
-	EVEN
-rd_error_text23
 	DC.B ASCII_LINE_FEED,"Couldn't execute WHDLoad slave file",ASCII_LINE_FEED
-rd_error_text23_end
+rd_error_text22_end
 	EVEN
 
 
