@@ -1,13 +1,12 @@
 ; AmigaDemoLauncher (ADL)
 ; Christian Gerbig
-; 30.08.2024
-; V.2.0
+; 14.09.2024
 
 ; Min-Requirements
 ; * 68020+
-; * .5 MB+
-; * OCS
-; * OS 2.0+
+; * 2 MB+
+; * AGA
+; * OS 3.0+
 
 
 ; Historie
@@ -240,6 +239,8 @@
 ; - Umbenennung des Arguments FADER in SCREENFADER
 ; - Bugfix: Die Werte aus der Playlist für den Run-Modus und die Spielzeit wurden nicht mehr
 ;           in die Playback-Queue übernommen
+
+; V.2.01
 ; - Bugfix: Wenn der letzte Eintrag der Liste wieder manuell auf "not played"
 ;           gesetzt wird und der ADL danach erneut gestartet wird, dann wird
 ;           nicht mehr der folgende leere Eintrag gespielt, sondern es erfolgt
@@ -7933,7 +7934,7 @@ whdl_slave_cmd_line_path
 
 
 ; **** Main ****
-	DC.B "$VER: Amiga Demo Launcher 2.0 (30.8.24)",0
+	DC.B "$VER: Amiga Demo Launcher 2.01 (14.9.24)",0
 	EVEN
 
 
