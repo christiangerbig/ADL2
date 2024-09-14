@@ -3992,16 +3992,16 @@ rd_start
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_serial_message_port
 
+	bsr	rd_alloc_cleared_sprite_data
+	move.l	d0,adl_dos_return_code(a3)
+	bne	rd_cleanup_serial_device
+
 	bsr	sf_alloc_screen_color_table
 	move.l	d0,adl_dos_return_code(a3)
-	bne     rd_cleanup_serial_device
+	bne     rd_cleanup_cleared_sprite_data
 	bsr	sf_alloc_screen_color_cache
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_screen_color_table
-
-	bsr	rd_alloc_cleared_sprite_data
-	move.l	d0,adl_dos_return_code(a3)
-	bne	rd_cleanup_screen_color_cache
 
 	bsr	rd_get_active_screen
 	bsr	rd_get_active_screen_mode
@@ -4013,8 +4013,7 @@ rd_start
 rd_play_loop
 	bsr	rd_check_queue
 	move.l	d0,adl_dos_return_code(a3)
-	bne	rd_cleanup_screen_color_cache
-
+	bne	rd_cleanup_io_error
 	bsr	rd_get_new_entry_offset
 	bsr	rd_get_demofile_name
 	move.l	d0,adl_dos_return_code(a3)
@@ -4052,7 +4051,7 @@ rd_play_loop
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_active_screen_colors
 	bsr	rd_get_sprite_resolution
-	bsr	rd_set_lores_sprite_resolution
+	bsr	rd_set_sprite_resolution
 	bsr	rd_open_invisible_window
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_display
@@ -4118,16 +4117,15 @@ rd_cleanup_current_dir
 	bsr	rd_restore_current_dir
 
 rd_cleanup_io_error
-	move.l	rd_demofile_path(a3),a0
 	bsr	adl_print_io_error
 
 	bsr	rd_check_queue
 	move.l	d0,adl_dos_return_code(a3)
-	bne.s	rd_cleanup_cleared_sprite_data
+	bne.s	rd_cleanup_screen_color_cache
 
 	bsr	rd_check_user_break
 	move.l	d0,adl_dos_return_code(a3)
-	bne.s	rd_cleanup_cleared_sprite_data
+	bne.s	rd_cleanup_screen_color_cache
 
 	bsr	rd_reset_demo_variables
 
@@ -4135,13 +4133,13 @@ rd_cleanup_io_error
 	tst.l	d0
 	beq	rd_play_loop
 
-
-rd_cleanup_cleared_sprite_data
-	bsr	rd_free_cleared_sprite_data
 rd_cleanup_screen_color_cache
 	bsr	sf_free_screen_color_cache
 rd_cleanup_screen_color_table
 	bsr	sf_free_screen_color_table
+
+rd_cleanup_cleared_sprite_data
+	bsr	rd_free_cleared_sprite_data
 
 rd_cleanup_serial_device
 	bsr	rd_close_serial_device
@@ -4287,6 +4285,27 @@ rd_open_serial_device_ok
 ; Result
 ; d0.l	... Rückgabewert: Return-Code/Error-Code
 	CNOP 0,4
+rd_alloc_cleared_sprite_data
+	moveq	#sprite_pointer_data_size,d0
+	move.l	#MEMF_CLEAR|MEMF_CHIP|MEMF_PUBLIC|MEMF_REVERSE,d1
+	CALLEXEC AllocMem
+	move.l	d0,rd_cleared_sprite_pointer_data(a3)
+	bne.s	rd_alloc_cleared_sprite_data_ok
+	lea	rd_error_text6(pc),a0
+	moveq	#rd_error_text6_end-rd_error_text6,d0
+	bsr	adl_print_text
+	moveq	#ERROR_NO_FREE_STORE,d0
+	rts
+	CNOP 0,4
+rd_alloc_cleared_sprite_data_ok
+	moveq	#RETURN_OK,d0
+	rts
+
+
+; Input
+; Result
+; d0.l	... Rückgabewert: Return-Code/Error-Code
+	CNOP 0,4
 sf_alloc_screen_color_table
 	tst.w	rd_arg_screenfader_enabled(a3)
 	bne.s	sf_alloc_screen_color_table_ok
@@ -4325,27 +4344,6 @@ sf_alloc_screen_color_cache
 	rts
 	CNOP 0,4
 sf_alloc_screen_color_cache_ok
-	moveq	#RETURN_OK,d0
-	rts
-
-
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code/Error-Code
-	CNOP 0,4
-rd_alloc_cleared_sprite_data
-	moveq	#sprite_pointer_data_size,d0
-	move.l	#MEMF_CLEAR|MEMF_CHIP|MEMF_PUBLIC|MEMF_REVERSE,d1
-	CALLEXEC AllocMem
-	move.l	d0,rd_cleared_sprite_pointer_data(a3)
-	bne.s	rd_alloc_cleared_sprite_data_ok
-	lea	rd_error_text6(pc),a0
-	moveq	#rd_error_text6_end-rd_error_text6,d0
-	bsr	adl_print_text
-	moveq	#ERROR_NO_FREE_STORE,d0
-	rts
-	CNOP 0,4
-rd_alloc_cleared_sprite_data_ok
 	moveq	#RETURN_OK,d0
 	rts
 
@@ -4439,13 +4437,65 @@ sf_do_copy_screen_colors_loop
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
+rd_check_queue
+	move.l	adl_entries_buffer(a3),a0
+	ADDF.W	pqe_entry_active,a0
+	MOVEF.L	playback_queue_entry_size,d0
+	move.w	adl_entries_number(a3),d7
+	subq.w 	#1,d7			; wegen dbf
+rd_check_queue_loop
+	tst.b	(a0)
+	beq.s	rd_check_queue_ok
+	add.l	d0,a0			; nächster Eintrag
+	dbf	d7,rd_check_queue_loop
+	tst.w 	rd_arg_endless_enabled(a3)
+	bne.s   rd_queue_played
+	bsr.s	rd_deactivate_queue
+rd_check_queue_ok
+	moveq	#RETURN_OK,d0
+	rts
+	CNOP 0,4
+rd_queue_played
+	lea	rd_message_text3(pc),a0
+	moveq	#rd_message_text3_end-rd_message_text3,d0
+	bsr	adl_print_text
+	moveq	#RETURN_WARN,d0
+	rts
+
+
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
+	CNOP 0,4
+rd_deactivate_queue
+	moveq 	#0,d0
+	MOVEF.L	playback_queue_entry_size,d1
+	move.l	adl_entries_buffer(a3),a0
+	ADDF.W	pqe_entry_active,a0
+	move.w	adl_entries_number(a3),d7
+	subq.w  #1,d7			; wegen dbf
+rd_deactivate_queue_loop
+	move.b	d0,(a0)			; Status löschen
+	add.l	d1,a0			; nächster Eintrag
+	dbf	d7,rd_deactivate_queue_loop
+	move.w	#adl_entries_number_min,rd_entry_offset(a3)
+	GET_RESIDENT_ENTRY_OFFSET
+	move.l	d0,a0
+	move.w	#adl_entries_number_min,(a0)
+	rts
+
+
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
+	CNOP 0,4
 rd_get_new_entry_offset
 	tst.w	rd_arg_random_enabled(a3)
 	bne.s	rd_get_fixed_entry
 rd_get_random_entry_loop
 	moveq	#0,d2
 	move.w	adl_entries_number(a3),d2
-	bsr	rd_get_random_entry
+	bsr.s	rd_get_random_entry
 	mulu.w	#playback_queue_entry_size,d0 ; Offset in Puffer berechnen
 	move.l	adl_entries_buffer(a3),a0
 	add.l	d0,a0
@@ -4461,6 +4511,27 @@ rd_get_fixed_entry
 	add.l	d0,a0
 rd_get_new_entry_offset_skip
 	move.l	a0,rd_demofile_path(a3)
+	rts
+
+
+; Input
+; d2.l	... Anzahl der Einträge
+; Result
+; d0.l	... Rückgabewert: Zufallswert für Offset
+	CNOP 0,4
+rd_get_random_entry
+	move.w	_CUSTOM+VHPOSR,d0	; f(x)
+	mulu.w	_CUSTOM+VHPOSR,d0	; f(x)*a
+	move.w	_CUSTOM+VHPOSR,d1
+	swap	d1
+	move.b	_CIAA+CIATODLOW,d1
+	lsl.w	#8,d1
+	move.b	_CIAB+CIATODLOW,d1	; b
+	add.l	d1,d0			; (f(x)*a)+b
+	and.l	#$0000ffff,d0		; Nur Low-Word
+	divu.w	d2,d0			; f(x+1) = [(f(x)*a)+b]/mod rp_entries_number
+	swap	d0			; Rest der Division = Zufallsoffset
+	ext.l	d0
 	rts
 
 
@@ -4540,27 +4611,6 @@ rd_check_demofile_play_state
 	CNOP 0,4
 rd_check_demofile_play_state_ok
 	moveq	#RETURN_OK,d0
-	rts
-
-
-; Input
-; d2.l	... Anzahl der Einträge
-; Result
-; d0.l	... Rückgabewert: Zufallswert für Offset
-	CNOP 0,4
-rd_get_random_entry
-	move.w	_CUSTOM+VHPOSR,d0	; f(x)
-	mulu.w	_CUSTOM+VHPOSR,d0	; f(x)*a
-	move.w	_CUSTOM+VHPOSR,d1
-	swap	d1
-	move.b	_CIAA+CIATODLOW,d1
-	lsl.w	#8,d1
-	move.b	_CIAB+CIATODLOW,d1	; b
-	add.l	d1,d0			; (f(x)*a)+b
-	and.l	#$0000ffff,d0		; Nur Low-Word
-	divu.w	d2,d0			; f(x+1) = [(f(x)*a)+b]/mod rp_entries_number
-	swap	d0			; Rest der Division = Zufallsoffset
-	ext.l	d0
 	rts
 
 
@@ -4968,7 +5018,7 @@ rd_get_sprite_resolution
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-rd_set_lores_sprite_resolution
+rd_set_sprite_resolution
 	move.l	rd_degrade_screen(a3),a2
 	move.l	sc_ViewPort+vp_ColorMap(a2),a0
 	lea	rd_video_control_tags(pc),a1
@@ -6097,58 +6147,6 @@ rd_restore_current_dir
 
 ; Input
 ; Result
-; d0.l	... Kein Rückgabewert
-	CNOP 0,4
-rd_check_queue
-	move.l	adl_entries_buffer(a3),a0
-	ADDF.W	pqe_entry_active,a0
-	MOVEF.L	playback_queue_entry_size,d0
-	move.w	adl_entries_number(a3),d7
-	subq.w 	#1,d7			; wegen dbf
-rd_check_queue_loop
-	tst.b	(a0)
-	beq.s	rd_check_queue_ok
-	add.l	d0,a0			; nächster Eintrag
-	dbf	d7,rd_check_queue_loop
-	tst.w 	rd_arg_endless_enabled(a3)
-	bne.s   rd_queue_played
-	bsr.s	rd_deactivate_queue
-rd_check_queue_ok
-	moveq	#RETURN_OK,d0
-	rts
-	CNOP 0,4
-rd_queue_played
-	lea	rd_message_text3(pc),a0
-	moveq	#rd_message_text3_end-rd_message_text3,d0
-	bsr	adl_print_text
-	moveq	#RETURN_WARN,d0
-	rts
-
-
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
-	CNOP 0,4
-rd_deactivate_queue
-	moveq 	#0,d0
-	MOVEF.L	playback_queue_entry_size,d1
-	move.l	adl_entries_buffer(a3),a0
-	ADDF.W	pqe_entry_active,a0
-	move.w	adl_entries_number(a3),d7
-	subq.w  #1,d7			; wegen dbf
-rd_deactivate_queue_loop
-	move.b	d0,(a0)			; Status löschen
-	add.l	d1,a0			; nächster Eintrag
-	dbf	d7,rd_deactivate_queue_loop
-	move.w	#adl_entries_number_min,rd_entry_offset(a3)
-	GET_RESIDENT_ENTRY_OFFSET
-	move.l	d0,a0
-	move.w	#adl_entries_number_min,(a0)
-	rts
-
-
-; Input
-; Result
 ; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 rd_check_user_break
@@ -6209,16 +6207,6 @@ rd_check_loop_mode_ok
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-rd_free_cleared_sprite_data
-	move.l	rd_cleared_sprite_pointer_data(a3),a1
-	moveq	#sprite_pointer_data_size,d0
-	CALLEXECQ FreeMem
-
-
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
-	CNOP 0,4
 sf_free_screen_color_cache
 	move.l	sf_screen_color_cache(a3),d0
 	bne.s	sf_free_screen_color_cache_skip
@@ -6242,6 +6230,16 @@ sf_free_screen_color_table
 sf_free_screen_color_table_skip
 	move.l	d0,a1
 	MOVEF.L	sf_colors_number*3*LONGWORD_SIZE,d0
+	CALLEXECQ FreeMem
+
+
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
+	CNOP 0,4
+rd_free_cleared_sprite_data
+	move.l	rd_cleared_sprite_pointer_data(a3),a1
+	moveq	#sprite_pointer_data_size,d0
 	CALLEXECQ FreeMem
 
 
