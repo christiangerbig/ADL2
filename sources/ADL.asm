@@ -3,11 +3,11 @@
 ; 30.08.2024
 ; V.2.0
 
-; Requirements
+; Min-Requirements
 ; * 68020+
-; * 2 MB+
-; * AGA
-; * OS 3.0+
+; * .5 MB+
+; * OCS
+; * OS 2.0+
 
 
 ; Historie
@@ -232,11 +232,11 @@
 ; - Wenn alle Demos aus der Liste gespielt wurden wird der ADL nicht mehr
 ;   automtisch aus dem Speicher entfernt
 ; - File-Requester: Der Filter berücksichtigt jetzt auch die Endung ".data"
-; - Neues Argument: EDITQUEUE
+; - Neues Argument: EDITQUEUE - Alle Einträge können nacheinander besabeitet werden
 ; - Neuer Bereich: Queue-Handler qh_
 ; - Edit-Window: Gadgets für Entry-Nummer, Runmode und Entry-Active,
 ;                Änderungrn können in der Playback-Queue gespeichert werden
-; - Neues Argument: EDITENTRY n
+; - Neues Argument: EDITENTRY n - Ein bestimmter Einztrak kann bearbeitet werden
 ; - Umbenennung des Arguments FADER in SCREENFADER
 ; - Bugfix: Die Werte aus der Playlist für den Run-Modus und die Spielzeit wurden nicht mehr
 ;           in die Playback-Queue übernommen
@@ -245,6 +245,7 @@
 ;           nicht mehr der folgende leere Eintrag gespielt, sondern es erfolgt
 ;           eine Warnmeldung
 ; - Screen-Degrader-Routine komplett überarbeitet
+; - Neues Argument: RESTORESYSTIME - Systemzeit wird korrigiert
 
 
 	SECTION code_and_variables,CODE
@@ -567,11 +568,15 @@ rd_arg_random_enabled		RS.W 1
 rd_arg_endless_enabled		RS.W 1
 rd_arg_loop_enabled		RS.W 1
 rd_arg_screenfader_enabled	RS.W 1
+rd_arg_restoresystime_enabled	RS.W 1
 rd_arg_softreset_enabled	RS.W 1
 
 	RS_ALIGN_LONGWORD
 rd_serial_message_port		RS.L 1
-rd_timer_delay			RS.W 1
+rd_playtimer_delay		RS.W 1
+
+	RS_ALIGN_LONGWORD
+rd_tod_time			RS.L 1
 
 rd_play_duration		RS.W 1
 
@@ -658,6 +663,7 @@ cra_RANDOM			RS.L 1
 cra_ENDLESS			RS.L 1
 cra_LOOP			RS.L 1
 cra_SCREENFADER			RS.L 1
+cra_RESTORESYSTIME		RS.L 1
 cra_SOFTRESET			RS.L 1
 
 cmd_results_array_size		RS.B 0
@@ -1032,9 +1038,10 @@ adl_init_variables
 	move.w	d1,rd_arg_endless_enabled(a3)
 	move.w	d1,rd_arg_loop_enabled(a3)
 	move.w	d1,rd_arg_screenfader_enabled(a3)
+	move.w	d1,rd_arg_restoresystime_enabled(a3)
 	move.w	d1,rd_arg_softreset_enabled(a3)
 
-	move.w	d0,rd_timer_delay(a3)
+	move.w	d0,rd_playtimer_delay(a3)
 	move.w	d0,rd_play_duration(a3)
 
 	move.w	#adl_entries_number_min,rd_entry_offset(a3)
@@ -1956,6 +1963,13 @@ adl_check_arg_loop
 	move.l	cra_SCREENFADER(a2),d0
 	not.w	d0
 	move.w	d0,rd_arg_screenfader_enabled(a3)
+
+
+; ** Run-Demo Argument RESTORESYSTIME **
+	move.l	cra_RESTORESYSTIME(a2),d0
+	not.w	d0
+	move.w	d0,rd_arg_restoresystime_enabled(a3)
+
 
 ; ** Run-Demo Argument SOFTRESET **
 	move.l	cra_SOFTRESET(a2),d0
@@ -3927,6 +3941,8 @@ adl_print_text
 ; **** Run-Demo ****
 	CNOP 0,4
 rd_start
+	bsr	rd_init_timer_io
+
 	bsr	rd_open_ciaa_resource
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_read_arguments
@@ -3946,9 +3962,13 @@ rd_start
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_serial_message_port
 
-	bsr	rd_alloc_cleared_sprite_data
+	bsr	rd_open_timer_device
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_serial_device
+
+	bsr	rd_alloc_cleared_sprite_data
+	move.l	d0,adl_dos_return_code(a3)
+	bne	rd_cleanup_timer_device
 
 	bsr	sf_alloc_screen_color_table
 	move.l	d0,adl_dos_return_code(a3)
@@ -4023,13 +4043,16 @@ rd_play_loop
 
 	bsr	adl_wait_drives_motor
 
-	bsr	rd_init_timer_start
-	bsr	rd_start_timer
+	bsr	rd_init_playtimer_start
+	bsr	rd_start_playtimer
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_demofile
 
+	bsr	rd_get_system_time
+
 	bsr	rd_save_custom_trap_vectors
 	bsr	rd_downgrade_CPU
+	bsr	rd_get_tod_time
 	bsr	rd_save_chips_registers
 
 	IFEQ adl_restore_adl_code_enabled
@@ -4043,12 +4066,15 @@ rd_play_loop
 
 	bsr	rd_clear_chips_registers
 	bsr	rd_restore_chips_registers
+	bsr	rd_get_tod_duration
 	bsr	rd_upgrade_CPU
 	bsr	rd_restore_custom_trap_vectors
 
-	bsr	rd_init_timer_stop
-	bsr	rd_stop_timer
+	bsr	rd_init_playtimer_stop
+	bsr	rd_stop_playtimer
 	move.l	d0,adl_dos_return_code(a3)
+
+	bsr	rd_update_system_time
 	
 rd_cleanup_demofile
 	bsr	rd_unload_demofile
@@ -4095,6 +4121,9 @@ rd_cleanup_screen_color_table
 rd_cleanup_cleared_sprite_data
 	bsr	rd_free_cleared_sprite_data
 
+rd_cleanup_timer_device
+	bsr	rd_close_timer_device
+
 rd_cleanup_serial_device
 	bsr	rd_close_serial_device
 rd_cleanup_serial_message_port
@@ -4105,6 +4134,20 @@ rd_cleanup_icon_library
 
 rd_quit
 	bra	adl_cleanup_read_arguments
+
+
+; Input
+; Result
+; d0.l	... Kein Rückgabewert	
+		CNOP 0,4
+rd_init_timer_io
+	lea	rd_timer_io(pc),a0
+	moveq	#0,d0
+	move.b	d0,LN_Type(a0)		; Eintragstyp = Null
+	move.b	d0,LN_Pri(a0)		; Priorität der Struktur = Null
+	move.l	d0,LN_Name(a0)		; Keine Name der Struktur
+	move.l	d0,MN_ReplyPort(a0) 	; Kein Reply-Port
+	rts
 
 
 ; Input
@@ -4159,6 +4202,29 @@ rd_open_ciab_resource_skip
 
 ; Input
 ; Result
+; d0.l	... Rückgabewert: Return-Code	
+		CNOP 0,4
+rd_open_timer_device
+		lea	timer_device_name(pc),a0
+		lea	rd_timer_io(pc),a1
+		moveq	#UNIT_MICROHZ,d0
+		moveq	#0,d1		; Keine Flags
+		CALLEXEC OpenDevice
+		tst.l	d0
+		beq.s	rd_open_timer_device_ok
+		lea	rd_error_text3(pc),a0
+		moveq	#rd_error_text3_end-rd_error_text3,d0
+		bsr	adl_print_text
+		moveq	#RETURN_FAIL,d0
+		rts
+		CNOP 0,4
+rd_open_timer_device_ok
+		moveq	#RETURN_OK,d0
+		rts
+
+
+; Input
+; Result
 ; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 rd_open_icon_library
@@ -4168,8 +4234,8 @@ rd_open_icon_library
 	lea	_IconBase(pc),a0
 	move.l	d0,(a0)
 	bne.s	rd_open_icon_library_ok
-	lea	rd_error_text3(pc),a0
-	moveq	#rd_error_text3_end-rd_error_text3,d0
+	lea	rd_error_text4(pc),a0
+	moveq	#rd_error_text4_end-rd_error_text4,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -4187,8 +4253,8 @@ rd_create_serial_message_port
 	CALLEXEC CreateMsgPort
 	move.l	d0,rd_serial_message_port(a3)
 	bne.s	rd_create_serial_message_port_ok
-	lea	rd_error_text4(pc),a0
-	moveq	#rd_error_text4_end-rd_error_text4,d0
+	lea	rd_error_text5(pc),a0
+	moveq	#rd_error_text5_end-rd_error_text5,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -4224,8 +4290,8 @@ rd_open_serial_device
 	CALLEXEC OpenDevice
 	tst.l	d0
 	beq.s	rd_open_serial_device_ok
-	lea	rd_error_text5(pc),a0
-	moveq	#rd_error_text5_end-rd_error_text5,d0
+	lea	rd_error_text6(pc),a0
+	moveq	#rd_error_text6_end-rd_error_text6,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -4245,8 +4311,8 @@ rd_alloc_cleared_sprite_data
 	CALLEXEC AllocMem
 	move.l	d0,rd_cleared_sprite_pointer_data(a3)
 	bne.s	rd_alloc_cleared_sprite_data_ok
-	lea	rd_error_text6(pc),a0
-	moveq	#rd_error_text6_end-rd_error_text6,d0
+	lea	rd_error_text7(pc),a0
+	moveq	#rd_error_text7_end-rd_error_text7,d0
 	bsr	adl_print_text
 	moveq	#ERROR_NO_FREE_STORE,d0
 	rts
@@ -4268,8 +4334,8 @@ sf_alloc_screen_color_table
 	CALLEXEC AllocMem
 	move.l	d0,sf_screen_color_table(a3)
 	bne.s	sf_alloc_screen_color_table_ok
-	lea	rd_error_text7(pc),a0
-	moveq	#rd_error_text7_end-rd_error_text7,d0
+	lea	rd_error_text8(pc),a0
+	moveq	#rd_error_text8_end-rd_error_text8,d0
 	bsr	adl_print_text
 	moveq	#ERROR_NO_FREE_STORE,d0
 	rts
@@ -4326,8 +4392,8 @@ rd_get_active_screen_mode
 	CALLGRAF GetVPModeID
 	cmp.l	#INVALID_ID,d0
 	bne.s	rd_get_active_screen_mode_save
-	lea	rd_error_text9(pc),a0
-	moveq	#rd_error_text9_end-rd_error_text9,d0
+	lea	rd_error_text10(pc),a0
+	moveq	#rd_error_text10_end-rd_error_text10,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -4580,8 +4646,8 @@ rd_open_demofile
 	CALLDOS Open
 	move.l	d0,rd_demofile_handle(a3)
 	bne.s	rd_open_demofile_ok
-	lea	rd_error_text10(pc),a0
-	moveq	#rd_error_text10_end-rd_error_text10,d0
+	lea	rd_error_text11(pc),a0
+	moveq	#rd_error_text11_end-rd_error_text11,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -4619,8 +4685,8 @@ rd_close_demofile
 rd_check_demofile_header
 	cmp.l	#MAGIC_COOKIE,rd_demofile_MAGIC_COOKIE(a3)
 	beq.s	rd_check_demofile_header_ok
-	lea	rd_error_text11(pc),a0
-	moveq	#rd_error_text11_end-rd_error_text11,d0
+	lea	rd_error_text12(pc),a0
+	moveq	#rd_error_text12_end-rd_error_text12,d0
 	bsr	adl_print_text
 	MOVEF.L ERROR_FILE_NOT_OBJECT,d0
 	rts
@@ -4670,8 +4736,8 @@ rd_set_new_current_dir
 	CALLDOS Lock
 	move.l	d0,rd_demofile_dir_lock(a3)
 	bne.s	rd_set_new_current_dir_skip
-	lea	rd_error_text12(pc),a0
-	moveq	#rd_error_text12_end-rd_error_text12,d0
+	lea	rd_error_text13(pc),a0
+	moveq	#rd_error_text13_end-rd_error_text13,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -4724,8 +4790,8 @@ rd_check_prerunscript_path_loop
 	addq.b	#1,d0
 	cmp.b	#adl_prerunscript_path_length-1,d0
 	blt.s	rd_check_prerunscript_path_skip
-	lea	rd_error_text13(pc),a0
-	moveq	#rd_error_text13_end-rd_error_text13,d0
+	lea	rd_error_text14(pc),a0
+	moveq	#rd_error_text14_end-rd_error_text14,d0
 	bsr	adl_print_text
 	MOVEF.L	ERROR_INVALID_COMPONENT_NAME,d0
 	rts
@@ -4759,8 +4825,8 @@ rd_copy_prerunscript_path_loop
 	CALLDOS	SystemTagList
 	tst.l	d0
 	beq.s	rd_execute_prerunscript_ok
-	lea	rd_error_text14(pc),a0
-	moveq	#rd_error_text14_end-rd_error_text14,d0
+	lea	rd_error_text15(pc),a0
+	moveq	#rd_error_text15_end-rd_error_text15,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -4920,8 +4986,8 @@ rd_open_degrade_screen
 	CALLINT OpenScreenTagList
 	move.l	d0,rd_degrade_screen(a3)
 	bne.s	rd_open_degrade_screen_ok
-	lea	rd_error_text15(pc),a0
-	moveq	#rd_error_text15_end-rd_error_text15,d0
+	lea	rd_error_text16(pc),a0
+	moveq	#rd_error_text16_end-rd_error_text16,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -4943,8 +5009,8 @@ rd_check_degrade_screen_mode
 	CALLGRAF GetVPModeID
 	cmp.l	#PAL_MONITOR_ID|LORES_KEY,d0
 	beq.s	rd_check_degrade_screen_mode_ok
-	lea	rd_error_text16(pc),a0
-	moveq	#rd_error_text16_end-rd_error_text16,d0
+	lea	rd_error_text17(pc),a0
+	moveq	#rd_error_text17_end-rd_error_text17,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -4996,8 +5062,8 @@ rd_open_invisible_window
 	CALLINT OpenWindowTagList
 	move.l	d0,rd_invisible_window(a3)
 	bne.s	rd_open_invisible_window_ok
-	lea	rd_error_text17(pc),a0
-	moveq	#rd_error_text17_end-rd_error_text17,d0
+	lea	rd_error_text18(pc),a0
+	moveq	#rd_error_text18_end-rd_error_text18,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -5106,8 +5172,8 @@ rd_load_demofile
 	CALLDOS LoadSeg
 	move.l	d0,rd_demofile_seglist(a3)
 	bne.s	rd_load_demofile_ok
-	lea	rd_error_text18(pc),a0
-	moveq	#rd_error_text18_end-rd_error_text18,d0
+	lea	rd_error_text19(pc),a0
+	moveq	#rd_error_text19_end-rd_error_text19,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -5159,8 +5225,8 @@ rd_check_icon_tooltypes
 	CALLICON GetDiskObject
 	move.l	d0,whdl_disk_object(a3)
 	bne.s	rd_check_tooltype_preload
-	lea	rd_error_text19(pc),a0
-	moveq	#rd_error_text19_end-rd_error_text19,d0
+	lea	rd_error_text20(pc),a0
+	moveq	#rd_error_text20_end-rd_error_text20,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -5303,21 +5369,21 @@ adl_wait_drives_motor
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-rd_init_timer_start
+rd_init_playtimer_start
 	moveq	#0,d1
 	move.w	rd_play_duration(a3),d1
 	beq.s	rd_check_queue_playtime
-	move.w	d1,rd_timer_delay(a3)
+	move.w	d1,rd_playtimer_delay(a3)
 	bra	rp_create_output_string
 	CNOP 0,4
 rd_check_queue_playtime
 	move.l	rd_demofile_path(a3),a0
 	add.w	pqe_playtime(a0),d1
-	beq.s	rd_init_timer_start_quit
-	move.w	d1,rd_timer_delay(a3)
+	beq.s	rd_init_playtimer_start_quit
+	move.w	d1,rd_playtimer_delay(a3)
 	bra	rp_create_output_string
 	CNOP 0,4
-rd_init_timer_start_quit
+rd_init_playtimer_start_quit
 	rts
 
 
@@ -5325,16 +5391,16 @@ rd_init_timer_start_quit
 ; Result
 ; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
-rd_start_timer
-	tst.w	rd_timer_delay(a3)
-	bne.s	rd_set_timer_play_duration
+rd_start_playtimer
+	tst.w	rd_playtimer_delay(a3)
+	bne.s	rd_set_playtimer_duration
 	moveq	#RETURN_OK,d0
 	rts
 	CNOP 0,4
-rd_set_timer_play_duration
-	bsr.s	rd_set_timer
+rd_set_playtimer_duration
+	bsr.s	rd_set_playtimer
 	tst.l	d0
-	beq  	rd_write_timer
+	beq  	rd_write_playtimer
 	rts
 
 
@@ -5343,7 +5409,7 @@ rd_set_timer_play_duration
 ; Result
 ; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
-rd_set_timer
+rd_set_playtimer
 	lea	rd_serial_io(pc),a1
 	move.l	a1,a2
 	move.w	#SDCMD_SETPARAMS,io_Command(a1)
@@ -5353,11 +5419,11 @@ rd_set_timer
 	move.b	#SERF_XDISABLED,io_Serflags(a1)
 	CALLEXEC DoIO
 	move.b	io_Error(a2),d0
-	beq.s	rd_set_timer_ok
+	beq.s	rd_set_playtimer_ok
 	cmp.b	#SerErr_DevBusy,d0	; Serial-Device bereits in Benutzung ?
 	bne.s	rd_check_baud_mismatch	; Ja -> verzweige
-	lea	rd_error_text20a(pc),a0
-	moveq	#rd_error_text20a_end-rd_error_text20a,d0
+	lea	rd_error_text21a(pc),a0
+	moveq	#rd_error_text21a_end-rd_error_text21a,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -5365,8 +5431,8 @@ rd_set_timer
 rd_check_baud_mismatch
 	cmp.b	#SerErr_BaudMismatch,d0	; Baudrate nicht von der Hardware unterstützt ?
 	bne.s	rd_check_invalid_parameters
-	lea	rd_error_text20b(pc),a0
-	moveq	#rd_error_text20b_end-rd_error_text20b,d0
+	lea	rd_error_text21b(pc),a0
+	moveq	#rd_error_text21b_end-rd_error_text21b,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -5374,8 +5440,8 @@ rd_check_baud_mismatch
 rd_check_invalid_parameters
 	cmp.b	#SerErr_InvParam,d0	; Falsche Parameter ?
 	bne.s	rd_check_line_error
-	lea	rd_error_text20c(pc),a0
-	moveq	#rd_error_text20c_end-rd_error_text20c,d0
+	lea	rd_error_text21c(pc),a0
+	moveq	#rd_error_text21c_end-rd_error_text21c,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -5383,22 +5449,22 @@ rd_check_invalid_parameters
 rd_check_line_error
 	cmp.b	#SerErr_LineErr,d0 	; Überlauf der Daten ?
 	bne.s	rd_check_no_data_set_ready
-	lea	rd_error_text20d(pc),a0
-	moveq	#rd_error_text20d_end-rd_error_text20d,d0
+	lea	rd_error_text21d(pc),a0
+	moveq	#rd_error_text21d_end-rd_error_text21d,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
 rd_check_no_data_set_ready
 	cmp.b	#SerErr_NoDSR,d0	; Data-Set nicht bereit ?
-	bne.s	rd_set_timer_ok
-	lea	rd_error_text20e(pc),a0
-	moveq	#rd_error_text20e_end-rd_error_text20e,d0
+	bne.s	rd_set_playtimer_ok
+	lea	rd_error_text21e(pc),a0
+	moveq	#rd_error_text21e_end-rd_error_text21e,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
-rd_set_timer_ok
+rd_set_playtimer_ok
 	moveq	#RETURN_OK,d0
 	rts
 
@@ -5407,7 +5473,7 @@ rd_set_timer_ok
 ; Result
 ; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
-rd_write_timer
+rd_write_playtimer
 	lea	rd_serial_io(pc),a1
 	move.l	a1,a2
 	move.w	#CMD_WRITE,io_Command(a1)
@@ -5417,16 +5483,26 @@ rd_write_timer
 	move.l	a0,io_Data(a1)
 	CALLEXEC DoIO
 	move.b	io_Error(a2),d0
-	beq.s	rd_write_timer_ok
-	lea	rd_error_text21(pc),a0
-	moveq	#rd_error_text21_end-rd_error_text21,d0
+	beq.s	rd_write_playtimer_ok
+	lea	rd_error_text22(pc),a0
+	moveq	#rd_error_text22_end-rd_error_text22,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
-rd_write_timer_ok
+rd_write_playtimer_ok
 	moveq	#RETURN_OK,d0
 	rts
+
+
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
+		CNOP 0,4
+rd_get_system_time
+		lea	rd_timer_io(pc),a1
+		move.w	#TR_GETSYSTIME,IO_command(a1)
+		CALLEXECQ DoIO
 
 
 ; Input
@@ -5505,6 +5581,23 @@ rd_disable_030_mmu
 	lea	rd_old_mmu_registers(pc),a1
 	lea	rd_030_mmu_off(pc),a5
 	CALLLIBQ Supervisor
+
+
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
+	CNOP 0,4
+rd_get_tod_time
+	CALLEXEC Disable
+	move.l	#_CIAA,a4
+	moveq	#0,d0
+	move.b	CIATODHI(a4),d0		; TOD-clock Bits 23-16
+	swap	d0			; Bits in richtige Position bringen
+	move.b	CIATODMID(a4),d0	; TOD-clock Bits 15-8
+	lsl.w	#8,d0			; Bits in richtige Position bringen
+	move.b	CIATODLOW(a4),d0	; TOD-clock Bits 7-0
+	move.l	d0,rd_tod_time(a3)
+	CALLLIBQ Enable
 
 
 ; Input
@@ -5617,8 +5710,8 @@ rd_execute_whdload_slave
 	CALLDOS SystemTagList
 	tst.l	d0
 	beq.s	rd_execute_whdload_slave_skip
-	lea	rd_error_text22(pc),a0
-	moveq	#rd_error_text22_end-rd_error_text22,d0
+	lea	rd_error_text23(pc),a0
+	moveq	#rd_error_text23_end-rd_error_text23,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -5753,6 +5846,34 @@ rd_set_ciab_crb2
 ; Input
 ; Result
 ; d0.l	... Kein Rückgabewert
+		CNOP 0,4
+rd_get_tod_duration
+	CALLEXEC Disable
+	move.l	#_CIAA,a4
+	move.l	rd_tod_time(a3),d0 	; Zeit vor Programmstart
+	moveq	#0,d1
+	move.b	CIATODHI(a4),d1		; Bits 23-16
+	swap	d1			; Bits in richtige Position bringen
+	move.b	CIATODMID(a4),d1 	; Bits 15-8
+	lsl.w	#8,d1			; Bits in richtige Position bringen
+	move.b	CIATODLOW(a4),d1 	; Bits 7-0
+	cmp.l	d0,d1			; TOD Überlauf ?
+	bge.s	rd_get_tod_duration_skip
+	move.l	#$ffffff,d2		; Maximalwert
+	sub.l	d0,d2			; Differenz bis zum Überlauf
+	add.l	d2,d1			; zuzüglich Wert nach dem Überlauf
+	bra.s	rd_get_tod_duration_save
+	CNOP 0,4
+rd_get_tod_duration_skip
+	sub.l	d0,d1			; Normale Differenz
+rd_get_tod_duration_save
+	move.l	d1,rd_tod_time(a3)
+	CALLLIBQ Enable
+
+
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_upgrade_cpu
 	move.l	rd_demofile_path(a3),a0
@@ -5839,12 +5960,12 @@ rd_copy_custom_trap_vectors_loop
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-rd_init_timer_stop
-	tst.w	rd_timer_delay(a3)
-	bne.s   rd_init_timer_stop_skip
+rd_init_playtimer_stop
+	tst.w	rd_playtimer_delay(a3)
+	bne.s   rd_init_playtimer_stop_skip
 	rts
 	CNOP 0,4
-rd_init_timer_stop_skip
+rd_init_playtimer_stop_skip
 	moveq	#0,d1			; Timer stoppen
 	bra     rp_create_output_string
 
@@ -5853,11 +5974,37 @@ rd_init_timer_stop_skip
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-rd_stop_timer
-	bsr	rd_set_timer
+rd_stop_playtimer
+	bsr	rd_set_playtimer
 	tst.l	d0
-	beq	rd_write_timer
+	beq	rd_write_playtimer
 	rts
+
+
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
+		CNOP 0,4
+rd_update_system_time
+	tst.w	rd_arg_restoresystime_enabled(a3)
+	beq.s	rd_update_system_time_skip
+	rts
+	CNOP 0,4
+rd_update_system_time_skip
+	move.l	_SysBase(pc),a6
+	move.l	rd_tod_time(a3),d0 ; Vergangene Zeit, als System ausgeschaltet war
+	moveq	#0,d1
+	move.b	VBlankFrequency(a6),d1
+	divu.w	d1,d0		; / Vertikalfrequenz (50Hz) = Unix-Sekunden, Rest Unix-Microsekunden
+	lea	rd_timer_io(pc),a1
+	move.w	#TR_SETSYSTIME,IO_command(a1)
+	move.l	d0,d1
+	ext.l	d0
+	swap	d1		; Rest der Division
+	add.l	d0,IO_size+TV_SECS(a1) ; Unix-Sekunden
+	mulu.w	#10000,d1	; In Mikrosekunden
+	add.l	d1,IO_size+TV_MICRO(a1) ; Unix-Mikrosekunden
+	CALLLIBQ DoIO
 
 
 ; Input
@@ -6201,6 +6348,15 @@ rd_free_cleared_sprite_data
 ; Input
 ; Result
 ; d0.l	... Kein Rückgabewert
+		CNOP 0,4
+rd_close_timer_device
+		lea	rd_timer_io(pc),a1
+		CALLEXECQ CloseDevice
+
+
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_close_serial_device
 	lea	rd_serial_io(pc),a1
@@ -6428,8 +6584,8 @@ rp_skip1
 	bra.s	rp_quit
 	CNOP 0,4
 rp_proceed
-	bsr	rp_init_timer_stop
-	bsr	rp_stop_timer
+	bsr	rp_init_playtimer_stop
+	bsr	rp_stop_playtimer
 	move.l	#rp_entries_buffer-rp_start,d0
 	move.l	rp_reset_program_memory(pc),a1
 	move.w	rp_entries_number_max(pc),d1
@@ -6493,7 +6649,7 @@ rp_clear_cool_capture
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-rp_init_timer_stop
+rp_init_playtimer_stop
 	moveq	#0,d1			; Timer stoppen
 	bra.s	rp_create_output_string
 
@@ -6502,9 +6658,9 @@ rp_init_timer_stop
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-rp_stop_timer
-	bsr	rp_set_timer
-  	bra	rp_write_timer
+rp_stop_playtimer
+	bsr	rp_set_playtimer
+  	bra	rp_write_playtimer
 
 
 ; Input
@@ -6621,7 +6777,7 @@ rp_update_output_checksum_loop
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-rp_set_timer
+rp_set_playtimer
 	CALLLIBS Disable
 	move.w	#$0100,d1		; 8 Bits pro Zeichen beim Schreiben, 1 Stoppbit
 	lea	rp_old_adkcon(pc),a0
@@ -6635,18 +6791,18 @@ rp_set_timer
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-rp_write_timer
+rp_write_playtimer
 	CALLLIBS Disable
 	MOVEF.W	SERDATRF_TBE,d2
 	lea	rp_output_string(pc),a0
 	moveq	#output_string_size-1,d7 ; Anzahl der Bytes zum Schreiben
-rp_write_timer_loop
+rp_write_playtimer_loop
 	move.w	SERDATR(a5),d0
 	and.w	d2,d0			; TBE-Bit gesetzt ?
-	beq.s	rp_write_timer_loop	; Nein -> verzweige
+	beq.s	rp_write_playtimer_loop	; Nein -> verzweige
 	move.b	(a0)+,d1		; Datenbyte D0-D7 kopieren
 	move.w	d1,SERDAT(a5)		; und Datenwort übertragen
-	dbf	d7,rp_write_timer_loop
+	dbf	d7,rp_write_playtimer_loop
 	move.w	#$7fff,ADKCON(a5)
 	move.w	rp_old_adkcon(pc),d0
 	or.w	#ADKF_SETCLR,d0
@@ -7032,6 +7188,8 @@ ciab_resource_name		DC.B "ciab.resource",0
 	EVEN
 serial_device_name		DC.B "serial.device",0
 	EVEN
+timer_device_name		DC.B "timer.device",0
+	EVEN
 workbench_screen_name		DC.B "Workbench",0
 	EVEN
 topaz_font_name			DC.B "topaz.font",0
@@ -7107,6 +7265,7 @@ adl_cmd_usage_text
 	DC.B "ENDLESS                Play entries of playback queue endlessly",ASCII_LINE_FEED
 	DC.B "LOOP                   Play demos until no more entries left to play",ASCII_LINE_FEED
 	DC.B "SCREENFADER            Fade screen to black before demo is played",ASCII_LINE_FEED
+	DC.B "RESTORESYSTIME         Restore system time after a intro/demo was played",ASCII_LINE_FEED
 	DC.B "SOFTRESET              Automatic reset after quitting demo",ASCII_LINE_FEED,ASCII_LINE_FEED
 adl_cmd_usage_text_end
 	EVEN
@@ -7138,6 +7297,7 @@ adl_cmd_template
 	DC.B "ENDLESS/S,"
 	DC.B "LOOP/S,"
 	DC.B "SCREENFADER/S,"
+	DC.B "RESTORESYSTIME/S,"
 	DC.B "SOFTRESET/S",0
 	EVEN
 
@@ -7551,6 +7711,11 @@ rd_serial_io
 
 
 	CNOP 0,4
+rd_timer_io
+	DS.B IOTV_SIZE
+
+
+	CNOP 0,4
 rd_degrade_screen_colors
 	DS.B screen_02_colors_size
 
@@ -7641,100 +7806,104 @@ rd_error_text2
 rd_error_text2_end
 	EVEN
 rd_error_text3
-	DC.B ASCII_LINE_FEED,"Couldn't open icon.library",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't open timer.device",ASCII_LINE_FEED
 rd_error_text3_end
 	EVEN
 rd_error_text4
-	DC.B ASCII_LINE_FEED,"Couldn't create serial message port",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't open icon.library",ASCII_LINE_FEED
 rd_error_text4_end
 	EVEN
 rd_error_text5
-	DC.B ASCII_LINE_FEED,"Couldn't open serial.device",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't create serial message port",ASCII_LINE_FEED
 rd_error_text5_end
 	EVEN
 rd_error_text6
-	DC.B ASCII_LINE_FEED,"Couldnt allocate sprite data structure"
+	DC.B ASCII_LINE_FEED,"Couldn't open serial.device",ASCII_LINE_FEED
 rd_error_text6_end
 	EVEN
 rd_error_text7
-	DC.B ASCII_LINE_FEED,"Couldnt allocate colour values table"
+	DC.B ASCII_LINE_FEED,"Couldnt allocate sprite data structure"
 rd_error_text7_end
 	EVEN
 rd_error_text8
-	DC.B ASCII_LINE_FEED,"Couldnt allocate colour cache"
+	DC.B ASCII_LINE_FEED,"Couldnt allocate colour values table"
 rd_error_text8_end
 	EVEN
 rd_error_text9
-	DC.B ASCII_LINE_FEED,"Invalid monitor ID",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldnt allocate colour cache"
 rd_error_text9_end
 	EVEN
 rd_error_text10
-	DC.B ASCII_LINE_FEED,"Couldn't open demo file",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Invalid monitor ID",ASCII_LINE_FEED
 rd_error_text10_end
 	EVEN
 rd_error_text11
-	DC.B ASCII_LINE_FEED,"No executable demo file"
+	DC.B ASCII_LINE_FEED,"Couldn't open demo file",ASCII_LINE_FEED
 rd_error_text11_end
 	EVEN
 rd_error_text12
-	DC.B ASCII_LINE_FEED,"Couldn't find demo directory",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"No executable demo file"
 rd_error_text12_end
 	EVEN
 rd_error_text13
-	DC.B ASCII_LINE_FEED,"Prerun script filepath is longer than 63 characters"
+	DC.B ASCII_LINE_FEED,"Couldn't find demo directory",ASCII_LINE_FEED
 rd_error_text13_end
 	EVEN
 rd_error_text14
-	DC.B ASCII_LINE_FEED,"Couldn't execute prerun script file",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Prerun script filepath is longer than 63 characters"
 rd_error_text14_end
 	EVEN
 rd_error_text15
-	DC.B ASCII_LINE_FEED,"Couldn't open degrade screen",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't execute prerun script file",ASCII_LINE_FEED
 rd_error_text15_end
 	EVEN
 rd_error_text16
-	DC.B ASCII_LINE_FEED,"Lores PAL screen not supported",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't open degrade screen",ASCII_LINE_FEED
 rd_error_text16_end
 	EVEN
 rd_error_text17
-	DC.B ASCII_LINE_FEED,"Couldn't open invisible window",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Lores PAL screen not supported",ASCII_LINE_FEED
 rd_error_text17_end
 	EVEN
 rd_error_text18
-	DC.B ASCII_LINE_FEED,"Couldn't load demo file",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't open invisible window",ASCII_LINE_FEED
 rd_error_text18_end
 	EVEN
 rd_error_text19
-	DC.B ASCII_LINE_FEED,"Couldn't open WHDLoad .info file",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't load demo file",ASCII_LINE_FEED
 rd_error_text19_end
 	EVEN
-rd_error_text20a
+rd_error_text20
+	DC.B ASCII_LINE_FEED,"Couldn't open WHDLoad .info file",ASCII_LINE_FEED
+rd_error_text20_end
+	EVEN
+rd_error_text21a
 	DC.B ASCII_LINE_FEED,"Serial device in use",ASCII_LINE_FEED
-rd_error_text20a_end
+rd_error_text21a_end
 	EVEN
-rd_error_text20b
+rd_error_text21b
 	DC.B ASCII_LINE_FEED,"Baud rate not supported by hardware",ASCII_LINE_FEED
-rd_error_text20b_end
+rd_error_text21b_end
 	EVEN
-rd_error_text20c
+rd_error_text21c
 	DC.B ASCII_LINE_FEED,"Bad parameter",ASCII_LINE_FEED
-rd_error_text20c_end
+rd_error_text21c_end
 	EVEN
-rd_error_text20d
+rd_error_text21d
 	DC.B ASCII_LINE_FEED,"Hardware data overrun",ASCII_LINE_FEED
-rd_error_text20d_end
+rd_error_text21d_end
 	EVEN
-rd_error_text20e
+rd_error_text21e
 	DC.B ASCII_LINE_FEED,"No data set ready",ASCII_LINE_FEED
-rd_error_text20e_end
-	EVEN
-rd_error_text21
-	DC.B ASCII_LINE_FEED,"Write to serial port failed",ASCII_LINE_FEED
-rd_error_text21_end
+rd_error_text21e_end
 	EVEN
 rd_error_text22
-	DC.B ASCII_LINE_FEED,"Couldn't execute WHDLoad slave file",ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Write to serial port failed",ASCII_LINE_FEED
 rd_error_text22_end
+	EVEN
+rd_error_text23
+	DC.B ASCII_LINE_FEED,"Couldn't execute WHDLoad slave file",ASCII_LINE_FEED
+rd_error_text23_end
 	EVEN
 
 

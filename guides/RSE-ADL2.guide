@@ -251,7 +251,9 @@ Arguments of the intro/demo player:
 
   @{" SCREENFADER " LINK Chapter-1-5-17}
 
-  @{" SOFTRESET " LINK Chapter-1-5-18}
+  @{" RESTORESYSTIME " LINK Chapter-1-5-18}
+
+  @{" SOFTRESET " LINK Chapter-1-5-19}
 @ENDNODE
 
 
@@ -411,7 +413,16 @@ After the intro/demo is quit by the user the active screen is faded in from blac
 @ENDNODE
 
 
-@NODE Chapter-1-5-18 "Amiga Demo Launcher Version 2: List of the ADL2 arguments / SOFTRESET"
+@NODE Chapter-1-5-18 "Amiga Demo Launcher Version 2: List of the ADL2 arguments / RESTORESYSTIME"
+@{B}RESTORESYSTIME@{UB}
+
+
+Every intro/demo that turns the system off stops the system time. If you watch the intro/demo for a longer time, the system time won't be updated after you quit the demo and return to the system. The time will be delayed.
+The argument RESTORESYSTIME prevents this and adds the duration of the intro/demo to the system time and thus does a time update.
+@ENDNODE
+
+
+@NODE Chapter-1-5-19 "Amiga Demo Launcher Version 2: List of the ADL2 arguments / SOFTRESET"
 @{B}SOFTRESET@{UB}
 
 The argument does an automatic software reset after the running intro/demo was quit manually regardless of any timer settings of the @{"reset device" LINK Chapter-2-3-14}.
