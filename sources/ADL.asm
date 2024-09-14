@@ -1081,12 +1081,9 @@ adl_init_structures
 	bsr	qh_init_get_visual_info_tags
 	bsr	qh_init_edit_window_tags
 	bsr	qh_init_gadgets
-	bsr	rd_init_degrade_screen_colors
 	bsr	rd_init_degrade_screen_tags
 	bsr	rd_init_invisible_window_tags
-	bsr	rd_init_video_control_tags
-        bsr	rd_init_sprite_tags
-	bra	rd_init_no_op_tags
+	bra	rd_init_video_control_tags
 
 ; Input
 ; Result
@@ -1380,25 +1377,6 @@ qh_init_gadgets
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-rd_init_degrade_screen_colors
-	lea	rd_degrade_screen_colors(pc),a0
-	move.w	#rd_degrade_screen_colors_number,(a0)+
-	moveq	#0,d0
-	move.w	d0,(a0)+		; Erste Farbe COLOR00
-	move.l	d0,(a0)+		; COLOR00 32-Bit Rotwert
-	move.l	d0,(a0)+		; COLOR00 32-Bit Grünwert
-	move.l	d0,(a0)+		; COLOR00 32-Bit Blauwert
-	move.l	d0,(a0)+		; COLOR01 32-Bit Rotwert
-	move.l	d0,(a0)+		; COLOR01 32-Bit Grünwert
-	move.l	d0,(a0)+		; COLOR01 32-Bit Blauwert
-	move.l	d0,(a0)			; Ende der Tabelle
-	rts
-
-
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
-	CNOP 0,4
 rd_init_degrade_screen_tags
 	lea	rd_degrade_screen_tags(pc),a0
 	move.l	#SA_Left,(a0)+
@@ -1510,30 +1488,6 @@ rd_init_invisible_window_tags
 	CNOP 0,4
 rd_init_video_control_tags
 	lea	rd_video_control_tags(pc),a0
-	moveq	#TAG_DONE,d2
-	move.l	d2,vctl_TAG_DONE(a0)
-	rts
-
-
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
-	CNOP 0,4
-rd_init_sprite_tags
-	lea	rd_pointer_tags(pc),a0
-	move.l	#WA_POINTER,(a0)+
-	clr.l	(a0)+
-	moveq	#TAG_DONE,d2
-	move.l	d2,vctl_TAG_DONE(a0)
-	rts
-
-
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
-	CNOP 0,4
-rd_init_no_op_tags
-	lea	rd_no_op_tags(pc),a0
 	moveq	#TAG_DONE,d2
 	move.l	d2,vctl_TAG_DONE(a0)
 	rts
@@ -4961,6 +4915,7 @@ sf_set_new_colors_skip
 	CNOP 0,4
 rd_open_degrade_screen
 	lea	rd_degrade_screen_tags(pc),a1
+	move.l	sf_screen_color_cache(a3),sctl_SA_Colors32+ti_data(a1)
 	sub.l	a0,a0			; Keine NewScreen-Struktur
 	CALLINT OpenScreenTagList
 	move.l	d0,rd_degrade_screen(a3)
@@ -7612,16 +7567,6 @@ rd_invisible_window_tags
 	CNOP 0,4
 rd_video_control_tags
 	DS.B video_control_tag_list_size
-
-
-	CNOP 0,4
-rd_pointer_tags
-	DS.B pointer_tag_list_size
-
-
-	CNOP 0,4
-rd_no_op_tags
-	DS.L 1
 
 
         CNOP 0,4
