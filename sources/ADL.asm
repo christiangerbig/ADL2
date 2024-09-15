@@ -810,18 +810,19 @@ edit_window_tag_list_size	RS.B 0
 	bsr	adl_open_graphics_library
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_dos_library
-	bsr	adl_check_system_requirements
-	move.l	d0,adl_dos_return_code(a3)
-	bne	adl_cleanup_graphics_library
 	bsr	adl_open_intuition_library
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_graphics_library
 	bsr	adl_open_gadtools_library
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_intuition_library
+
+	bsr	adl_check_system_requirements
+	move.l	d0,adl_dos_return_code(a3)
+	bne	adl_cleanup_gadtools_library
 	bsr	adl_check_cool_capture
 	move.l	d0,adl_dos_return_code(a3)
-	bne	adl_cleanup_intuition_library
+	bne	adl_cleanup_gadtools_library
 
 	bsr	adl_check_cmd_line
 	move.l	d0,adl_dos_return_code(a3)
@@ -1333,8 +1334,7 @@ qh_init_gadgets
 	move.l	a1,(a0)+
 	lea	qh_cycle_gadget_choice_text3(pc),a1
 	move.l	a1,(a0)+
-	moveq	#0,d0
-	move.w	d0,(a0)
+	clr.w	d0,(a0)
 
 	lea	qh_cycle_gadget_tags(pc),a0
 	move.l	#GTCY_Labels,(a0)+
@@ -1561,6 +1561,50 @@ adl_open_graphics_library_ok
 ; Result
 ; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
+adl_open_intuition_library
+	lea	intuition_library_name(pc),a1
+	moveq	#ANY_LIBRARY_VERSION,d0
+	CALLEXEC OpenLibrary
+	lea	_IntuitionBase(pc),a0
+	move.l	d0,(a0)
+	bne.s	adl_open_intuition_library_ok
+	lea	adl_error_text7(pc),a0
+	moveq	#adl_error_text7_end-adl_error_text7,d0
+	bsr	adl_print_text
+	moveq	#RETURN_FAIL,d0
+	rts
+	CNOP 0,4
+adl_open_intuition_library_ok
+	moveq	#RETURN_OK,d0
+	rts
+
+
+; Input
+; Result
+; d0.l	... Rückgabewert: Return-Code
+	CNOP 0,4
+adl_open_gadtools_library
+	lea	gadtools_library_name(pc),a1
+	moveq	#ANY_LIBRARY_VERSION,d0
+	CALLEXEC OpenLibrary
+	lea	_GadToolsBase(pc),a0
+	move.l	d0,(a0)
+	bne.s	adl_open_gadtools_library_ok
+	lea	adl_error_text6(pc),a0
+	moveq	#adl_error_text6_end-adl_error_text6,d0
+	bsr	adl_print_text
+	moveq	#RETURN_FAIL,d0
+	rts
+	CNOP 0,4
+adl_open_gadtools_library_ok
+	moveq	#RETURN_OK,d0
+	rts	
+
+
+; Input
+; Result
+; d0.l	... Rückgabewert: Return-Code
+	CNOP 0,4
 adl_check_system_requirements
 	move.l	_SysBase(pc),a0
 	cmp.w	#OS_VERSION_MIN,Lib_Version(a0)
@@ -1612,50 +1656,6 @@ adl_check_pal
 adl_check_system_requirements_ok
 	moveq	#RETURN_OK,d0
 	rts
-
-
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
-	CNOP 0,4
-adl_open_intuition_library
-	lea	intuition_library_name(pc),a1
-	moveq	#OS_VERSION_MIN,d0
-	CALLEXEC OpenLibrary
-	lea	_IntuitionBase(pc),a0
-	move.l	d0,(a0)
-	bne.s	adl_open_intuition_library_ok
-	lea	adl_error_text7(pc),a0
-	moveq	#adl_error_text7_end-adl_error_text7,d0
-	bsr	adl_print_text
-	moveq	#RETURN_FAIL,d0
-	rts
-	CNOP 0,4
-adl_open_intuition_library_ok
-	moveq	#RETURN_OK,d0
-	rts
-
-
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
-	CNOP 0,4
-adl_open_gadtools_library
-	lea	gadtools_library_name(pc),a1
-	moveq	#OS_VERSION_MIN,d0
-	CALLEXEC OpenLibrary
-	lea	_GadToolsBase(pc),a0
-	move.l	d0,(a0)
-	bne.s	adl_open_gadtools_library_ok
-	lea	adl_error_text6(pc),a0
-	moveq	#adl_error_text6_end-adl_error_text6,d0
-	bsr	adl_print_text
-	moveq	#RETURN_FAIL,d0
-	rts
-	CNOP 0,4
-adl_open_gadtools_library_ok
-	moveq	#RETURN_OK,d0
-	rts	
 
 
 ; Input
