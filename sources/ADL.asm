@@ -4021,16 +4021,16 @@ rd_play_loop
 	bsr	sf_fade_out_active_screen
 	bsr	rd_open_degrade_screen
 	move.l	d0,adl_dos_return_code(a3)
-	bne	rd_cleanup_active_screen_colors
+	bne	rd_cleanup_active_screen
 	bsr	rd_check_degrade_screen_mode
 	move.l	d0,adl_dos_return_code(a3)
-	bne	rd_cleanup_active_screen_colors
+	bne	rd_cleanup_active_screen
 	bsr	rd_get_sprite_resolution
-	bsr	rd_set_sprite_resolution
 	bsr	rd_open_invisible_window
 	move.l	d0,adl_dos_return_code(a3)
-	bne	rd_cleanup_display
+	bne	rd_cleanup_degrade_screen
 	bsr	rd_clear_mousepointer
+	bsr	rd_set_sprite_resolution
  	bsr	rd_blank_display
 	bsr	rd_wait_monitor_switch
 
@@ -4083,14 +4083,12 @@ rd_cleanup_demofile
 rd_cleanup_fast_memory
 	bsr	rd_free_fast_memory
 
-rd_cleanup_invisible_window
-	bsr	rd_close_invisible_window
-rd_cleanup_display
 	bsr	rd_restore_sprite_resolution
 	bsr	rd_wait_monitor_switch
+	bsr	rd_close_invisible_window
 rd_cleanup_degrade_screen
 	bsr	rd_close_degrade_screen
-rd_cleanup_active_screen_colors
+rd_cleanup_active_screen
 	bsr	rd_check_active_screen_priority
 	bsr	sf_fade_in_active_screen
 
@@ -6054,15 +6052,6 @@ rd_free_first_memory_block
 
 ; Input
 ; Result
-; d0.l	... Kein Rückgabewert
-	CNOP 0,4
-rd_close_invisible_window
-	move.l	rd_invisible_window(a3),a0
-	CALLINTQ CloseWindow
-
-
-; Input
-; Result
 ; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 rd_restore_sprite_resolution
@@ -6075,6 +6064,15 @@ rd_restore_sprite_resolution
 	move.l	a2,a0			; Zeiger auf Screen
 	CALLINT MakeScreen
 	CALLLIBQ RethinkDisplay
+
+
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
+	CNOP 0,4
+rd_close_invisible_window
+	move.l	rd_invisible_window(a3),a0
+	CALLINTQ CloseWindow
 
 
 ; Input
