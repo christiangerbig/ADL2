@@ -1334,7 +1334,7 @@ qh_init_gadgets
 	move.l	a1,(a0)+
 	lea	qh_cycle_gadget_choice_text3(pc),a1
 	move.l	a1,(a0)+
-	clr.w	d0,(a0)
+	clr.w	(a0)
 
 	lea	qh_cycle_gadget_tags(pc),a0
 	move.l	#GTCY_Labels,(a0)+
@@ -4089,7 +4089,7 @@ rd_cleanup_fast_memory
 rd_cleanup_degrade_screen
 	bsr	rd_close_degrade_screen
 rd_cleanup_active_screen
-	bsr	rd_check_active_screen_priority
+	bsr	rd_active_screen_to_front
 	bsr	sf_fade_in_active_screen
 
 rd_cleanup_current_dir
@@ -6088,24 +6088,20 @@ rd_close_degrade_screen
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-rd_check_active_screen_priority
+rd_active_screen_to_front
 	tst.l	rd_active_screen(a3)
-	bne.s	rd_get_first_screen
-	rts
-	CNOP 0,4
-rd_get_first_screen
+	beq.s	rd_active_screen_to_front_ok
 	moveq	#0,d0			; alle Locks
 	CALLINT LockIBase
 	move.l	d0,a0
 	move.l	ib_FirstScreen(a6),a2
 	CALLLIBS UnLockIBase
 	cmp.l	rd_active_screen(a3),a2
-	bne.s	rd_active_screen_to_front
-	rts
-	CNOP 0,4
-rd_active_screen_to_front
+	beq.s	rd_active_screen_to_front_ok
 	move.l	rd_active_screen(a3),a0
-	CALLLIBQ ScreenToFront
+	CALLLIBS ScreenToFront
+rd_active_screen_to_front_ok
+	rts
 
 
 ; Input
