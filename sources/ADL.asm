@@ -1,15 +1,16 @@
-; AmigaDemoLauncher (ADL)
-; Christian Gerbig
-; 14.09.2024
+; Programm:	AmigaDemoLauncher (ADL)
+; Autor:	Christian Gerbig
+; Datum		14.09.2024
+; Version:	2.01
 
 ; Min-Requirements
-; * 68020+
-; * 2 MB+
-; * AGA
-; * OS 3.0+
+; 	68020+
+; 	2 MB+
+;	AGA
+;	OS 3.0+
 
 
-; Historie
+; Historie / Changes
 
 ; Lader für Intros und Demos "DemoSelector"
 ; Mit CoolCapture-Abfrage
@@ -253,6 +254,7 @@
 
 	MC68020
 
+
 	INCDIR "Daten:include3.5/"
 
 	INCLUDE "exec/exec.i"
@@ -302,8 +304,6 @@
 
 FirstCode			EQU 4	; Offset in SegList
 
-OS_VERSION_MIN			EQU 39
-
 MAGIC_COOKIE			EQU $000003f3
 
 RUNMODE_TURBO			EQU $01
@@ -312,8 +312,6 @@ RUNMODE_AGA_VANILLA		EQU $03
 
 
 ; **** Amiga-Demo-Launcher ****
-adl_drives_motor_delay		EQU PAL_FPS/2 ; 500 ms
-
 adl_restore_adl_code_enabled	EQU FALSE
 adl_lmbexit_code_enabled	EQU FALSE
 
@@ -328,10 +326,8 @@ adl_minutes_max			EQU 99
 
 adl_baud			EQU 2400
 
-	IFEQ adl_lmbexit_code_enabled
 adl_lmbexit_parts_number_min	EQU 2
 adl_lmbexit_parts_number_max	EQU 10
-	ENDC
 
 
 ; **** Demo-Charger ****
@@ -402,26 +398,6 @@ qh_negative_button_id		EQU 7
 
 
 ; **** Run-Demo ****
-rd_degrade_screen_left		EQU 0
-rd_degrade_screen_top		EQU 0
-rd_degrade_screen_x_size	EQU 2
-rd_degrade_screen_y_size	EQU 2
-rd_degrade_screen_depth		EQU 1
-rd_degrade_screen_colors_number	EQU 2
-
-rd_invisible_window_left	EQU 0
-rd_invisible_window_top		EQU 0
-rd_invisible_window_x_size	EQU rd_degrade_screen_x_size
-rd_invisible_window_y_size	EQU rd_degrade_screen_y_size
-
-rd_cleared_sprite_x_size	EQU 16	; 1x Bandwidth
-rd_cleared_sprite_y_size	EQU 1
-rd_cleared_sprite_x_offset	EQU 0
-rd_cleared_sprite_y_offset	EQU 0
-rd_sprites_colors_number	EQU 16
-
-rd_monitor_switch_delay		EQU PAL_FPS*3 ; 3 Sekunden
-
 rd_output_string_duration_shift	EQU 10
 
 
@@ -487,10 +463,10 @@ wm
 	INCLUDE "except-vectors-offsets.i"
 
 
-	INCLUDE "screen-colors.i"
-
-
 	INCLUDE "taglists-offsets.i"
+
+
+	INCLUDE "screen-colors.i"
 
 
 	RSRESET
@@ -596,7 +572,7 @@ rd_prerunscript_path		RS.L 1
 
 rd_active_screen		RS.L 1
 rd_active_screen_mode		RS.L 1
-rd_degrade_screen		RS.L 1
+rd_pal_screen			RS.L 1
 rd_invisible_window		RS.L 1
 rd_cleared_sprite_pointer_data	RS.L 1
 rd_old_sprite_resolution	RS.L 1
@@ -606,7 +582,7 @@ rd_available_fast_memory	RS.L 1
 
 rd_old_current_dir_lock		RS.L 1
 
-rd_custom_trap_vectors		RS.L 1
+rd_custom_traps		RS.L 1
 
 rd_old_vbr			RS.L 1
 rd_old_cacr			RS.L 1
@@ -622,15 +598,14 @@ whdl_disk_object		RS.L 1
 
 ; **** Screen-Fader ****
 	RS_ALIGN_LONGWORD
-sf_screen_colors_number		RS.L 1
 sf_screen_color_table		RS.L 1
 sf_screen_color_cache		RS.L 1
 
 ; **** Screen-Fader-In ****
-sfi_active			RS.W 1
+sfi_rgb32_active		RS.W 1
 
 ; **** Screen-Fader-Out ****
-sfo_active			RS.W 1
+sfo_rgb32_active		RS.W 1
 
 adl_variables_size		RS.B 0
 
@@ -877,7 +852,7 @@ adl_check_queue_empty
 
 ; **** Demo-Charger ****
 dc_start
-	bsr	adl_print_intro_message_text
+	bsr	adl_print_intro_message
 	bsr	dc_check_entries_number_max
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_read_arguments
@@ -896,7 +871,6 @@ dc_start
 	bsr	dc_get_program_dir
 	move.l	d0,adl_dos_return_code(a3)
 	bne.s	dc_cleanup_asl_library
-
 dc_demo_charge_loop
 	bsr	dc_display_remaining_files
 	bsr	dc_make_file_request
@@ -905,7 +879,6 @@ dc_demo_charge_loop
 	bsr	dc_display_file_request
 	move.l	d0,adl_dos_return_code(a3)
 	bne.s	dc_cleanup_file_request
-
 	bsr	dc_get_demofile_path
 	move.l	d0,adl_dos_return_code(a3)
 	bne.s	dc_cleanup_file_request
@@ -1060,10 +1033,10 @@ adl_init_variables
 
 
 ; **** Screen-Fader-In ****
-	move.w	d0,sfi_active(a3)
+	move.w	d0,sfi_rgb32_active(a3)
 
 ; **** Screen-Fader-Out ****
-	move.w	d0,sfo_active(a3)
+	move.w	d0,sfo_rgb32_active(a3)
 
 
 ; **** Reset-Programm ****
@@ -1090,7 +1063,7 @@ adl_init_structures
 	bsr	qh_init_get_visual_info_tags
 	bsr	qh_init_edit_window_tags
 	bsr	qh_init_gadgets
-	bsr	rd_init_degrade_screen_tags
+	bsr	rd_init_pal_screen_tags
 	bsr	rd_init_invisible_window_tags
 	bra	rd_init_video_control_tags
 
@@ -1104,11 +1077,11 @@ adl_init_cool_capture_request
 	move.l	d2,(a0)+		; Größe der Struktur
 	moveq	#0,d0
 	move.l	d0,(a0)+		; Keine Flags
-	lea	adl_resident_request_title(pc),a1
+	lea	adl_install_request_title(pc),a1
 	move.l	a1,(a0)+		; Zeiger auf Titeltext
-	lea	adl_resident_request_text(pc),a1
+	lea	adl_install_request_text_body(pc),a1
 	move.l	a1,(a0)+		; Zeiger auf Text in Requester
-	lea	adl_resident_request_gadget_text(pc),a1
+	lea	adl_install_request_text_gadgets(pc),a1
 	move.l	a1,(a0)			; Zeiger auf Gadgettexte
 	rts
 
@@ -1135,9 +1108,9 @@ dc_init_runmode_request
 	move.l	d0,(a0)+		; Keine Flags
 	lea	dc_runmode_request_title(pc),a1
 	move.l	a1,(a0)+		; Zeiger auf Titeltext
-	lea	dc_runmode_request_text(pc),a1
+	lea	dc_runmode_request_text_body(pc),a1
 	move.l	a1,(a0)+		; Zeiger auf Text in Requester
-	lea	dc_runmode_request_gadget_text(pc),a1
+	lea	dc_runmode_request_text_gadgets(pc),a1
 	move.l	a1,(a0)			; Zeiger auf Gadgettexte
 	rts
 
@@ -1240,7 +1213,8 @@ qh_init_edit_window_tags
 	move.l	#WA_MaxHeight,(a0)+
 	move.l	#qh_edit_window_y_size,(a0)+
 	move.l	#WA_AutoAdjust,(a0)+
-	move.l	d0,(a0)+
+	moveq	#BOOL_TRUE,d2
+	move.l	d2,(a0)+
 	move.l	#WA_Flags,(a0)+
 	move.l	#WFLG_CLOSEGADGET|WFLG_ACTIVATE|WFLG_DEPTHGADGET|WFLG_DRAGBAR,(a0)+
 	move.l	#WA_Gadgets,(a0)+
@@ -1385,22 +1359,22 @@ qh_init_gadgets
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-rd_init_degrade_screen_tags
-	lea	rd_degrade_screen_tags(pc),a0
+rd_init_pal_screen_tags
+	lea	rd_pal_screen_tags(pc),a0
 	move.l	#SA_Left,(a0)+
-     	moveq	#rd_degrade_screen_left,d2
+     	moveq	#pal_screen_left,d2
 	move.l	d2,(a0)+
 	move.l	#SA_Top,(a0)+
-     	moveq	#rd_degrade_screen_top,d2
+     	moveq	#pal_screen_top,d2
 	move.l	d2,(a0)+
 	move.l	#SA_Width,(a0)+
-	moveq	#rd_degrade_screen_x_size,d2
+	moveq	#pal_screen_x_size,d2
 	move.l	d2,(a0)+
 	move.l	#SA_Height,(a0)+
-	moveq	#rd_degrade_screen_y_size,d2
+	moveq	#pal_screen_y_size,d2
 	move.l	d2,(a0)+
 	move.l	#SA_Depth,(a0)+
-	moveq	#rd_degrade_screen_depth,d2
+	moveq	#pal_screen_depth,d2
 	move.l	d2,(a0)+
 	move.l	#SA_DisplayID,(a0)+
 	move.l	#PAL_MONITOR_ID|LORES_KEY,(a0)+
@@ -1410,10 +1384,10 @@ rd_init_degrade_screen_tags
 	move.l	#SA_BlockPen,(a0)+
 	move.l	d0,(a0)+
 	move.l	#SA_Title,(a0)+
-	lea	rd_degrade_screen_name(pc),a1
+	lea	rd_pal_screen_name(pc),a1
 	move.l	a1,(a0)+
 	move.l	#SA_Colors32,(a0)+
-	lea	rd_degrade_screen_colors(pc),a1
+	lea	rd_pal_screen_colors(pc),a1
 	move.l	a1,(a0)+
 	move.l	#SA_Font,(a0)+
 	move.l	d0,(a0)+
@@ -1445,16 +1419,16 @@ rd_init_degrade_screen_tags
 rd_init_invisible_window_tags
 	lea	rd_invisible_window_tags(pc),a0
 	move.l	#WA_Left,(a0)+
-	moveq	#rd_invisible_window_left,d2
+	moveq	#invisible_window_left,d2
 	move.l	d2,(a0)+
 	move.l	#WA_Top,(a0)+
-	moveq	#rd_invisible_window_top,d2
+	moveq	#invisible_window_top,d2
 	move.l	d2,(a0)+
 	move.l	#WA_Width,(a0)+
-	moveq	#rd_invisible_window_x_size,d2
+	moveq	#invisible_window_x_size,d2
 	move.l	d2,(a0)+
 	move.l	#WA_Height,(a0)+
-	moveq	#rd_invisible_window_y_size,d2
+	moveq	#invisible_window_y_size,d2
 	move.l	d2,(a0)+
 	move.l	#WA_DetailPen,(a0)+
 	moveq	#0,d0
@@ -1469,19 +1443,19 @@ rd_init_invisible_window_tags
 	move.l	#WA_CustomScreen,(a0)+
 	move.l	d0,(a0)+		; Zeiger wird später initialisiert
 	move.l	#WA_MinWidth,(a0)+
-	moveq	#rd_invisible_window_x_size,d2
+	moveq	#invisible_window_x_size,d2
 	move.l	d2,(a0)+
 	move.l	#WA_MinHeight,(a0)+
-	moveq	#rd_invisible_window_y_size,d2
+	moveq	#invisible_window_y_size,d2
 	move.l	d2,(a0)+
 	move.l	#WA_MaxWidth,(a0)+
-	moveq	#rd_invisible_window_x_size,d2
+	moveq	#invisible_window_x_size,d2
 	move.l	d2,(a0)+
 	move.l	#WA_MaxHeight,(a0)+
-	moveq	#rd_invisible_window_y_size,d2
+	moveq	#invisible_window_y_size,d2
 	move.l	d2,(a0)+
 	move.l	#WA_AutoAdjust,(a0)+
-	moveq	#FALSE,d2
+	moveq	#BOOL_TRUE,d2
 	move.l	d2,(a0)+
 	move.l	#WA_Flags,(a0)+
 	move.l	#WFLG_BACKDROP|WFLG_BORDERLESS|WFLG_ACTIVATE,(a0)+
@@ -1607,7 +1581,7 @@ adl_open_gadtools_library_ok
 	CNOP 0,4
 adl_check_system_requirements
 	move.l	_SysBase(pc),a0
-	cmp.w	#OS_VERSION_MIN,Lib_Version(a0)
+	cmp.w	#OS2_VERSION,Lib_Version(a0)
 	bge.s	adl_check_cpu_requirement
 	lea	adl_error_text2(pc),a0
 	moveq	#adl_error_text2_end-adl_error_text2,d0
@@ -1616,7 +1590,7 @@ adl_check_system_requirements
 	rts
 	CNOP 0,4
 adl_check_cpu_requirement
-	btst	#AFB_68020,AttnFlags+1(a0)
+	btst	#AFB_68020,AttnFlags+BYTE_SIZE(a0)
 	bne.s	adl_check_chipset_requirement
 	lea	adl_error_text3(pc),a0
 	move.l	#adl_error_text3_end-adl_error_text3,d0
@@ -1669,15 +1643,15 @@ adl_check_cool_capture
 	move.l	d0,a0
 	cmp.w	#"DL",2(a0)
 	beq.s	adl_update_values
-	move.l	a3,-(a7)
 	sub.l	a0,a0			; Requester erscheint auf Workbench
 	lea	adl_cool_capture_request(pc),a1
 	move.l	a0,a2			; Keine IDCMP-Flags
+	move.l	a3,-(a7)
 	move.l	a0,a3			; Keine Argumentenliste
 	CALLINT EasyRequestArgs
 	move.l	(a7)+,a3
-	tst.l	d0			; Gadget "Proceed" ?
-	bne.s	adl_set_default_values	; Ja -> verzweige
+	cmp.l	#BOOL_TRUE,d0		; Gadget "Proceed" ?
+	beq.s	adl_set_default_values
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
@@ -1916,7 +1890,7 @@ adl_calculate_playtime
 		bra	adl_check_cmd_line_fail
 		CNOP 0,4
 adl_check_arg_lmbexit_skip
-		move.l	d0,a0		; Zeiger auf String
+		move.l	d0,a0
 		move.l	(a0),d0		; Anzahl der Demoteile
 		cmp.w	#adl_lmbexit_parts_number_min,d0
 		bge.s   adl_check_demo_parts_number_max
@@ -1965,12 +1939,10 @@ adl_check_arg_loop
 	not.w	d0
 	move.w	d0,rd_arg_screenfader_enabled(a3)
 
-
 ; ** Run-Demo Argument RESTORESYSTIME **
 	move.l	cra_RESTORESYSTIME(a2),d0
 	not.w	d0
 	move.w	d0,rd_arg_restoresystime_enabled(a3)
-
 
 ; ** Run-Demo Argument SOFTRESET **
 	move.l	cra_SOFTRESET(a2),d0
@@ -1987,20 +1959,19 @@ adl_check_arg_softreset_skip
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-adl_print_intro_message_text
+adl_print_intro_message
 	tst.w	adl_reset_program_active(a3)
-	bne.s	adl_check_arg_playlist_enabled
+	bne.s	adl_print_intro_message_skip
+adl_print_intro_message_quit
 	rts
 	CNOP 0,4
-adl_check_arg_playlist_enabled
+adl_print_intro_message_skip
 	tst.w	dc_arg_playlist_enabled(a3)
-	bne.s   adl_print_intro_message_text_skip
-	rts
-	CNOP 0,4
-adl_print_intro_message_text_skip
+	beq.s	adl_print_intro_message_quit
 	lea	adl_intro_message_text(pc),a0
 	move.l	#adl_intro_message_text_end-adl_intro_message_text,d0
-	bra	adl_print_text
+	bsr	adl_print_text
+	bra.s	adl_print_intro_message_quit
 
 
 ; **** Demo-Charger ****
@@ -2012,7 +1983,7 @@ dc_alloc_entries_buffer
 	tst.w	adl_reset_program_active(a3)
 	beq.s	dc_alloc_entries_buffer_ok
 	move.w	adl_entries_number_max(a3),d0
-	mulu.w	#playback_queue_entry_size,d0 Größe des Puffers berechnen
+	mulu.w	#playback_queue_entry_size,d0 ; Größe des Puffers
 	move.l	#MEMF_CLEAR|MEMF_ANY|MEMF_PUBLIC|MEMF_REVERSE,d1
 	CALLEXEC AllocMem
 	move.l	d0,adl_entries_buffer(a3)
@@ -2034,7 +2005,7 @@ dc_alloc_entries_buffer_ok
 	CNOP 0,4
 dc_open_asl_library
 	lea	asl_library_name(pc),a1
-	moveq	#OS_VERSION_MIN,d0
+	moveq	#OS3_VERSION,d0
 	CALLEXEC OpenLibrary
 	lea	_ASLBase(pc),a0
 	move.l	d0,(a0)
@@ -2150,27 +2121,27 @@ dc_get_demofile_path
 	move.w	d6,d0			; Anzahl der ausgewählten Dateien
 	add.w   adl_entries_number(a3),d0
 	cmp.w   adl_entries_number_max(a3),d0
-	blt.s   dc_entries_number_skip
+	blt.s   dc_get_demofile_path_skip1
 	move.w  adl_entries_number_max(a3),d6
 	sub.w   adl_entries_number(a3),d6 ; noch verbleibende Einträge
-dc_entries_number_skip
+dc_get_demofile_path_skip1
 	move.w  d6,dc_multiselect_entries_number(a3)
 	moveq	#0,d5			; Erster Eintrag in ArgLists
 	move.l	fr_ArgList(a2),a6
 	subq.w	#1,d6			; wegen dbf
-dc_multiselect_loop
+dc_get_demofile_path_loop
 	move.l	wa_Name(a6,d5.w*8),a0	; Zeiger auf Dateiname
 	move.l	fr_Drawer(a2),a1	; Zeiger auf Verzeichnisname
 	move.l	a2,-(a7)
 	bsr.s	dc_check_demofile_path
 	move.l	(a7)+,a2
 	tst.l	d0
-	beq.s	dc_fwd_multiselect_entry
+	beq.s	dc_get_demofile_path_skip2
 	rts
 	CNOP 0,4
-dc_fwd_multiselect_entry
+dc_get_demofile_path_skip2
 	addq.w	#1,d5			; nächster Eintrag in ArgLists
-	dbf	d6,dc_multiselect_loop
+	dbf	d6,dc_get_demofile_path_loop
 	moveq	#RETURN_OK,d0
 	rts
 
@@ -2201,7 +2172,7 @@ dc_check_demofile_name
 	CNOP 0,4
 dc_get_playback_entry_offset
 	move.w	adl_entries_number(a3),d0
-	mulu.w	#playback_queue_entry_size,d0 ; Offset in Puffer berechnen
+	mulu.w	#playback_queue_entry_size,d0 ; Offset in Puffer
 	move.l	adl_entries_buffer(a3),a2
 	add.l   d0,a2			; Zeiger auf Eintrag im Puffer
 	move.l	a2,dc_current_entry(a3)
@@ -2211,7 +2182,7 @@ dc_get_playback_entry_offset
 	move.l	(a7)+,a0		; Zeiger auf Dateiname
 dc_check_demo_dir_name
 	tst.b	(a1)			; Ende von Verzeichnisname (Nullbyte) ?
-	beq.s	dc_copy_demofile_name_loop ; Ja -> verzweige
+	beq.s	dc_copy_demofile_name_loop
 	cmp.b	#"/",(a1)
 	bne.s	dc_copy_demo_dir_name
 	addq.w	#1,a1			; Nächstes Zeichen im Verzeichnisnamen
@@ -2288,10 +2259,10 @@ dc_free_file_request
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 dc_display_runmode_request
-	move.l	a3,-(a7)
-	sub.l	a0,a0			; Requester erscheint auf Workbench
+	sub.l	a0,a0			; Requester erscheint auf Workbench / Public-Screen
 	lea	dc_runmode_request(pc),a1
 	move.l	a0,a2			; Keine IDCMP-Flags
+	move.l	a3,-(a7)
 	move.l	a0,a3			; Keine Argumentenliste
 	CALLINT EasyRequestArgs
 	move.l	(a7)+,a3
@@ -2299,7 +2270,7 @@ dc_display_runmode_request
 	MOVEF.L playback_queue_entry_size,d1 ; Größe des Eintrags
 	move.l	dc_current_entry(a3),a0
 	move.w	dc_multiselect_entries_number(a3),d7
-	subq.w	#1,d7			;wegen dbf
+	subq.w	#1,d7			; wegen dbf
 dc_start_loop
 	move.b	d0,pqe_runmode(a0)	; Kennung eintragen
 	sub.l	d1,a0			; vorheriger Pfadname
@@ -2315,7 +2286,7 @@ dc_check_entries_number_max
 	move.w  adl_entries_number(a3),d0
 	cmp.w   adl_entries_number_max(a3),d0
 	bne.s	dc_check_entries_number_max_ok
-	bsr.s	dc_print_entries_max_message_text
+	bsr.s	dc_print_entries_max_message
 	moveq   #RETURN_WARN,d0
 	rts
 	CNOP 0,4
@@ -2328,7 +2299,7 @@ dc_check_entries_number_max_ok
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-dc_print_entries_max_message_text
+dc_print_entries_max_message
 	lea     dc_message_text(pc),a0
 	moveq   #dc_message_text_end-dc_message_text,d0
 	bra     adl_print_text
@@ -2352,7 +2323,7 @@ dc_check_reset_program_active
 	move.l	#rp_entries_buffer-rp_start,d0 ; Programmgröße
 	move.w	d0,d7
 	move.w	adl_entries_number_max(a3),d1
-	mulu.w	#playback_queue_entry_size,d1 ; Größe des Puffers berechnen
+	mulu.w	#playback_queue_entry_size,d1 ; Größe des Puffers
 	add.l	d1,d0			; Gesamtlänge inkusive Puffergröße
 	lea	rp_reset_program_size(pc),a0
 	move.l	d0,(a0)
@@ -2373,19 +2344,20 @@ dc_copy_reset_program
 	move.l	d0,a2			; Reset-Programm im Speicher
 	move.l	d0,CoolCapture(a6)
 	subq.w	#1,d7			; wegen dbf
-dc_copy_reset_program_loop
+dc_copy_reset_program_loop1
 	move.b	(a0)+,(a1)+
-	dbf	d7,dc_copy_reset_program_loop
+	dbf	d7,dc_copy_reset_program_loop1
 	move.l	adl_entries_buffer(a3),a0 ; Quelle
 	move.w	adl_entries_number_max(a3),d7
 	mulu.w	#playback_queue_entry_size,d7 ; Puffergröße zum Kopieren berechnen
 	subq.w	#1,d7			; wegen dbf
-dc_copy_entries_buffer_loop
+dc_copy_reset_program_loop2
 	move.b	(a0)+,(a1)+
-	dbf	d7,dc_copy_entries_buffer_loop
+	dbf	d7,dc_copy_reset_program_loop2
 	bsr	rp_update_exec_checksum
 	CALLLIBS CacheClearU
-	jsr	rp_init_custom_exceptions-rp_start(a2) ; Zeiger auf eigene Exception/Trap-Routinen initialisieren
+
+	jsr	rp_init_custom_traps-rp_start(a2) ; Zeiger auf eigene Exception/Trap-Routinen initialisieren
 	lea	rp_read_VBR(pc),a5
 	CALLLIBS Supervisor
 	tst.l	d0			; VBR = $000000 ?
@@ -2398,9 +2370,9 @@ dc_copy_entries_buffer_loop
 	ELSE
 		moveq	#7-1,d7		; Anzahl der Trap-Vektoren
 	ENDC
-dc_copy_custom_trap_vectors_loop
+dc_copy_custom_traps_loop
 	move.l	(a0)+,(a1)+
-	dbf	d7,dc_copy_custom_trap_vectors_loop
+	dbf	d7,dc_copy_custom_traps_loop
 	CALLLIBS CacheClearU
 dc_update_entries_number
 	GET_RESIDENT_ENTRIES_NUMBER
@@ -2557,7 +2529,7 @@ dc_parse_playlist_file
 	moveq	#dc_parsing_begin_text_end-dc_parsing_begin_text,d0
 	bsr	adl_print_text
 	move.w	adl_entries_number(a3),d0
-	mulu.w	#playback_queue_entry_size,d0 ; Offset in Puffer berechnen
+	mulu.w	#playback_queue_entry_size,d0 ; Offset in Puffer
 	move.l	adl_entries_buffer(a3),a0
 	add.l   d0,a0			; Zeiger auf Eintrag im Puffer
 	move.l	a0,d6
@@ -2716,8 +2688,6 @@ dc_calculate_playtime
 
 	IFEQ adl_lmbexit_code_enabled
 ; ** Playlist-Argument LMBEXIT **
-;		CNOP 0,4
-;dc_check_arg_lmbexit
 		move.l	d6,a1		; Zeiger auf Eintrag im Puffer
 		move.l	pra_LMBEXIT(a5),d0
 		beq.s	dc_check_arg_prerunscript
@@ -2773,7 +2743,7 @@ dc_fwd_transmitted_entry
 	cmp.w	adl_entries_number(a3),d0
 	bne.s	dc_fwd_playlist_cmd_line
 	bsr.s	dc_parse_playlist_file_result
-	bra	dc_print_entries_max_message_text
+	bra	dc_print_entries_max_message
 	CNOP 0,4
 dc_fwd_playlist_cmd_line
 	add.l	#playback_queue_entry_size,d6 ; nächster Eintrag
@@ -3000,7 +2970,6 @@ qh_get_entry_filename_skip3
 	moveq	#qh_show_entry_space_end-qh_show_entry_space-1,d0 ; Textlänge der Füllzeile
 	sub.w	d4,d0			; Abzüglich Länge des Dateinamens
 	bsr	adl_print_text
-
 	tst.b	pqe_entry_active(a2)
 	bne.s	qh_print_entry_active_text2
 	lea	qh_entry_active_text1(pc),a0
@@ -3626,9 +3595,9 @@ qh_ascii_to_dec_loop
 	CNOP 0,4
 qh_edit_fetch_entry
 	subq.w	#1,d0			; Zählung ab 0
-	mulu.w	#playback_queue_entry_size,d0 ; Offset in Puffer berechnen
+	mulu.w	#playback_queue_entry_size,d0 ; Offset in Puffer
 	move.l	adl_entries_buffer(a3),a0
-	add.l	d0,a0
+	add.l	d0,a0                   ; Zeiger auf Eintrag
 	move.l	a0,qh_edit_entry(a3)
 	bsr	qh_get_demofile_title
 	move.l	d0,qh_edit_entry_demofile_name(a3)
@@ -3839,11 +3808,11 @@ qh_check_queue_empty_ok
 	CNOP 0,4
 adl_free_read_arguments
 	move.l	adl_read_arguments(a3),d1
-	beq.s	adl_free_read_arguments_skip
-	CALLDOSQ FreeArgs
+	bne.s	adl_free_read_arguments_skip
+	rts
 	CNOP 0,4
 adl_free_read_arguments_skip
-	rts
+	CALLDOSQ FreeArgs
 
 
 ; Input
@@ -4018,17 +3987,17 @@ rd_play_loop
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_current_dir
 
-	bsr	sf_fade_out_active_screen
-	bsr	rd_open_degrade_screen
+	bsr	sf_fade_out_screen
+	bsr	rd_open_pal_screen
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_active_screen
-	bsr	rd_check_degrade_screen_mode
+	bsr	rd_check_pal_screen_mode
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_active_screen
 	bsr	rd_get_sprite_resolution
 	bsr	rd_open_invisible_window
 	move.l	d0,adl_dos_return_code(a3)
-	bne	rd_cleanup_degrade_screen
+	bne	rd_cleanup_pal_screen
 	bsr	rd_clear_mousepointer
 	bsr	rd_set_sprite_resolution
  	bsr	rd_blank_display
@@ -4051,7 +4020,7 @@ rd_play_loop
 
 	bsr	rd_get_system_time
 
-	bsr	rd_save_custom_trap_vectors
+	bsr	rd_save_custom_traps
 	bsr	rd_downgrade_CPU
 	bsr	rd_get_tod_time
 	bsr	rd_save_chips_registers
@@ -4069,7 +4038,7 @@ rd_play_loop
 	bsr	rd_restore_chips_registers
 	bsr	rd_get_tod_duration
 	bsr	rd_upgrade_CPU
-	bsr	rd_restore_custom_trap_vectors
+	bsr	rd_restore_custom_traps
 
 	bsr	rd_init_playtimer_stop
 	bsr	rd_stop_playtimer
@@ -4086,8 +4055,8 @@ rd_cleanup_fast_memory
 	bsr	rd_restore_sprite_resolution
 	bsr	rd_wait_monitor_switch
 	bsr	rd_close_invisible_window
-rd_cleanup_degrade_screen
-	bsr	rd_close_degrade_screen
+rd_cleanup_pal_screen
+	bsr	rd_close_pal_screen
 rd_cleanup_active_screen
 	bsr	rd_active_screen_to_front
 	bsr	sf_fade_in_active_screen
@@ -4228,7 +4197,7 @@ rd_open_timer_device_ok
 	CNOP 0,4
 rd_open_icon_library
 	lea	icon_library_name(pc),a1
-	moveq	#OS_VERSION_MIN,d0
+	moveq	#OS3_VERSION,d0
 	CALLEXEC OpenLibrary
 	lea	_IconBase(pc),a0
 	move.l	d0,(a0)
@@ -4328,7 +4297,7 @@ rd_alloc_cleared_sprite_data_ok
 sf_alloc_screen_color_table
 	tst.w	rd_arg_screenfader_enabled(a3)
 	bne.s	sf_alloc_screen_color_table_ok
-	MOVEF.L	sf_colors_number*3*LONGWORD_SIZE,d0
+	MOVEF.L	sf_rgb32_colors_number*3*LONGWORD_SIZE,d0
 	move.l	#MEMF_CLEAR|MEMF_ANY|MEMF_PUBLIC|MEMF_REVERSE,d1
 	CALLEXEC AllocMem
 	move.l	d0,sf_screen_color_table(a3)
@@ -4351,7 +4320,7 @@ sf_alloc_screen_color_table_ok
 sf_alloc_screen_color_cache
 	tst.w	rd_arg_screenfader_enabled(a3)
 	bne.s	sf_alloc_screen_color_cache_ok
-	MOVEF.L	(1+(sf_colors_number*3)+1)*LONGWORD_SIZE,d0
+	MOVEF.L	(1+(sf_rgb32_colors_number*3)+1)*LONGWORD_SIZE,d0
 	move.l	#MEMF_CLEAR|MEMF_ANY|MEMF_PUBLIC|MEMF_REVERSE,d1
 	CALLEXEC AllocMem
 	move.l	d0,sf_screen_color_cache(a3)
@@ -4420,9 +4389,9 @@ sf_get_active_screen_colors_quit
 sf_get_active_screen_colors_skip
 	move.l	d0,a0
 	move.l	sc_ViewPort+vp_ColorMap(a0),a0
-	move.l	sf_screen_color_table(a3),a1 ; 32-Bit RGB-Werte
+	move.l	sf_screen_color_table(a3),a1 ; RGB32-Werte
 	moveq	#0,d0			; Ab COLOR00
-	MOVEF.L	sf_colors_number,d1 	; Alle 256 Farben
+	MOVEF.L	sf_rgb32_colors_number,d1 ; Alle 256 Farben
  	CALLGRAFQ GetRGB32
 	CNOP 0,4
 
@@ -4437,16 +4406,16 @@ sf_copy_active_screen_colors
 	rts
 	CNOP 0,4
 sf_do_copy_screen_colors
-	move.l	sf_screen_color_table(a3),a0 ; Quelle 32-Bit RGB-Werte
-	move.l	sf_screen_color_cache(a3),a1 ; Ziel 32-Bit RGB-Werte
-	move.w	#sf_colors_number,(a1)+ ; Anzahl der Farben
+	move.l	sf_screen_color_table(a3),a0 ; Quelle
+	move.l	sf_screen_color_cache(a3),a1 ; Ziel
+	move.w	#sf_rgb32_colors_number,(a1)+ ; Anzahl der Farben
 	moveq	#0,d0
 	move.w	d0,(a1)+		; Ab COLOR00
-	MOVEF.W	sf_colors_number-1,d7
+	MOVEF.W	sf_rgb32_colors_number-1,d7
 sf_do_copy_screen_colors_loop
-	move.l	(a0)+,(a1)+		; 32-Bit-Rotwert
-	move.l	(a0)+,(a1)+		; 32-Bit-Grünwert
-	move.l	(a0)+,(a1)+		; 32-Bit-Blauwert
+	move.l	(a0)+,(a1)+		; R32
+	move.l	(a0)+,(a1)+		; G32
+	move.l	(a0)+,(a1)+		; B32
 	dbf	d7,sf_do_copy_screen_colors_loop
 	move.l	d0,(a1)			; Listenende
         rts
@@ -4468,13 +4437,13 @@ rd_check_queue_loop
 	add.l	d0,a0			; nächster Eintrag
 	dbf	d7,rd_check_queue_loop
 	tst.w 	rd_arg_endless_enabled(a3)
-	bne.s   rd_queue_played
+	bne.s   rd_check_queue_fail
 	bsr.s	rd_deactivate_queue
 rd_check_queue_ok
 	moveq	#RETURN_OK,d0
 	rts
 	CNOP 0,4
-rd_queue_played
+rd_check_queue_fail
 	lea	rd_message_text3(pc),a0
 	moveq	#rd_message_text3_end-rd_message_text3,d0
 	bsr	adl_print_text
@@ -4839,17 +4808,17 @@ rd_execute_prerunscript_ok
 ; Result
 ; d0.l	... keine Rückgabewert
 	CNOP 0,4
-sf_fade_out_active_screen
+sf_fade_out_screen
 	tst.w	rd_arg_screenfader_enabled(a3)
-	beq.s	sf_fade_out_active_screen_loop
+	beq.s	sf_fade_out_screen_loop
 	rts
 	CNOP 0,4
-sf_fade_out_active_screen_loop
+sf_fade_out_screen_loop
 	CALLGRAF WaitTOF
-	bsr.s	screen_fader_out
-	bsr	sf_set_new_colors
-	tst.w	sfo_active(a3)
-	beq.s	sf_fade_out_active_screen_loop
+	bsr.s	rgb32_screen_fader_out
+	bsr	sf_rgb32_set_new_colors
+	tst.w	sfo_rgb32_active(a3)
+	beq.s	sf_fade_out_screen_loop
 	rts
 
 
@@ -4857,14 +4826,14 @@ sf_fade_out_active_screen_loop
 ; Result
 ; d0.l	... Kein Rückgabewert
       CNOP 0,4
-screen_fader_out
-	MOVEF.W	sf_colors_number*3,d6 ; Zähler
+rgb32_screen_fader_out
+	MOVEF.W	sf_rgb32_colors_number*3,d6 ; Zähler
 	move.l	sf_screen_color_cache(a3),a0 ; Istwerte
 	addq.w  #4,a0			; Offset überspringen
 	sub.l	a1,a1			; Sollwert ($000000)
 	move.w  #sfo_fader_speed,a4	; Additions-/Subtraktionswert RGB-Werte
-	MOVEF.W sf_colors_number-1,d7 ;Anzahl der Farbwerte
-screen_fader_out_loop
+	MOVEF.W sf_rgb32_colors_number-1,d7 ;Anzahl der Farbwerte
+rgb32_screen_fader_out_loop
 	moveq   #0,d0
 	move.b  (a0),d0			; 8-Bit Rot-Istwert
 	move.l  a1,d3			
@@ -4879,23 +4848,23 @@ screen_fader_out_loop
 	and.w	#$00ff,d5		; 8-Bit Blau-Sollwert
 
 	cmp.w	d3,d0
-	bgt.s	sfo_decrease_red
-	blt.s	sfo_increase_red
-sfo_matched_red
+	bgt.s	sfo_rgb32_decrease_red
+	blt.s	sfo_rgb32_increase_red
+sfo_rgb32_matched_red
 	subq.w  #1,d6			; Ziel-Rotwert erreicht
-sfo_check_green_byte
+sfo_rgb32_check_green
 	cmp.w	d4,d1
-	bgt.s	sfo_decrease_green
-	blt.s	sfo_increase_green
-sfo_matched_green
+	bgt.s	sfo_rgb32_decrease_green
+	blt.s	sfo_rgb32_increase_green
+sfo_rgb32_matched_green
 	subq.w  #1,d6			; Ziel-Grünwert erreicht
-sfo_check_blue_byte
+sfo_rgb32_check_blue
 	cmp.w	d5,d2
-	bgt.s	sfo_decrease_blue
-	blt.s	sfo_increase_blue
-sfo_matched_blue
+	bgt.s	sfo_rgb32_decrease_blue
+	blt.s	sfo_rgb32_increase_blue
+sfo_rgb32_matched_blue
 	subq.w	#1,d6			; Ziel-Blauwert erreicht
-sfo_set_rgb_bytes
+sfo_set_rgb32
 	move.b	d0,(a0)+		; 4x 8-Bit Rotwert in Cache schreiben
 	move.b	d0,(a0)+
 	move.b	d0,(a0)+
@@ -4908,66 +4877,66 @@ sfo_set_rgb_bytes
 	move.b	d2,(a0)+
 	move.b	d2,(a0)+
 	move.b	d2,(a0)+
-	dbf	d7,screen_fader_out_loop
+	dbf	d7,rgb32_screen_fader_out_loop
 	tst.w   d6			; Fertig mit ausblenden ?
-	bne.s   sfo_flush_caches	; Nein -> verzweige
-	move.w  #FALSE,sfo_active(a3)	; Fading-Out aus
-sfo_flush_caches
+	bne.s   sfo_rgb32_flush_caches	; Nein -> verzweige
+	move.w  #FALSE,sfo_rgb32_active(a3)	; Fading-Out aus
+sfo_rgb32_flush_caches
 	CALLEXECQ CacheClearU
 	CNOP 0,4
-sfo_decrease_red
+sfo_rgb32_decrease_red
 	sub.w	a4,d0
 	cmp.w	d3,d0
-	bgt.s	sfo_check_green_byte
+	bgt.s	sfo_rgb32_check_green
 	move.w	d3,d0
-	bra.s	sfo_matched_red
+	bra.s	sfo_rgb32_matched_red
 	CNOP 0,4
-sfo_increase_red
+sfo_rgb32_increase_red
 	add.w	a4,d0
 	cmp.w	d3,d0
-	blt.s	sfo_check_green_byte
+	blt.s	sfo_rgb32_check_green
 	move.w	d3,d0
-	bra.s	sfo_matched_red
+	bra.s	sfo_rgb32_matched_red
 	CNOP 0,4
-sfo_decrease_green
+sfo_rgb32_decrease_green
 	sub.w	a4,d1
 	cmp.w	d4,d1
-	bgt.s	sfo_check_blue_byte
+	bgt.s	sfo_rgb32_check_blue
 	move.w	d4,d1
-	bra.s	sfo_matched_green
+	bra.s	sfo_rgb32_matched_green
 	CNOP 0,4
-sfo_increase_green
+sfo_rgb32_increase_green
 	add.w	a4,d1
 	cmp.w	d4,d1
-	blt.s	sfo_check_blue_byte
+	blt.s	sfo_rgb32_check_blue
 	move.w	d4,d1
-	bra.s	sfo_matched_green
+	bra.s	sfo_rgb32_matched_green
 	CNOP 0,4
-sfo_decrease_blue
+sfo_rgb32_decrease_blue
 	sub.w	a4,d2
 	cmp.w	d5,d2
-	bgt.s	sfo_set_rgb_bytes
+	bgt.s	sfo_set_rgb32
 	move.w	d5,d2
-	bra.s	sfo_matched_blue
+	bra.s	sfo_rgb32_matched_blue
 	CNOP 0,4
-sfo_increase_blue
+sfo_rgb32_increase_blue
 	add.w	a4,d2
 	cmp.w	d5,d2
-	blt.s	sfo_set_rgb_bytes
+	blt.s	sfo_set_rgb32
 	move.w	d5,d2
-	bra.s	sfo_matched_blue
+	bra.s	sfo_rgb32_matched_blue
 
 
 ; Input
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-sf_set_new_colors
+sf_rgb32_set_new_colors
 	move.l	rd_active_screen(a3),d0
-	bne.s   sf_set_new_colors_skip
+	bne.s   sf_rgb32_set_new_colors_skip
 	rts
 	CNOP 0,4
-sf_set_new_colors_skip
+sf_rgb32_set_new_colors_skip
 	move.l	d0,a0
 	ADDF.W	sc_ViewPort,a0
 	move.l	sf_screen_color_cache(a3),a1
@@ -4978,20 +4947,20 @@ sf_set_new_colors_skip
 ; Result
 ; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
-rd_open_degrade_screen
-	lea	rd_degrade_screen_tags(pc),a1
+rd_open_pal_screen
+	lea	rd_pal_screen_tags(pc),a1
 	move.l	sf_screen_color_cache(a3),sctl_SA_Colors32+ti_data(a1)
 	sub.l	a0,a0			; Keine NewScreen-Struktur
 	CALLINT OpenScreenTagList
-	move.l	d0,rd_degrade_screen(a3)
-	bne.s	rd_open_degrade_screen_ok
+	move.l	d0,rd_pal_screen(a3)
+	bne.s	rd_open_pal_screen_ok
 	lea	rd_error_text16(pc),a0
 	moveq	#rd_error_text16_end-rd_error_text16,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
-rd_open_degrade_screen_ok
+rd_open_pal_screen_ok
 	moveq	#RETURN_OK,d0
 	rts
 
@@ -5000,20 +4969,20 @@ rd_open_degrade_screen_ok
 ; Result
 ; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
-rd_check_degrade_screen_mode
-	move.l	rd_degrade_screen(a3),d0
-	beq.s	rd_check_degrade_screen_mode_ok
+rd_check_pal_screen_mode
+	move.l	rd_pal_screen(a3),d0
+	beq.s	rd_check_pal_screen_mode_ok
 	move.l	d0,a0
 	ADDF.W	sc_ViewPort,a0
 	CALLGRAF GetVPModeID
 	cmp.l	#PAL_MONITOR_ID|LORES_KEY,d0
-	beq.s	rd_check_degrade_screen_mode_ok
+	beq.s	rd_check_pal_screen_mode_ok
 	lea	rd_error_text17(pc),a0
 	moveq	#rd_error_text17_end-rd_error_text17,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
-rd_check_degrade_screen_mode_ok
+rd_check_pal_screen_mode_ok
 	moveq	#RETURN_OK,d0
 	rts
 
@@ -5023,7 +4992,7 @@ rd_check_degrade_screen_mode_ok
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_get_sprite_resolution
-	move.l	rd_degrade_screen(a3),a0
+	move.l	rd_pal_screen(a3),a0
 	move.l  sc_ViewPort+vp_ColorMap(a0),a0
 	lea	rd_video_control_tags(pc),a1
 	move.l	#VTAG_SPRITERESN_GET,vctl_VTAG_SPRITERESN+ti_tag(a1)
@@ -5039,7 +5008,7 @@ rd_get_sprite_resolution
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_set_sprite_resolution
-	move.l	rd_degrade_screen(a3),a2
+	move.l	rd_pal_screen(a3),a2
 	move.l	sc_ViewPort+vp_ColorMap(a2),a0
 	lea	rd_video_control_tags(pc),a1
 	move.l	#VTAG_SPRITERESN_SET,+vctl_VTAG_SPRITERESN+ti_tag(a1)
@@ -5057,7 +5026,7 @@ rd_set_sprite_resolution
 rd_open_invisible_window
 	sub.l	a0,a0			; Keine NewWindow-Struktur
 	lea	rd_invisible_window_tags(pc),a1
-	move.l	rd_degrade_screen(a3),wtl_WA_CustomScreen+ti_data(a1)
+	move.l	rd_pal_screen(a3),wtl_WA_CustomScreen+ti_data(a1)
 	CALLINT OpenWindowTagList
 	move.l	d0,rd_invisible_window(a3)
 	bne.s	rd_open_invisible_window_ok
@@ -5079,10 +5048,10 @@ rd_open_invisible_window_ok
 rd_clear_mousepointer
 	move.l	rd_invisible_window(a3),a0
 	move.l	rd_cleared_sprite_pointer_data(a3),a1
-	moveq	#rd_cleared_sprite_y_size,d0
-	moveq	#rd_cleared_sprite_x_size,d1
-	moveq	#rd_cleared_sprite_x_offset,d2
-	moveq	#rd_cleared_sprite_y_offset,d3
+	moveq	#cleared_sprite_y_size,d0
+	moveq	#cleared_sprite_x_size,d1
+	moveq	#cleared_sprite_x_offset,d2
+	moveq	#cleared_sprite_y_offset,d3
 	CALLINTQ SetPointer
 
 
@@ -5121,7 +5090,7 @@ rd_wait_monitor_switch_skip1
 	rts
 	CNOP 0,4
 rd_wait_monitor_switch_skip2
-	MOVEF.L	rd_monitor_switch_delay,d1
+	MOVEF.L	monitor_switch_delay,d1
 	CALLDOSQ Delay
 
 
@@ -5360,7 +5329,7 @@ rd_ascii_to_hex_skip
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 adl_wait_drives_motor
-	MOVEF.L	adl_drives_motor_delay,d1
+	MOVEF.L	drives_motor_delay,d1
 	CALLDOSQ Delay
 
 
@@ -5499,18 +5468,18 @@ rd_write_playtimer_ok
 ; d0.l	... Kein Rückgabewert
 		CNOP 0,4
 rd_get_system_time
-		lea	rd_timer_io(pc),a1
-		move.w	#TR_GETSYSTIME,IO_command(a1)
-		CALLEXECQ DoIO
+	lea	rd_timer_io(pc),a1
+	move.w	#TR_GETSYSTIME,IO_command(a1)
+	CALLEXECQ DoIO
 
 
 ; Input
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-rd_save_custom_trap_vectors
+rd_save_custom_traps
 	GET_CUSTOM_TRAP_VECTORS
-	move.l	d0,rd_custom_trap_vectors(a3)
+	move.l	d0,rd_custom_traps(a3)
 	rts
 
 
@@ -5624,9 +5593,9 @@ rd_save_chips_registers
 	move.b	CIATALO(a4),ocr_ciaa_talo(a0)
 	move.b	CIATAHI(a4),ocr_ciaa_tahi(a0)
 	btst	#CIACRAB_RUNMODE,d1	; Continuous-Modus ?
-	bne.s	rd_set_ciaa_cra1	; Nein -> verzweige
+	bne.s	rd_save_chips_registers_skip1 ; Nein -> verzweige
 	or.b	#CIACRAF_START,d1	; Timer wieder starten
-rd_set_ciaa_cra1
+rd_save_chips_registers_skip1
 	move.b	d1,CIACRA(a4)
 	move.b	CIACRB(a4),d0
 	move.b	d0,d1		
@@ -5638,9 +5607,9 @@ rd_set_ciaa_cra1
 	move.b	CIATBLO(a4),ocr_ciaa_tblo(a0)
 	move.b	CIATBHI(a4),ocr_ciaa_tbhi(a0)
 	btst	#CIACRBB_RUNMODE,d1	; Continuous-Modus ?
-	bne.s	rd_set_ciaa_crb1	; Nein -> verzweige
+	bne.s	rd_save_chips_registers_skip2 ; Nein -> verzweige
 	or.b	#CIACRBF_START,d1	; Timer wieder starten
-rd_set_ciaa_crb1
+rd_save_chips_registers_skip2
 	move.b	d1,CIACRB(a4)
 
 	move.b	CIAPRB(a5),ocr_ciab_prb(a0)
@@ -5654,9 +5623,9 @@ rd_set_ciaa_crb1
 	move.b	CIATALO(a5),ocr_ciab_talo(a0)
 	move.b	CIATAHI(a5),ocr_ciab_tahi(a0)
 	btst	#CIACRAB_RUNMODE,d1	; Continuous-Modus ?
-	bne.s	rd_set_ciab_cra1	; Nein -> verzweige
+	bne.s	rd_save_chips_registers_skip3 ; Nein -> verzweige
 	or.b	#CIACRAF_START,d1	; Timer wieder starten
-rd_set_ciab_cra1
+rd_save_chips_registers_skip3
 	move.b	d1,CIACRA(a5)
 	move.b	CIACRB(a5),d0
 	move.b	d0,d1		
@@ -5668,9 +5637,9 @@ rd_set_ciab_cra1
 	move.b	CIATBLO(a5),ocr_ciab_tblo(a0)
 	move.b	CIATBHI(a5),ocr_ciab_tbhi(a0)
 	btst	#CIACRBB_RUNMODE,d1	; Continuous-Modus ?
-	bne.s	rd_set_ciab_crb1	; Nein -> verzweige
+	bne.s	rd_save_chips_registers_skip4 ; Nein -> verzweige
 	or.b	#CIACRBF_START,d1	; Timer wieder starten
-rd_set_ciab_crb1
+rd_save_chips_registers_skip4
 	move.b	d1,CIACRB(a5)
 	CALLEXECQ Enable
 
@@ -5681,10 +5650,10 @@ rd_set_ciab_crb1
 	CNOP 0,4
 rd_run_dos_file
 	tst.w	whdl_slave_enabled(a3)
-	bne.s	rd_do_run_dos_file
+	bne.s	rd_run_dos_file_skip
 	rts
 	CNOP 0,4
-rd_do_run_dos_file
+rd_run_dos_file_skip
 	moveq	#rd_shell_no_op_cmd_line_end-rd_shell_no_op_cmd_line,d0
 	lea	rd_shell_no_op_cmd_line(pc),a0
 	move.l	a3,-(a7)
@@ -5789,16 +5758,16 @@ rd_restore_chips_registers
 
 	move.b	ocr_ciaa_cra(a0),d0
 	btst	#CIACRAB_RUNMODE,d0	; Continuous-Modus ?
-	bne.s	rd_set_ciaa_cra2	; Nein -> verzweige
+	bne.s	rd_restore_chips_registers1 ; Nein -> verzweige
 	or.b	#CIACRAF_START,d0	; Timer wieder starten
-rd_set_ciaa_cra2
+rd_restore_chips_registers1
 	move.b	d0,CIACRA(a4)
 
 	move.b	ocr_ciaa_crb(a0),d0
 	btst	#CIACRBB_RUNMODE,d0 	; Continuous-Modus ?
-	bne.s	rd_set_ciaa_crb2	; Nein -> verzweige
+	bne.s	rd_restore_chips_registers2 ; Nein -> verzweige
 	or.b	#CIACRBF_START,d0	; Timer wieder starten
-rd_set_ciaa_crb2
+rd_restore_chips_registers2
 	move.b	d0,CIACRB(a4)
 
 	move.b	ocr_ciab_prb(a0),CIAPRB(a5)
@@ -5817,16 +5786,16 @@ rd_set_ciaa_crb2
 
 	move.b	ocr_ciab_cra(a0),d0
 	btst	#CIACRAB_RUNMODE,d0 	; Continuous-Modus ?
-	bne.s	rd_set_ciab_cra2 	; Nein -> verzweige
+	bne.s	rd_restore_chips_registers3 ; Nein -> verzweige
 	or.b	#CIACRAF_START,d0	; Timer wieder starten
-rd_set_ciab_cra2
+rd_restore_chips_registers3
 	move.b	d0,CIACRA(a5)
 
 	move.b	ocr_ciab_crb(a0),d0
 	btst	#CIACRBB_RUNMODE,d0	; Continuous-Modus ?
-	bne.s	rd_set_ciab_crb2	; Nein -> verzweige
+	bne.s	rd_restore_chips_registers4 ; Nein -> verzweige
 	or.b	#CIACRBF_START,d0	; Timer wieder starten
-rd_set_ciab_crb2
+rd_restore_chips_registers4
 	move.b	d0,CIACRB(a5)
 
 	move.l	#_CUSTOM,a1
@@ -5877,18 +5846,18 @@ rd_get_tod_duration_save
 rd_upgrade_cpu
 	move.l	rd_demofile_path(a3),a0
 	cmp.b   #RUNMODE_TURBO,pqe_runmode(a0)
-	bne.s	rd_restore_vbr
+	bne.s	rd_upgrade_cpu_skip1
 	rts
 	CNOP 0,4
-rd_restore_vbr
+rd_upgrade_cpu_skip1
 	move.l	_SysBase(pc),a6
 	move.l	rd_old_vbr(a3),d0
-	beq.s	rd_check_060_cpu2
+	beq.s	rd_upgrade_cpu_skip2
 	lea	rd_write_vbr(pc),a5
 	CALLEXEC Supervisor
-rd_check_060_cpu2
+rd_upgrade_cpu_skip2
 	tst.b	AttnFlags+1(a6)
-	bpl.s	rd_enable_caches_mmu
+	bpl.s	rd_upgrade_cpu_skip3
 ; ** 68060 **
 	move.l	rd_old_060_pcr(a3),d1
 	lea	rd_060_set_pcr(pc),a5
@@ -5901,22 +5870,22 @@ rd_check_060_cpu2
 	CALLLIBQ Supervisor
 ; ** 68030-68040 **
 	CNOP 0,4
-rd_enable_caches_mmu
+rd_upgrade_cpu_skip3
 	moveq	#FALSE,d0		; Alle Bits setzen
 	move.l	rd_old_cacr(a3),d1
 	CALLEXEC CacheControl		; CPU neu konfigurieren und Caches flushen
 	btst	#AFB_68040,AttnFlags+1(a6)
-	beq.s	rd_check_030_cpu2
+	beq.s	rd_upgrade_cpu_skip4
 	lea	rd_old_mmu_registers(pc),a1
 	lea	rd_040_060_mmu_on(pc),a5
 	CALLLIBQ Supervisor
 	CNOP 0,4
-rd_check_030_cpu2
+rd_upgrade_cpu_skip4
 	btst	#AFB_68030,AttnFlags+1(a6)
-	bne.s	rd_enable_030_mmu
+	bne.s	rd_upgrade_cpu_skip5
 	rts
 	CNOP 0,4
-rd_enable_030_mmu
+rd_upgrade_cpu_skip5
 	lea	rd_old_mmu_registers(pc),a1
 	lea	rd_030_mmu_on(pc),a5
 	CALLLIBQ Supervisor
@@ -5926,15 +5895,15 @@ rd_enable_030_mmu
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-rd_restore_custom_trap_vectors
+rd_restore_custom_traps
 	move.l	rd_old_vbr(a3),d0
-	beq.s	rd_restore_only_chip_memory
+	beq.s	rd_restore_custom_traps_skip
 	move.l	d0,a1			; Ziel: Fast-Memory
 	add.w	#TRAP_0_VECTOR,a1	; Ab Trap0-Vektor
-	bsr.s	rd_copy_custom_trap_vectors
-rd_restore_only_chip_memory
-	move.w	#TRAP_0_VECTOR,a1	; Ab Trap0-Vektor
-	bsr.s	rd_copy_custom_trap_vectors
+	bsr.s	rd_copy_custom_traps
+rd_restore_custom_traps_skip
+	move.w	#TRAP_0_VECTOR,a1	; Ab Trap0-Vektor in Chip-Memory
+	bsr.s	rd_copy_custom_traps
 	CALLEXECQ CacheClearU
 
 
@@ -5942,16 +5911,16 @@ rd_restore_only_chip_memory
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-rd_copy_custom_trap_vectors
-	move.l	rd_custom_trap_vectors(a3),a0
+rd_copy_custom_traps
+	move.l	rd_custom_traps(a3),a0
 	IFEQ adl_restore_adl_code_enabled
 		moveq	#8-1,d7		; Anzahl der Trap-Vektoren
 	ELSE
 		moveq	#7-1,d7		; Anzahl der Trap-Vektoren
 	ENDC
-rd_copy_custom_trap_vectors_loop
+rd_copy_custom_traps_loop
 	move.l	(a0)+,(a1)+	 	; Vektor kopieren
-	dbf	d7,rd_copy_custom_trap_vectors_loop
+	dbf	d7,rd_copy_custom_traps_loop
 	rts
 
 
@@ -6055,7 +6024,7 @@ rd_free_first_memory_block
 ; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 rd_restore_sprite_resolution
-	move.l	rd_degrade_screen(a3),a2
+	move.l	rd_pal_screen(a3),a2
 	move.l	sc_ViewPort+vp_ColorMap(a2),a0
 	lea	rd_video_control_tags(pc),a1
 	move.l	#VTAG_SPRITERESN_SET,vctl_VTAG_SPRITERESN+ti_tag(a1)
@@ -6079,8 +6048,8 @@ rd_close_invisible_window
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-rd_close_degrade_screen
-	move.l	rd_degrade_screen(a3),a0
+rd_close_pal_screen
+	move.l	rd_pal_screen(a3),a0
 	CALLINTQ CloseScreen
 
 
@@ -6115,9 +6084,9 @@ sf_fade_in_active_screen
 	CNOP 0,4
 sf_fade_in_active_screen_loop
 	CALLGRAF WaitTOF
-	bsr	screen_fader_in
-	bsr	sf_set_new_colors
-	tst.w	sfi_active(a3)
+	bsr	rgb32_screen_fader_in
+	bsr	sf_rgb32_set_new_colors
+	tst.w	sfi_rgb32_active(a3)
 	beq.s	sf_fade_in_active_screen_loop
 	rts
 
@@ -6126,14 +6095,14 @@ sf_fade_in_active_screen_loop
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-screen_fader_in
-	MOVEF.W	sf_colors_number*3,d6	; Zähler
+rgb32_screen_fader_in
+	MOVEF.W	sf_rgb32_colors_number*3,d6 ; Zähler
 	move.l	sf_screen_color_cache(a3),a0 ; Puffer für Farbwerte
 	addq.w	#4,a0			; Offset überspringen
 	move.w	#sfi_fader_speed,a4	; Additions-/Subtraktionswert für RGB-Werte
 	move.l	sf_screen_color_table(a3),a1 ; Sollwerte
-	MOVEF.W	sf_colors_number-1,d7	; Anzahl der Farben
-screen_fader_in_loop
+	MOVEF.W	sf_rgb32_colors_number-1,d7
+rgb32_screen_fader_in_loop
 	moveq	#0,d0
 	move.b	(a0),d0			; 8-Bit Rot-Istwert
 	moveq	#0,d1
@@ -6148,24 +6117,24 @@ screen_fader_in_loop
 	move.b	8(a1),d5		; 8-Bit Blau-Sollwert
 
 	cmp.w	d3,d0
-	bgt.s	sfi_decrease_red
-	blt.s	sfi_increase_red
-sfi_matched_red
+	bgt.s	sfi_rgb32_decrease_red
+	blt.s	sfi_rgb32_increase_red
+sfi_rgb32_matched_red
 	subq.w	#1,d6			; Ziel-Rotwert erreicht
-sfi_check_green_byte
+sfi_rgb32_check_green
 	cmp.w	d4,d1
-	bgt.s	sfi_decrease_green
-	blt.s	sfi_increase_green
-sfi_matched_green
+	bgt.s	sfi_rgb32_decrease_green
+	blt.s	sfi_rgb32_increase_green
+sfi_rgb32_matched_green
 	subq.w	#1,d6			; Ziel-Grünwert erreicht
-sfi_check_blue_byte
+sfi_rgb32_check_blue
 	cmp.w	d5,d2
-	bgt.s	sfi_decrease_blue
-	blt.s	sfi_increase_blue
-sfi_matched_blue
+	bgt.s	sfi_rgb32_decrease_blue
+	blt.s	sfi_rgb32_increase_blue
+sfi_rgb32_matched_blue
 	subq.w	#1,d6			; Ziel-Blauwert erreicht
 
-sfi_set_rgb_bytes
+sfi_set_rgb32
 	move.b	d0,(a0)+		; 4x 8-Bit Rotwert in Cache schreiben
 	move.b	d0,(a0)+
 	move.b	d0,(a0)+
@@ -6180,55 +6149,54 @@ sfi_set_rgb_bytes
 	move.b	d2,(a0)+
 	addq.w	#4,a1
 	move.b	d2,(a0)+
-	dbf	d7,screen_fader_in_loop
+	dbf	d7,rgb32_screen_fader_in_loop
 	tst.w	d6			; Fertig mit ausblenden ?
-	bne.s	sfi_flush_caches	; Nein -> verzweige
-	move.w	#FALSE,sfi_active(a3)	; Fading-In aus
-sfi_flush_caches
-	CALLEXEC CacheClearU
-	rts
+	bne.s	sfi_rgb32_flush_caches	; Nein -> verzweige
+	move.w	#FALSE,sfi_rgb32_active(a3) ; Fading-In aus
+sfi_rgb32_flush_caches
+	CALLEXECQ CacheClearU
 	CNOP 0,4
-sfi_decrease_red
+sfi_rgb32_decrease_red
 	sub.w	a4,d0
 	cmp.w	d3,d0
-	bgt.s	sfi_check_green_byte
+	bgt.s	sfi_rgb32_check_green
 	move.w	d3,d0
-	bra.s	sfi_matched_red
+	bra.s	sfi_rgb32_matched_red
 	CNOP 0,4
-sfi_increase_red
+sfi_rgb32_increase_red
 	add.w   a4,d0
 	cmp.w   d3,d0
-	blt.s   sfi_check_green_byte
+	blt.s   sfi_rgb32_check_green
 	move.w  d3,d0
-	bra.s   sfi_matched_red
+	bra.s   sfi_rgb32_matched_red
 	CNOP 0,4
-sfi_decrease_green
+sfi_rgb32_decrease_green
 	sub.w	a4,d1
 	cmp.w	d4,d1
-	bgt.s	sfi_check_blue_byte
+	bgt.s	sfi_rgb32_check_blue
 	move.w	d4,d1
-	bra.s	sfi_matched_green
+	bra.s	sfi_rgb32_matched_green
 	CNOP 0,4
-sfi_increase_green
+sfi_rgb32_increase_green
 	add.w	a4,d1
 	cmp.w	d4,d1
-	blt.s	sfi_check_blue_byte
+	blt.s	sfi_rgb32_check_blue
 	move.w	d4,d1
-	bra.s	sfi_matched_green
+	bra.s	sfi_rgb32_matched_green
 	CNOP 0,4
-sfi_decrease_blue
+sfi_rgb32_decrease_blue
 	sub.w	a4,d2
 	cmp.w	d5,d2
-	bgt.s	sfi_set_rgb_bytes
+	bgt.s	sfi_set_rgb32
 	move.w	d5,d2
-	bra.s	sfi_matched_blue
+	bra.s	sfi_rgb32_matched_blue
 	CNOP 0,4
-sfi_increase_blue
+sfi_rgb32_increase_blue
 	add.w	a4,d2
 	cmp.w	d5,d2
-	blt.s	sfi_set_rgb_bytes
+	blt.s	sfi_set_rgb32
 	move.w	d5,d2
-	bra.s	sfi_matched_blue
+	bra.s	sfi_rgb32_matched_blue
 
 
 ; Input
@@ -6280,8 +6248,8 @@ rd_reset_demo_variables_skip1
 	move.l	d0,rd_prerunscript_path(a3)
 rd_reset_demo_variables_skip2
 	move.w	#FALSE,whdl_slave_enabled(a3)
-	move.w	rd_arg_screenfader_enabled(a3),sfo_active(a3)
-	move.w	rd_arg_screenfader_enabled(a3),sfi_active(a3)
+	move.w	rd_arg_screenfader_enabled(a3),sfo_rgb32_active(a3)
+	move.w	rd_arg_screenfader_enabled(a3),sfi_rgb32_active(a3)
 	rts
 
 
@@ -6311,7 +6279,7 @@ sf_free_screen_color_cache
 	CNOP 0,4
 sf_free_screen_color_cache_skip
 	move.l	d0,a1
-	MOVEF.L	(1+(sf_colors_number*3)+1)*LONGWORD_SIZE,d0
+	MOVEF.L	(1+(sf_rgb32_colors_number*3)+1)*LONGWORD_SIZE,d0
 	CALLEXECQ FreeMem
 
 
@@ -6326,7 +6294,7 @@ sf_free_screen_color_table
 	CNOP 0,4
 sf_free_screen_color_table_skip
 	move.l	d0,a1
-	MOVEF.L	sf_colors_number*3*LONGWORD_SIZE,d0
+	MOVEF.L	sf_rgb32_colors_number*3*LONGWORD_SIZE,d0
 	CALLEXECQ FreeMem
 
 
@@ -6345,8 +6313,8 @@ rd_free_cleared_sprite_data
 ; d0.l	... Kein Rückgabewert
 		CNOP 0,4
 rd_close_timer_device
-		lea	rd_timer_io(pc),a1
-		CALLEXECQ CloseDevice
+	lea	rd_timer_io(pc),a1
+	CALLEXECQ CloseDevice
 
 
 ; Input
@@ -6598,7 +6566,7 @@ rp_skip2
 	move.l	#rp_color_okay,d3
 	bsr	rp_screen_colour_flash
 	bsr	rp_restore_custom_cool_capture
-	bsr	rp_init_custom_exceptions
+	bsr	rp_init_custom_traps
 rp_quit
 	movem.l (a7)+,d0-d7/a0-a6
 	rts
@@ -6858,7 +6826,7 @@ rp_update_exec_checksum_loop
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-rp_init_custom_exceptions
+rp_init_custom_traps
 	lea	rp_read_vbr(pc),a5
 	CALLLIBS Supervisor
 	move.l	d0,a0
@@ -6923,7 +6891,6 @@ rp_init_custom_exceptions
 		move.l	a4,TRAP_7_VECTOR(a0)
 		move.l	a4,(a2)
 	ENDC
-
 	CALLLIBQ CacheClearU
 
 
@@ -6932,18 +6899,18 @@ rp_init_custom_exceptions
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-rp_restore_old_exceptions
+rp_restore_old_traps
 	lea	rp_read_vbr(pc),a5
 	CALLLIBS Supervisor
 	tst.l	d0			; VBR = $000000 ?
-	beq.s	rp_restore_chip_memory	; Ja -> verzweige
+	beq.s	rp_restore_old_traps_skip
 	move.l	d0,a1
 	IFEQ adl_restore_adl_code_enabled
 		move.l	rp_old_level_7_autovector(pc),LEVEL_7_AUTOVECTOR(a1) ; Zeiger alte Level-7-Interrptprogramm eintragen
 	ENDC
 	add.w	#TRAP_0_VECTOR,a1	; Ab Trap0-Vektor
 	bsr.s	rp_copy_old_trap_vectors
-rp_restore_chip_memory
+rp_restore_old_traps_skip
 	IFEQ adl_restore_adl_code_enabled
 		move.l	d0,a1
 		move.l	rp_old_level_7_autovector(pc),LEVEL_7_AUTOVECTOR(a1) ; Zeiger alte Level-7-Interrptprogramm eintragen
@@ -7078,7 +7045,7 @@ rp_trap_6_program
 	movem.l	a5-a6,-(a7)
 	move.l	exec_base.w,a6
 	bsr	rp_clear_cool_capture
-	bsr	rp_restore_old_exceptions
+	bsr	rp_restore_old_traps
 	lea	rp_reset_program_memory(pc),a0
 	move.l	a0,d0
 	movem.l	(a7)+,a5-a6
@@ -7108,10 +7075,6 @@ rp_read_vbr
 	nop
 	rte
 
-
-	CNOP 0,4
-rp_dec_table
-	DC.L 1,10,100,1000,10000
 
 rp_reset_program_memory		DC.L 0
 rp_reset_program_size		DC.L 0
@@ -7149,6 +7112,10 @@ rp_entry_offset 		DC.W 0
 rp_endless_enabled		DC.W 0
 
 rp_output_string		DS.B output_string_size
+
+	CNOP 0,4
+rp_dec_table
+	DC.L 1,10,100,1000,10000
 
 rp_entries_buffer			; Größe wird später berechnet
 
@@ -7220,15 +7187,15 @@ adl_intro_message_text_end
 	EVEN
 
 
-adl_resident_request_title
+adl_install_request_title
 	DC.B "Amiga Demo Launcher message",0
 	EVEN
-adl_resident_request_text
+adl_install_request_text_body
 	DC.B "The CoolCapture vector is already used.",ASCII_LINE_FEED,ASCII_LINE_FEED
 	DC.B "Should the Amiga Demo Launcher be installed",ASCII_LINE_FEED
 	DC.B "and the other program be disabled?",ASCII_LINE_FEED,0
 	EVEN
-adl_resident_request_gadget_text
+adl_install_request_text_gadgets
 	DC.B "Proceed|Quit",0
 	EVEN
 
@@ -7433,10 +7400,10 @@ dc_file_request_negative_text
 dc_runmode_request_title
 	DC.B "Define run mode",0
 	EVEN
-dc_runmode_request_text
+dc_runmode_request_text_body
 	DC.B "In which mode should the demo run?",ASCII_LINE_FEED,0
 	EVEN
-dc_runmode_request_gadget_text
+dc_runmode_request_text_gadgets
 	DC.B "OCS vanilla|AGA vanilla|turbo",0
 	EVEN
 
@@ -7711,11 +7678,11 @@ rd_timer_io
 
 
 	CNOP 0,4
-rd_degrade_screen_colors
+rd_pal_screen_colors
 	DS.B screen_02_colors_size
 
 	CNOP 0,4
-rd_degrade_screen_tags
+rd_pal_screen_tags
 	DS.B screen_tag_list_size
 
 
@@ -7739,7 +7706,7 @@ rd_old_chips_registers
 	DS.B old_chips_registers_size
 
 
-rd_degrade_screen_name		DC.B "Amiga Demo Launcher 2",0
+rd_pal_screen_name		DC.B "Amiga Demo Launcher 2",0
 	EVEN
 
 
