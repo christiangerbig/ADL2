@@ -407,9 +407,11 @@ You can always break a loop with the keys CTRL-C.
 
 The argument fades out the active screen to black before the intro/demo starts.
 
+This feature does not work properly in conjunction with graphic card screens.
+
 @{B}Caution: In most cases the active screen is the Workbench screen and there will be no system messages/requesters visible anymore.@{UB}
 
-After the intro/demo is quit by the user the active screen is faded in from black to the original colours.
+After the intro/demo is quit, the active screen is faded in from black to the original colours.
 @ENDNODE
 
 
