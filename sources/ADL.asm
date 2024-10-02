@@ -249,6 +249,16 @@
 ; - Screen-Degrader-Routine komplett überarbeitet
 ; - Neues Argument: RESTORESYSTIME - Systemzeit wird korrigiert
 
+; V.2.02
+; - Bugfix: Nach dem Check des Arguments PLAYENTRY erfolgen weitere Checks, sodass
+;           eine Kombination mit dem Argument SCREENFADER erfolgen kann
+; - Screen-Fader-Out: Jetzt mit Blackfader-Routine
+; - Farbtabelle des Custom-Screen wird wieder korrekt angelegt und der Tagliste
+;   zugewiesen
+; - Spriteauflösung wird bereits über den Active Screen ermittelt
+; - Über das Screentag SA_VideoControl wird bereits mit dem Öffnen des PAL-Screens
+;   die Spriteauflösung auf Lores gesetzt
+
 
 	SECTION code_and_variables,CODE
 
@@ -1035,7 +1045,7 @@ adl_init_variables
 ; **** Screen-Fader-In ****
 	move.w	d0,sfi_rgb32_active(a3)
 
-; **** Screen-Fader-Out ****
+; **** Screen-Fader-Out****
 	move.w	d0,sfo_rgb32_active(a3)
 
 
@@ -1063,9 +1073,10 @@ adl_init_structures
 	bsr	qh_init_get_visual_info_tags
 	bsr	qh_init_edit_window_tags
 	bsr	qh_init_gadgets
+	bsr	rd_init_pal_screen_colors
+	bsr	rd_init_video_control_tags
 	bsr	rd_init_pal_screen_tags
-	bsr	rd_init_invisible_window_tags
-	bra	rd_init_video_control_tags
+	bra	rd_init_invisible_window_tags
 
 ; Input
 ; Result
@@ -1359,6 +1370,37 @@ qh_init_gadgets
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
+rd_init_pal_screen_colors
+	lea	rd_pal_screen_colors(pc),a0
+	move.w	#pal_screen_colors_number,s02c_colors_number(a0)
+	moveq	#0,d0
+	move.w	d0,s02c_start_color(a0)
+	lea	s02c_color00(a0),a0
+	moveq	#pal_screen_colors_number-1,d7
+rd_init_pal_screen_colors_loop
+	move.l	d0,(a0)+		; R32 = schwarz
+	move.l	d0,(a0)+		; G32 = schwarz
+	move.l	d0,(a0)+		; B32 = schwarz
+	dbf	d7,rd_init_pal_screen_colors_loop
+	move.l	d0,(a0)
+	rts
+
+
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
+	CNOP 0,4
+rd_init_video_control_tags
+	lea	rd_video_control_tags(pc),a0
+	moveq	#TAG_DONE,d2
+	move.l	d2,vctl_TAG_DONE(a0)
+	rts
+
+
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
+	CNOP 0,4
 rd_init_pal_screen_tags
 	lea	rd_pal_screen_tags(pc),a0
 	move.l	#SA_Left,(a0)+
@@ -1388,6 +1430,11 @@ rd_init_pal_screen_tags
 	move.l	a1,(a0)+
 	move.l	#SA_Colors32,(a0)+
 	lea	rd_pal_screen_colors(pc),a1
+	move.l	a1,(a0)+
+	move.l	#SA_VideoControl,(a0)+
+	lea	rd_video_control_tags(pc),a1
+	move.l	#VTAG_SPRITERESN_SET,+vctl_VTAG_SPRITERESN+ti_tag(a1)
+	move.l	#SPRITERESN_140NS,vctl_VTAG_SPRITERESN+ti_data(a1)
 	move.l	a1,(a0)+
 	move.l	#SA_Font,(a0)+
 	move.l	d0,(a0)+
@@ -1461,17 +1508,6 @@ rd_init_invisible_window_tags
 	move.l	#WFLG_BACKDROP|WFLG_BORDERLESS|WFLG_ACTIVATE,(a0)+
 	moveq	#TAG_DONE,d2
 	move.l	d2,(a0)
-	rts
-
-
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
-	CNOP 0,4
-rd_init_video_control_tags
-	lea	rd_video_control_tags(pc),a0
-	moveq	#TAG_DONE,d2
-	move.l	d2,vctl_TAG_DONE(a0)
 	rts
 
 
@@ -1842,10 +1878,8 @@ arg_check_arg_playentry_max
 	CNOP 0,4
 adl_check_arg_playentry_set
 	move.w	d0,rd_entry_offset(a3)
-	bra	adl_check_cmd_line_ok
 
 ; ** Run-Demo Argument PRERUNSCRIPT **
-	CNOP 0,4
 adl_check_arg_prerunscript
 	move.l	cra_PRERUNSCRIPT(a2),rd_prerunscript_path(a3)
 	beq.s	adl_check_arg_secs
@@ -3948,6 +3982,7 @@ rd_start
 	bne	rd_cleanup_screen_color_table
 
 	bsr	rd_get_active_screen
+	bsr	rd_get_sprite_resolution
 	bsr	rd_get_active_screen_mode
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_cleared_sprite_data
@@ -3994,12 +4029,10 @@ rd_play_loop
 	bsr	rd_check_pal_screen_mode
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_active_screen
-	bsr	rd_get_sprite_resolution
 	bsr	rd_open_invisible_window
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_pal_screen
 	bsr	rd_clear_mousepointer
-	bsr	rd_set_sprite_resolution
  	bsr	rd_blank_display
 	bsr	rd_wait_monitor_switch
 
@@ -4346,6 +4379,25 @@ rd_get_active_screen
 	move.l	d0,a0
 	move.l	ib_ActiveScreen(a6),rd_active_screen(a3)
 	CALLLIBQ UnlockIBase
+
+
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
+	CNOP 0,4
+rd_get_sprite_resolution
+	move.l	rd_active_screen(a3),d0
+	beq.s	rd_get_sprite_resolution_quit
+	move.l	d0,a0
+	move.l  sc_ViewPort+vp_ColorMap(a0),a0
+	lea	rd_video_control_tags(pc),a1
+	move.l	#VTAG_SPRITERESN_GET,vctl_VTAG_SPRITERESN+ti_tag(a1)
+	clr.l	vctl_VTAG_SPRITERESN+ti_Data(a1)
+	CALLGRAF VideoControl
+	lea     rd_video_control_tags(pc),a0
+	move.l  vctl_VTAG_SPRITERESN+ti_Data(a0),rd_old_sprite_resolution(a3)
+rd_get_sprite_resolution_quit
+	rts
 
 
 ; Input
@@ -4824,47 +4876,42 @@ sf_fade_out_screen_loop
 
 ; Input
 ; Result
-; d0.l	... Kein Rückgabewert
-      CNOP 0,4
+; d0.l	... keine Rückgabewert
+	CNOP 0,4
 rgb32_screen_fader_out
-	MOVEF.W	sf_rgb32_colors_number*3,d6 ; Zähler
+	MOVEF.W	sf_rgb32_colors_number*3,d3 ; Zähler
+	move.w  #sfo_fader_speed,d4	; Additions-/Subtraktionswert für RGB
 	move.l	sf_screen_color_cache(a3),a0 ; Istwerte
 	addq.w  #4,a0			; Offset überspringen
-	sub.l	a1,a1			; Sollwert ($000000)
-	move.w  #sfo_fader_speed,a4	; Additions-/Subtraktionswert RGB-Werte
-	MOVEF.W sf_rgb32_colors_number-1,d7 ;Anzahl der Farbwerte
+	MOVEF.W sf_rgb32_colors_number-1,d7
 rgb32_screen_fader_out_loop
+	moveq   #TRUE,d0
+	move.b  (a0),d0			; R8-Istwert
+	beq.s	sfo_rgb32_matched_red
+	sub.w   d4,d0
+	bgt.s   sfo_rgb32_check_green
 	moveq   #0,d0
-	move.b  (a0),d0			; 8-Bit Rot-Istwert
-	move.l  a1,d3			
-	swap    d3			; 8-Bit Rot-Sollwert
-	moveq   #0,d1
-	move.b  4(a0),d1		; 8-Bit Grün-Istwert
-	move.w  a1,d4			
-	lsr.w   #8,d4			; 8-Bit Grün-Sollwert
-	moveq   #0,d2
-	move.b  8(a0),d2		; 8-Bit Blau-Istwert
-	move.w  a1,d5
-	and.w	#$00ff,d5		; 8-Bit Blau-Sollwert
-
-	cmp.w	d3,d0
-	bgt.s	sfo_rgb32_decrease_red
-	blt.s	sfo_rgb32_increase_red
 sfo_rgb32_matched_red
-	subq.w  #1,d6			; Ziel-Rotwert erreicht
+	subq.w  #1,d3			; Rotwert auf Null
 sfo_rgb32_check_green
-	cmp.w	d4,d1
-	bgt.s	sfo_rgb32_decrease_green
-	blt.s	sfo_rgb32_increase_green
+	moveq   #0,d1
+	move.b  4(a0),d1		; G8-Istwert
+	beq.s   sfo_rgb32_matched_green
+	sub.w   d4,d1
+	bgt.s	sfo_check_blue
+	moveq   #0,d1
 sfo_rgb32_matched_green
-	subq.w  #1,d6			; Ziel-Grünwert erreicht
-sfo_rgb32_check_blue
-	cmp.w	d5,d2
-	bgt.s	sfo_rgb32_decrease_blue
-	blt.s	sfo_rgb32_increase_blue
+	subq.w  #1,d3			; Grünwert auf Null
+sfo_check_blue
+	moveq   #0,d2
+	move.b  8(a0),d2		; B8-Istwert
+	beq.s   sfo_rgb32_matched_blue
+	sub.w   d4,d2
+	bgt.s   sfo_merge_rgb32
+	moveq   #0,d2
 sfo_rgb32_matched_blue
-	subq.w	#1,d6			; Ziel-Blauwert erreicht
-sfo_set_rgb32
+	subq.w  #1,d3			; Blauwert auf Null
+sfo_merge_rgb32
 	move.b	d0,(a0)+		; 4x 8-Bit Rotwert in Cache schreiben
 	move.b	d0,(a0)+
 	move.b	d0,(a0)+
@@ -4878,53 +4925,11 @@ sfo_set_rgb32
 	move.b	d2,(a0)+
 	move.b	d2,(a0)+
 	dbf	d7,rgb32_screen_fader_out_loop
-	tst.w   d6			; Fertig mit ausblenden ?
-	bne.s   sfo_rgb32_flush_caches	; Nein -> verzweige
-	move.w  #FALSE,sfo_rgb32_active(a3)	; Fading-Out aus
+	tst.w   d3
+	bne.s   sfo_rgb32_flush_caches
+	move.w  #FALSE,sfo_rgb32_active(a3)
 sfo_rgb32_flush_caches
 	CALLEXECQ CacheClearU
-	CNOP 0,4
-sfo_rgb32_decrease_red
-	sub.w	a4,d0
-	cmp.w	d3,d0
-	bgt.s	sfo_rgb32_check_green
-	move.w	d3,d0
-	bra.s	sfo_rgb32_matched_red
-	CNOP 0,4
-sfo_rgb32_increase_red
-	add.w	a4,d0
-	cmp.w	d3,d0
-	blt.s	sfo_rgb32_check_green
-	move.w	d3,d0
-	bra.s	sfo_rgb32_matched_red
-	CNOP 0,4
-sfo_rgb32_decrease_green
-	sub.w	a4,d1
-	cmp.w	d4,d1
-	bgt.s	sfo_rgb32_check_blue
-	move.w	d4,d1
-	bra.s	sfo_rgb32_matched_green
-	CNOP 0,4
-sfo_rgb32_increase_green
-	add.w	a4,d1
-	cmp.w	d4,d1
-	blt.s	sfo_rgb32_check_blue
-	move.w	d4,d1
-	bra.s	sfo_rgb32_matched_green
-	CNOP 0,4
-sfo_rgb32_decrease_blue
-	sub.w	a4,d2
-	cmp.w	d5,d2
-	bgt.s	sfo_set_rgb32
-	move.w	d5,d2
-	bra.s	sfo_rgb32_matched_blue
-	CNOP 0,4
-sfo_rgb32_increase_blue
-	add.w	a4,d2
-	cmp.w	d5,d2
-	blt.s	sfo_set_rgb32
-	move.w	d5,d2
-	bra.s	sfo_rgb32_matched_blue
 
 
 ; Input
@@ -4949,7 +4954,12 @@ sf_rgb32_set_new_colors_skip
 	CNOP 0,4
 rd_open_pal_screen
 	lea	rd_pal_screen_tags(pc),a1
-	move.l	sf_screen_color_cache(a3),sctl_SA_Colors32+ti_data(a1)
+	lea	rd_pal_screen_colors(pc),a0
+	tst.w	rd_arg_screenfader_enabled(a3)
+	bne.s	rd_open_pal_screen_skip
+	move.l	sf_screen_color_cache(a3),a0
+rd_open_pal_screen_skip
+	move.l	a0,sctl_SA_Colors32+ti_data(a1)
 	sub.l	a0,a0			; Keine NewScreen-Struktur
 	CALLINT OpenScreenTagList
 	move.l	d0,rd_pal_screen(a3)
@@ -4985,38 +4995,6 @@ rd_check_pal_screen_mode
 rd_check_pal_screen_mode_ok
 	moveq	#RETURN_OK,d0
 	rts
-
-
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
-	CNOP 0,4
-rd_get_sprite_resolution
-	move.l	rd_pal_screen(a3),a0
-	move.l  sc_ViewPort+vp_ColorMap(a0),a0
-	lea	rd_video_control_tags(pc),a1
-	move.l	#VTAG_SPRITERESN_GET,vctl_VTAG_SPRITERESN+ti_tag(a1)
-	clr.l	vctl_VTAG_SPRITERESN+ti_Data(a1)
-	CALLGRAF VideoControl
-	lea     rd_video_control_tags(pc),a0
-	move.l  vctl_VTAG_SPRITERESN+ti_Data(a0),rd_old_sprite_resolution(a3)
-	rts
-
-
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
-	CNOP 0,4
-rd_set_sprite_resolution
-	move.l	rd_pal_screen(a3),a2
-	move.l	sc_ViewPort+vp_ColorMap(a2),a0
-	lea	rd_video_control_tags(pc),a1
-	move.l	#VTAG_SPRITERESN_SET,+vctl_VTAG_SPRITERESN+ti_tag(a1)
-	move.l	#SPRITERESN_140NS,vctl_VTAG_SPRITERESN+ti_data(a1)
-	CALLGRAF VideoControl		; Sprite-Auflösung auf 140 ns Pixel zurücksetzen
-	move.l	a2,a0			; Zeiger auf Screen
-	CALLINT MakeScreen
-	CALLLIBQ RethinkDisplay
 
 
 ; Input
