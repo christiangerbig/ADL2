@@ -1429,8 +1429,7 @@ rd_init_pal_screen_tags
 	lea	rd_pal_screen_name(pc),a1
 	move.l	a1,(a0)+
 	move.l	#SA_Colors32,(a0)+
-	lea	rd_pal_screen_colors(pc),a1
-	move.l	a1,(a0)+
+	move.l	d0,(a0)+		; Wird später initialisiert
 	move.l	#SA_VideoControl,(a0)+
 	lea	rd_video_control_tags(pc),a1
 	move.l	#VTAG_SPRITERESN_SET,+vctl_VTAG_SPRITERESN+ti_tag(a1)
@@ -1443,17 +1442,18 @@ rd_init_pal_screen_tags
 	move.l	#SA_Type,(a0)+
 	move.l	#CUSTOMSCREEN,(a0)+
 	move.l	#SA_Behind,(a0)+
-	move.l	d0,(a0)+
+	moveq   #BOOL_FALSE,d2
+	move.l	d2,(a0)+
 	move.l	#SA_Quiet,(a0)+
-	move.l	d0,(a0)+
+	move.l	d2,(a0)+
 	move.l	#SA_ShowTitle,(a0)+
-	move.l	d0,(a0)+
+	move.l	d2,(a0)+
 	move.l	#SA_AutoScroll,(a0)+
-	move.l	d0,(a0)+
+	move.l	d2,(a0)+
 	move.l	#SA_Draggable,(a0)+
-	move.l	d0,(a0)+
+	move.l	d2,(a0)+
 	move.l	#SA_Interleaved,(a0)+
-	move.l	d0,(a0)+
+	move.l	d2,(a0)+
 	moveq	#TAG_DONE,d2
 	move.l	d2,(a0)
 	rts
@@ -7656,6 +7656,10 @@ rd_timer_io
 
 
 	CNOP 0,4
+rd_video_control_tags
+	DS.B video_control_tag_list_size
+
+	CNOP 0,4
 rd_pal_screen_colors
 	DS.B screen_02_colors_size
 
@@ -7663,15 +7667,9 @@ rd_pal_screen_colors
 rd_pal_screen_tags
 	DS.B screen_tag_list_size
 
-
 	CNOP 0,4
 rd_invisible_window_tags
 	DS.B window_tag_list_size
-
-
-	CNOP 0,4
-rd_video_control_tags
-	DS.B video_control_tag_list_size
 
 
         CNOP 0,4
