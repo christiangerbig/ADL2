@@ -1073,7 +1073,7 @@ adl_init_structures
 	bsr	qh_init_get_visual_info_tags
 	bsr	qh_init_edit_window_tags
 	bsr	qh_init_gadgets
-	bsr	rd_init_pal_screen_colors
+	bsr	rd_init_pal_screen_rgb32_colors
 	bsr	rd_init_video_control_tags
 	bsr	rd_init_pal_screen_tags
 	bra	rd_init_invisible_window_tags
@@ -1370,18 +1370,18 @@ qh_init_gadgets
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-rd_init_pal_screen_colors
-	lea	rd_pal_screen_colors(pc),a0
+rd_init_pal_screen_rgb32_colors
+	lea	rd_pal_screen_rgb32_colors(pc),a0
 	move.w	#pal_screen_colors_number,s02c_colors_number(a0)
 	moveq	#0,d0
 	move.w	d0,s02c_start_color(a0)
 	lea	s02c_color00(a0),a0
 	moveq	#pal_screen_colors_number-1,d7
-rd_init_pal_screen_colors_loop
+rd_init_pal_screen_rgb32_colors_loop
 	move.l	d0,(a0)+		; R32 = schwarz
 	move.l	d0,(a0)+		; G32 = schwarz
 	move.l	d0,(a0)+		; B32 = schwarz
-	dbf	d7,rd_init_pal_screen_colors_loop
+	dbf	d7,rd_init_pal_screen_rgb32_colors_loop
 	move.l	d0,(a0)
 	rts
 
@@ -4954,7 +4954,7 @@ sf_rgb32_set_new_colors_skip
 	CNOP 0,4
 rd_open_pal_screen
 	lea	rd_pal_screen_tags(pc),a1
-	lea	rd_pal_screen_colors(pc),a0
+	lea	rd_pal_screen_rgb32_colors(pc),a0
 	tst.w	rd_arg_screenfader_enabled(a3)
 	bne.s	rd_open_pal_screen_skip
 	move.l	sf_screen_color_cache(a3),a0
@@ -6037,17 +6037,17 @@ rd_close_pal_screen
 	CNOP 0,4
 rd_active_screen_to_front
 	tst.l	rd_active_screen(a3)
-	beq.s	rd_active_screen_to_front_ok
+	beq.s	rd_active_screen_to_front_quit
 	moveq	#0,d0			; alle Locks
 	CALLINT LockIBase
 	move.l	d0,a0
 	move.l	ib_FirstScreen(a6),a2
 	CALLLIBS UnLockIBase
 	cmp.l	rd_active_screen(a3),a2
-	beq.s	rd_active_screen_to_front_ok
+	beq.s	rd_active_screen_to_front_quit
 	move.l	rd_active_screen(a3),a0
 	CALLLIBS ScreenToFront
-rd_active_screen_to_front_ok
+rd_active_screen_to_front_quit
 	rts
 
 
@@ -7660,7 +7660,7 @@ rd_video_control_tags
 	DS.B video_control_tag_list_size
 
 	CNOP 0,4
-rd_pal_screen_colors
+rd_pal_screen_rgb32_colors
 	DS.B screen_02_colors_size
 
 	CNOP 0,4
