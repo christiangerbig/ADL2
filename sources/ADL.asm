@@ -592,7 +592,7 @@ rd_available_fast_memory	RS.L 1
 
 rd_old_current_dir_lock		RS.L 1
 
-rd_custom_traps		RS.L 1
+rd_custom_traps			RS.L 1
 
 rd_old_vbr			RS.L 1
 rd_old_cacr			RS.L 1
