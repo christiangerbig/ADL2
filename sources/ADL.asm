@@ -4204,24 +4204,24 @@ rd_open_ciab_resource_skip
 ; Input
 ; Result
 ; d0.l	... Rückgabewert: Return-Code	
-		CNOP 0,4
+	CNOP 0,4
 rd_open_timer_device
-		lea	timer_device_name(pc),a0
-		lea	rd_timer_io(pc),a1
-		moveq	#UNIT_MICROHZ,d0
-		moveq	#0,d1		; Keine Flags
-		CALLEXEC OpenDevice
-		tst.l	d0
-		beq.s	rd_open_timer_device_ok
-		lea	rd_error_text3(pc),a0
-		moveq	#rd_error_text3_end-rd_error_text3,d0
-		bsr	adl_print_text
-		moveq	#RETURN_FAIL,d0
-		rts
-		CNOP 0,4
+	lea	timer_device_name(pc),a0
+	lea	rd_timer_io(pc),a1
+	moveq	#UNIT_MICROHZ,d0
+	moveq	#0,d1			; Keine Flags
+	CALLEXEC OpenDevice
+	tst.l	d0
+	beq.s	rd_open_timer_device_ok
+	lea	rd_error_text3(pc),a0
+	moveq	#rd_error_text3_end-rd_error_text3,d0
+	bsr	adl_print_text
+	moveq	#RETURN_FAIL,d0
+	rts
+	CNOP 0,4
 rd_open_timer_device_ok
-		moveq	#RETURN_OK,d0
-		rts
+	moveq	#RETURN_OK,d0
+	rts
 
 
 ; Input
@@ -4444,8 +4444,8 @@ sf_get_active_screen_colors_skip
 	move.l	sf_screen_color_table(a3),a1 ; RGB32-Werte
 	moveq	#0,d0			; Ab COLOR00
 	MOVEF.L	sf_rgb32_colors_number,d1 ; Alle 256 Farben
- 	CALLGRAFQ GetRGB32
-	CNOP 0,4
+ 	CALLGRAF GetRGB32
+	bra.s	sf_get_active_screen_colors_quit
 
 
 ; Input
@@ -4939,13 +4939,15 @@ sfo_rgb32_flush_caches
 sf_rgb32_set_new_colors
 	move.l	rd_active_screen(a3),d0
 	bne.s   sf_rgb32_set_new_colors_skip
+sf_rgb32_set_new_colors_quit
 	rts
 	CNOP 0,4
 sf_rgb32_set_new_colors_skip
 	move.l	d0,a0
 	ADDF.W	sc_ViewPort,a0
 	move.l	sf_screen_color_cache(a3),a1
-	CALLGRAFQ LoadRGB32
+	CALLGRAF LoadRGB32
+	bra.s	sf_rgb32_set_new_colors_quit
 
 
 ; Input
@@ -4992,6 +4994,7 @@ rd_check_pal_screen_mode
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
+	CNOP 0,4
 rd_check_pal_screen_mode_ok
 	moveq	#RETURN_OK,d0
 	rts
@@ -5046,10 +5049,10 @@ rd_blank_display
 	bne.s	rd_blank_display	; Ja -> neuer Versuch
 	move.l	rd_demofile_path(a3),a0
 	cmp.b	#RUNMODE_OCS_VANILLA,pqe_runmode(a0)
-	bne.s	rd_blank_display_skip
+	bne.s	rd_blank_display_quit
 	moveq	#0,d0			; OCS Standart Screen-Moduli
 	move.l	d0,_CUSTOM+BPL1MOD
-rd_blank_display_skip
+rd_blank_display_quit
 	rts
 
 
@@ -5059,17 +5062,18 @@ rd_blank_display_skip
 	CNOP 0,4
 rd_wait_monitor_switch
 	move.l	rd_active_screen_mode(a3),d0
-	beq.s	rd_wait_monitor_switch_skip1
+	beq.s	rd_wait_monitor_switch_quit
 	cmp.l	#DEFAULT_MONITOR_ID,d0
-	beq.s	rd_wait_monitor_switch_skip1
+	beq.s	rd_wait_monitor_switch_quit
 	cmp.l	#PAL_MONITOR_ID,d0
-	bne.s	rd_wait_monitor_switch_skip2
-rd_wait_monitor_switch_skip1
+	bne.s	rd_wait_monitor_switch_skip
+rd_wait_monitor_switch_quit
 	rts
 	CNOP 0,4
-rd_wait_monitor_switch_skip2
+rd_wait_monitor_switch_skip
 	MOVEF.L	monitor_switch_delay,d1
-	CALLDOSQ Delay
+	CALLDOS Delay
+	bra.s	rd_wait_monitor_switch_quit
 
 
 ; Input
@@ -5471,17 +5475,17 @@ rd_downgrade_cpu
 	move.l	d0,rd_old_vbr(a3)
 	move.l	rd_demofile_path(a3),a0
 	cmp.b	#RUNMODE_TURBO,pqe_runmode(a0)
-	bne.s	rd_check_vbr1
+	bne.s	rd_downgrade_cpu_skip1
 	rts
 	CNOP 0,4
-rd_check_vbr1
+rd_downgrade_cpu_skip1
 	tst.l	rd_old_vbr(a3)
-	beq.s	rd_check_060_cpu1
+	beq.s	rd_downgrade_cpu_skip2
 	moveq	#0,d0
 	lea	rd_write_vbr(pc),a5
 	CALLLIBS Supervisor		; VBR auf $000000 zurücksetzen
-rd_check_060_cpu1
-	tst.b	AttnFlags+1(a6)
+rd_downgrade_cpu_skip2
+	tst.b	AttnFlags+BYTE_SIZE(a6)
 	bpl.s	rd_disable_caches_mmu
 ; ** 68060 **
 	moveq	#0,d1			; Alle Bits in CACR löschen
@@ -5514,16 +5518,16 @@ rd_disable_caches
 	CALLEXEC CacheControl		; CPU neu konfigurieren und Caches flushen
 	move.l	d0,rd_old_cacr(a3)
 	btst	#AFB_68040,AttnFlags+1(a6)
-	beq.s   rd_check_030_cpu1
+	beq.s   rd_disable_030_mmu
 	lea	rd_040_060_mmu_off(pc),a5
 	CALLLIBQ Supervisor
 	CNOP 0,4
-rd_check_030_cpu1
+rd_disable_030_mmu
 	btst	#AFB_68030,AttnFlags+1(a6)
-	bne.s	rd_disable_030_mmu
+	bne.s	rd_disable_030_mmu_skip
 	rts
 	CNOP 0,4
-rd_disable_030_mmu
+rd_disable_030_mmu_skip
 	lea	rd_old_mmu_registers(pc),a1
 	lea	rd_030_mmu_off(pc),a5
 	CALLLIBQ Supervisor
@@ -5979,6 +5983,7 @@ rd_free_fast_memory
 rd_check_available_fast_memory
 	move.l	rd_available_fast_memory(a3),d2
 	bne.s	rd_turn_on_fast_memory
+rd_free_fast_memory_quit
 	rts
 	CNOP 0,4
 rd_turn_on_fast_memory
@@ -5994,7 +5999,8 @@ rd_turn_on_fast_memory_loop
 rd_free_first_memory_block
 	move.l	d2,a1			; Zeiger auf ersten größten Block
 	move.l	rd_available_fast_memory_size(a3),d0 ; Größe des ersten größten Blocks
-	CALLLIBQ FreeMem
+	CALLLIBS FreeMem
+	bra.s	rd_free_fast_memory_quit
 
 
 ; Input
@@ -6216,6 +6222,7 @@ rd_check_user_break_ok
 rd_reset_demo_variables
 	tst.w	rd_arg_loop_enabled(a3)
         beq.s	rd_reset_demo_variables_skip1
+rd_reset_demo_variables_quit
 	rts
 	CNOP 0,4
 rd_reset_demo_variables_skip1
@@ -6228,7 +6235,7 @@ rd_reset_demo_variables_skip2
 	move.w	#FALSE,whdl_slave_enabled(a3)
 	move.w	rd_arg_screenfader_enabled(a3),sfo_rgb32_active(a3)
 	move.w	rd_arg_screenfader_enabled(a3),sfi_rgb32_active(a3)
-	rts
+	bra.s	rd_reset_demo_variables_quit
 
 
 ; Input
@@ -6253,12 +6260,14 @@ rd_check_loop_mode_ok
 sf_free_screen_color_cache
 	move.l	sf_screen_color_cache(a3),d0
 	bne.s	sf_free_screen_color_cache_skip
+sf_free_screen_color_cache_quit
 	rts
 	CNOP 0,4
 sf_free_screen_color_cache_skip
 	move.l	d0,a1
 	MOVEF.L	(1+(sf_rgb32_colors_number*3)+1)*LONGWORD_SIZE,d0
-	CALLEXECQ FreeMem
+	CALLEXEC FreeMem
+	bra.s	sf_free_screen_color_cache_quit
 
 
 ; Input
@@ -6268,12 +6277,14 @@ sf_free_screen_color_cache_skip
 sf_free_screen_color_table
 	move.l	sf_screen_color_table(a3),d0
 	bne.s	sf_free_screen_color_table_skip
+sf_free_screen_color_table_quit
 	rts
 	CNOP 0,4
 sf_free_screen_color_table_skip
 	move.l	d0,a1
 	MOVEF.L	sf_rgb32_colors_number*3*LONGWORD_SIZE,d0
-	CALLEXECQ FreeMem
+	CALLEXEC FreeMem
+	bra.s	sf_free_screen_color_table_quit
 
 
 ; Input
@@ -6752,7 +6763,7 @@ rp_write_playtimer_loop
 
 
 ; Input
-; d3.l	... RBG4-Farbwert
+; d3.w	... RBG4-Farbwert
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
