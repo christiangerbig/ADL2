@@ -14,7 +14,7 @@
 
 ; Lader für Intros und Demos "DemoSelector"
 ; Mit CoolCapture-Abfrage
-; Level-7-Interrupt: Code kan optional aktiviert werden
+; Level-7-Interrupt: Code kann optional aktiviert werden
 ;                    Funktion: Mit einem Level7-Taster kann per Level-7-Interrupt
 ;                    ein Softare-Reset ausgelöst werdem und das Reset-Programm
 ;                    wird wieder als CoolCapture installiert. Sehr hilfreich bei
@@ -259,10 +259,14 @@
 ; - Über das Screentag SA_VideoControl wird bereits mit dem Öffnen des PAL-Screens
 ;   die Spriteauflösung auf Lores gesetzt
 
+; V.2.03
+; - Nutzung des Registers CFG0 zur Änderung der CPU-Taktfrequenz
+
+
 
 	SECTION code_and_variables,CODE
 
-	MC68020
+	MC68000
 
 
 	INCDIR "Daten:include3.5/"
@@ -484,6 +488,9 @@ wm
 ; **** Amiga-Demo-Launcher ****
 adl_output_handle		RS.L 1
 
+adl_cpu_flags			RS.W 1
+
+	RS_ALIGN_LONGWORD
 adl_dos_return_code		RS.L 1
 
 adl_read_arguments		RS.L 1
@@ -598,6 +605,7 @@ rd_old_vbr			RS.L 1
 rd_old_cacr			RS.L 1
 rd_old_060_pcr			RS.L 1
 rd_clear_030_mmu_register	RS.L 1
+rd_old_cfg0			RS.W 1
 
 
 ; **** WHD-Load ****
@@ -1616,46 +1624,19 @@ adl_open_gadtools_library_ok
 ; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 adl_check_system_requirements
-	move.l	_SysBase(pc),a0
+	move.l	_SysBase(pc),a6
 	cmp.w	#OS2_VERSION,Lib_Version(a0)
-	bge.s	adl_check_cpu_requirement
+	bge.s	adl_check_cpu
 	lea	adl_error_text2(pc),a0
 	moveq	#adl_error_text2_end-adl_error_text2,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
-adl_check_cpu_requirement
-	btst	#AFB_68020,AttnFlags+BYTE_SIZE(a0)
-	bne.s	adl_check_chipset_requirement
-	lea	adl_error_text3(pc),a0
-	move.l	#adl_error_text3_end-adl_error_text3,d0
-	bsr	adl_print_text
-	moveq	#RETURN_FAIL,d0
-	rts
-	CNOP 0,4
-adl_check_chipset_requirement
+adl_check_cpu
+	move.w	AttnFlags(a6),adl_cpu_flags(a3)
 	move.l	_GfxBase(pc),a1
-	move.b	gb_ChipRevBits0(a1),d0
-	btst	#GFXB_AA_ALICE,d0
-	bne.s   adl_check_lisa_chip
-	lea	adl_error_text4(pc),a0
-	move.l	#adl_error_text4_end-adl_error_text4,d0
-	bsr	adl_print_text
-	moveq	#RETURN_FAIL,d0
-	rts
-	CNOP 0,4
-adl_check_lisa_chip
-	btst	#GFXB_AA_LISA,d0
-	bne.s	adl_check_pal
-	lea	adl_error_text4(pc),a0
-	move.l	#adl_error_text4_end-adl_error_text4,d0
-	bsr	adl_print_text
-	moveq	#RETURN_FAIL,d0
-	rts
-	CNOP 0,4
-adl_check_pal
-	btst	#REALLY_PALn,gb_DisplayFlags+1(a1)
+	btst	#PALn,gb_DisplayFlags+1(a1)
 	bne.s	adl_check_system_requirements_ok
 	lea	adl_error_text5(pc),a0
 	move.l	#adl_error_text5_end-adl_error_text5,d0
@@ -2164,7 +2145,9 @@ dc_get_demofile_path_skip1
 	move.l	fr_ArgList(a2),a6
 	subq.w	#1,d6			; wegen dbf
 dc_get_demofile_path_loop
-	move.l	wa_Name(a6,d5.w*8),a0	; Zeiger auf Dateiname
+	move.w	d5,d0
+	MULUF.W	8,d0,d1
+	move.l	wa_Name(a6,d0.w),a0	; Zeiger auf Dateiname
 	move.l	fr_Drawer(a2),a1	; Zeiger auf Verzeichnisname
 	move.l	a2,-(a7)
 	bsr.s	dc_check_demofile_path
@@ -2392,6 +2375,8 @@ dc_copy_reset_program_loop2
 	CALLLIBS CacheClearU
 
 	jsr	rp_init_custom_traps-rp_start(a2) ; Zeiger auf eigene Exception/Trap-Routinen initialisieren
+	tst.b	adl_cpu_flags+1(a3)
+	beq.s	dc_update_entries_number
 	lea	rp_read_VBR(pc),a5
 	CALLLIBS Supervisor
 	tst.l	d0			; VBR = $000000 ?
@@ -4054,7 +4039,8 @@ rd_play_loop
 	bsr	rd_get_system_time
 
 	bsr	rd_save_custom_traps
-	bsr	rd_downgrade_CPU
+	bsr	rd_downgrade_cpu
+	bsr	rd_downgrade_cpu_clock
 	bsr	rd_get_tod_time
 	bsr	rd_save_chips_registers
 
@@ -4070,7 +4056,8 @@ rd_play_loop
 	bsr	rd_clear_chips_registers
 	bsr	rd_restore_chips_registers
 	bsr	rd_get_tod_duration
-	bsr	rd_upgrade_CPU
+	bsr	rd_upgrade_cpu_clock
+	bsr	rd_upgrade_cpu
 	bsr	rd_restore_custom_traps
 
 	bsr	rd_init_playtimer_stop
@@ -5470,21 +5457,26 @@ rd_save_custom_traps
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_downgrade_cpu
+	tst.b	adl_cpu_flags+1(a3)
+	bne.s	rd_downgrade_cpu_skip1
+	rts
+	CNOP 0,4
+rd_downgrade_cpu_skip1
 	lea	rp_read_vbr(pc),a5
 	CALLEXEC Supervisor
 	move.l	d0,rd_old_vbr(a3)
 	move.l	rd_demofile_path(a3),a0
 	cmp.b	#RUNMODE_TURBO,pqe_runmode(a0)
-	bne.s	rd_downgrade_cpu_skip1
+	bne.s	rd_downgrade_cpu_skip2
 	rts
 	CNOP 0,4
-rd_downgrade_cpu_skip1
+rd_downgrade_cpu_skip2
 	tst.l	rd_old_vbr(a3)
-	beq.s	rd_downgrade_cpu_skip2
+	beq.s	rd_downgrade_cpu_skip3
 	moveq	#0,d0
 	lea	rd_write_vbr(pc),a5
 	CALLLIBS Supervisor		; VBR auf $000000 zurücksetzen
-rd_downgrade_cpu_skip2
+rd_downgrade_cpu_skip3
 	tst.b	AttnFlags+BYTE_SIZE(a6)
 	bpl.s	rd_disable_caches_mmu
 ; ** 68060 **
@@ -5531,6 +5523,25 @@ rd_disable_030_mmu_skip
 	lea	rd_old_mmu_registers(pc),a1
 	lea	rd_030_mmu_off(pc),a5
 	CALLLIBQ Supervisor
+
+
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
+	CNOP 0,4
+rd_downgrade_cpu_clock
+	move.l	rd_demofile_path(a3),a0
+	cmp.b	#RUNMODE_TURBO,pqe_runmode(a0)
+	bne.s	rd_downgrade_cpu_clock_skip
+	rts
+	CNOP 0,4
+rd_downgrade_cpu_clock_skip
+	move.w	CFG0,d0
+	move.w	d0,rd_old_cfg0(a3)
+	and.w	#~(CFG0F_CLKSEL0|CFG0F_CLKSEL1),d0 ; Mask out SELx bits
+	or.w	#CFG0F_CLKSEL1,d0	; Stock speed mode (7 MHz)
+	move.w	d0,CFG0
+	rts
 
 
 ; Input
@@ -5825,13 +5836,31 @@ rd_get_tod_duration_save
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
+rd_upgrade_cpu_clock
+	move.l	rd_demofile_path(a3),a0
+	cmp.b	#RUNMODE_TURBO,pqe_runmode(a0)
+	bne.s	rd_upgrade_cpu_clock_skip
+	rts
+	CNOP 0,4
+rd_upgrade_cpu_clock_skip
+	move.w	rd_old_cfg0(a3),CFG0
+	rts
+
+
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
+	CNOP 0,4
 rd_upgrade_cpu
 	move.l	rd_demofile_path(a3),a0
 	cmp.b   #RUNMODE_TURBO,pqe_runmode(a0)
 	bne.s	rd_upgrade_cpu_skip1
+rd_upgrade_cpu_quit
 	rts
 	CNOP 0,4
 rd_upgrade_cpu_skip1
+	tst.b	adl_cpu_flags+1(a3)
+	beq.s	rd_upgrade_cpu_quit
 	move.l	_SysBase(pc),a6
 	move.l	rd_old_vbr(a3),d0
 	beq.s	rd_upgrade_cpu_skip2
@@ -6335,6 +6364,7 @@ rd_close_icon_library
 
 ; **** Exception-Routinen ****
 
+	MC68020
 ; Input
 ; d0.l	... neuer Inhalt von VBR
 ; Result
@@ -6518,7 +6548,7 @@ rd_030_mmu_on
 
 
 ; **** Reset-Programm ****
-	MC68020
+	MC68000
 	CNOP 0,4
 rp_start
 	bra.s	rp_skip1		; Kennung überspringen
@@ -6666,7 +6696,9 @@ rp_dec_to_hex_loop
 	CNOP 0,4
 rp_dec_to_ascii
 	lea	rp_dec_table(pc),a1	; Stellentabelle
-	lea	(a1,d7.l*4),a1		; Erste Zehnerpotenz in Stellentabelle ermitteln
+	move.l	d7,d0
+	MULUF.L	4,d0,d2
+	lea	(a1,d0.l),a1		; Erste Zehnerpotenz in Stellentabelle ermitteln
 	subq.w	#1,d7			; wegen dbf
 rp_dec_to_ascii_loop1
 	moveq	#-1,d3			; Ziffer
@@ -6816,9 +6848,13 @@ rp_update_exec_checksum_loop
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rp_init_custom_traps
+	sub.l	a0,a0
+	tst.b	AttnFlags(a6)
+	beq.s	rp_init_custom_traps_skip
 	lea	rp_read_vbr(pc),a5
 	CALLLIBS Supervisor
 	move.l	d0,a0
+rp_init_custom_traps_skip
 	IFEQ adl_restore_adl_code_enabled
 		lea	rp_restore_adl_active(pc),a1
 		move.w	#FALSE,(a1)	; Sicherheitshalber
@@ -6889,17 +6925,21 @@ rp_init_custom_traps
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rp_restore_old_traps
+	sub.l	a1,a1
+	tst.b	AttnFlags(a6)
+	beq.s   rp_restore_old_traps_skip1
 	lea	rp_read_vbr(pc),a5
 	CALLLIBS Supervisor
 	tst.l	d0			; VBR = $000000 ?
-	beq.s	rp_restore_old_traps_skip
+	beq.s	rp_restore_old_traps_skip2
 	move.l	d0,a1
+rp_restore_old_traps_skip1
 	IFEQ adl_restore_adl_code_enabled
 		move.l	rp_old_level_7_autovector(pc),LEVEL_7_AUTOVECTOR(a1) ; Zeiger alte Level-7-Interrptprogramm eintragen
 	ENDC
 	add.w	#TRAP_0_VECTOR,a1	; Ab Trap0-Vektor
 	bsr.s	rp_copy_old_trap_vectors
-rp_restore_old_traps_skip
+rp_restore_old_traps_skip2
 	IFEQ adl_restore_adl_code_enabled
 		move.l	d0,a1
 		move.l	rp_old_level_7_autovector(pc),LEVEL_7_AUTOVECTOR(a1) ; Zeiger alte Level-7-Interrptprogramm eintragen
@@ -7056,6 +7096,7 @@ rp_trap_7_program
 ; Input
 ; Result
 ; d0.l	... Rückgabewert: Inhalt von VBR
+	MC68020
 	CNOP 0,4
 rp_read_vbr
 	or.w	#SRF_I0+SRF_I1+SRF_I2,SR ; Level-7-Interruptebene

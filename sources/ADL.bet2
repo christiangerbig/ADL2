@@ -259,6 +259,10 @@
 ; - Über das Screentag SA_VideoControl wird bereits mit dem Öffnen des PAL-Screens
 ;   die Spriteauflösung auf Lores gesetzt
 
+; V.2.03
+; - Nutzung des Registers CFG0 zur Änderung der CPU-Taktfrequenz
+
+
 
 	SECTION code_and_variables,CODE
 
@@ -598,6 +602,7 @@ rd_old_vbr			RS.L 1
 rd_old_cacr			RS.L 1
 rd_old_060_pcr			RS.L 1
 rd_clear_030_mmu_register	RS.L 1
+rd_old_cfg0			RS.W 1
 
 
 ; **** WHD-Load ****
@@ -4054,7 +4059,8 @@ rd_play_loop
 	bsr	rd_get_system_time
 
 	bsr	rd_save_custom_traps
-	bsr	rd_downgrade_CPU
+	bsr	rd_downgrade_cpu
+	bsr	rd_downgrade_cpu_clock
 	bsr	rd_get_tod_time
 	bsr	rd_save_chips_registers
 
@@ -4070,7 +4076,8 @@ rd_play_loop
 	bsr	rd_clear_chips_registers
 	bsr	rd_restore_chips_registers
 	bsr	rd_get_tod_duration
-	bsr	rd_upgrade_CPU
+	bsr	rd_upgrade_cpu_clock
+	bsr	rd_upgrade_cpu
 	bsr	rd_restore_custom_traps
 
 	bsr	rd_init_playtimer_stop
@@ -5537,6 +5544,25 @@ rd_disable_030_mmu_skip
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
+rd_downgrade_cpu_clock
+	move.l	rd_demofile_path(a3),a0
+	cmp.b	#RUNMODE_TURBO,pqe_runmode(a0)
+	bne.s	rd_downgrade_cpu_clock_skip
+	rts
+	CNOP 0,4
+rd_downgrade_cpu_clock_skip
+	move.w	CFG0,d0
+	move.w	d0,rd_old_cfg0(a3)
+	and.w	#~(CFG0F_CLKSEL0|CFG0F_CLKSEL1),d0 ; Mask out SELx bits
+	or.w	#CFG0F_CLKSEL1,d0	; Stock speed mode (7 MHz)
+	move.w	d0,CFG0
+	rts
+
+
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
+	CNOP 0,4
 rd_get_tod_time
 	CALLEXEC Disable
 	move.l	#_CIAA,a4
@@ -5819,6 +5845,21 @@ rd_get_tod_duration_skip
 rd_get_tod_duration_save
 	move.l	d1,rd_tod_time(a3)
 	CALLLIBQ Enable
+
+
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
+	CNOP 0,4
+rd_upgrade_cpu_clock
+	move.l	rd_demofile_path(a3),a0
+	cmp.b	#RUNMODE_TURBO,pqe_runmode(a0)
+	bne.s	rd_upgrade_cpu_clock_skip
+	rts
+	CNOP 0,4
+rd_upgrade_cpu_clock_skip
+	move.w	rd_old_cfg0(a3),CFG0
+	rts
 
 
 ; Input
