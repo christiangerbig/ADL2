@@ -825,7 +825,7 @@ edit_window_tag_list_size	RS.B 0
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_intuition_library
 
-	bsr	adl_check_cool_capture
+	bsr	adl_search_id
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_gadtools_library
 
@@ -1660,13 +1660,27 @@ adl_open_gadtools_library_ok
 ; Result
 ; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
-adl_check_cool_capture
-	move.l	_SysBase(pc),a0
-	move.l	CoolCapture(a0),d0
-	beq.s   adl_set_default_values
-	move.l	d0,a0
-	cmp.w	#"DL",2(a0)
-	beq.s	adl_update_values
+adl_search_id
+	move.l	_SysBase(pc),a6
+	move.l	MaxLocMem(a6),a2
+	move.l	a2,d7
+	lsr.l	#2,d7			; Chip-Memory Größe in Langworten
+	subq.l	#1,d7			; Loopend at false
+adl_search_id_loop
+	move.l	-(a2),d0
+	not.l	d0
+	cmp.l	#~("-DL-"),d0
+	beq.s	adl_search_id_skip1
+	subq.l	#1,d7
+	bpl.s	adl_search_id_loop
+	bra.s	adl_search_id_skip4
+	CNOP 0,4
+adl_search_id_skip1
+	subq.w	#LONGWORD_SIZE,a2	; Zeiger auf Reset-Programm
+	move.l	CoolCapture(a6),d0
+	beq.s   adl_search_id_skip2
+	cmp.l	a2,d0
+	beq.s	adl_search_id_skip3
 	sub.l	a0,a0			; Requester erscheint auf Workbench
 	lea	adl_cool_capture_request(pc),a1
 	move.l	a0,a2			; Keine IDCMP-Flags
@@ -1675,11 +1689,18 @@ adl_check_cool_capture
 	CALLINT EasyRequestArgs
 	move.l	(a7)+,a3
 	cmp.l	#BOOL_TRUE,d0		; Gadget "Proceed" ?
-	beq.s	adl_set_default_values
+	beq.s	adl_search_id_skip4
+adl_search_id_fail
 	moveq	#RETURN_FAIL,d0
 	rts
+; Update values
 	CNOP 0,4
-adl_update_values
+adl_search_id_skip2
+	move.l	a2,CoolCapture(a6)
+	bsr	rp_update_exec_checksum
+	CALLLIBS CacheClearU
+	jsr	rp_init_custom_traps-rp_start(a2)
+adl_search_id_skip3
 	GET_RESIDENT_ENTRIES_NUMBER_MAX
 	move.l	d0,a0
 	move.w	(a0),adl_entries_number_max(a3)
@@ -1692,16 +1713,17 @@ adl_update_values
 	move.l	d0,a0
 	move.w	(a0),rd_entry_offset(a3)
 	clr.w   adl_reset_program_active(a3)
+adl_search_id_ok
 	moveq	#RETURN_OK,d0
 	rts
+; Set default values
 	CNOP 0,4
-adl_set_default_values
-	moveq	#dc_entries_number_default_max,d2
+adl_search_id_skip4
+	moveq	#dc_entries_number_default_max,d2 
 	move.w	d2,adl_entries_number_max(a3)
 	lea	rp_entries_number_max(pc),a0
 	move.w	d2,(a0)
-	moveq	#RETURN_OK,d0
-	rts
+	bra.s	adl_search_id_ok
 
 
 ; Input
@@ -3873,6 +3895,7 @@ adl_free_reset_programm_memory
 	REMOVE_RESET_PROGRAM
 	move.l	d0,a0
 	move.l	(a0)+,a1
+	clr.l	LONGWORD_SIZE(a1)	; ID löschen
 	move.l	(a0),d0
 	CALLEXEC FreeMem
 	lea	adl_message_text1(pc),a0
@@ -6239,7 +6262,8 @@ rd_030_mmu_on
 	CNOP 0,4
 rp_start
 	bra.s	rp_skip1		; Kennung überspringen
-rp_id	DC.B "DL"
+	CNOP 0,4
+rp_id	DC.B "-DL-"
 rp_skip1
 	movem.l d0-d7/a0-a6,-(a7)
 	move.l	#_CUSTOM,a5
