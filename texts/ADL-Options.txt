@@ -1,7 +1,0 @@
-[load] [maxentries n] [reloadlist] [playlist]
-
-[min(s) n] [sec(s) n] [random] [endless] [loop] [nofader] [softreset] [prerunscript]
-
-[remove]
-
-

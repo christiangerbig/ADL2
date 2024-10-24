@@ -749,7 +749,7 @@ output_string			RS.B 0
 os_start_id			RS.B 1	; ASCII
 os_duration			RS.B 5	; ASCII-Decimal
 os_comma			RS.B 1	; ASCII
-os_checksum			RS.B 2	; ASCII-Decimal
+os_checksum			RS.B 2	; ASCII-Hexadecimal
 os_line_feed			RS.B 1	; ASCII
 
 output_string_size		RS.B 0
@@ -802,7 +802,7 @@ edit_window_tag_list_size	RS.B 0
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_intuition_library
 
-	bsr	adl_check_system_requirements
+	bsr	adl_check_system_properties
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_gadtools_library
 	bsr	adl_check_cool_capture
@@ -1615,7 +1615,7 @@ adl_open_gadtools_library_ok
 ; Result
 ; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
-adl_check_system_requirements
+adl_check_system_properties
 	move.l	_SysBase(pc),a0
 	cmp.w	#OS2_VERSION,Lib_Version(a0)
 	bge.s	adl_check_cpu_requirement
@@ -1656,14 +1656,14 @@ adl_check_lisa_chip
 	CNOP 0,4
 adl_check_pal
 	btst	#REALLY_PALn,gb_DisplayFlags+1(a1)
-	bne.s	adl_check_system_requirements_ok
+	bne.s	adl_check_system_properties_ok
 	lea	adl_error_text5(pc),a0
 	move.l	#adl_error_text5_end-adl_error_text5,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
-adl_check_system_requirements_ok
+adl_check_system_properties_ok
 	moveq	#RETURN_OK,d0
 	rts
 
@@ -5735,7 +5735,7 @@ rd_restore_chips_registers
 	move.b	ocr_ciaa_tbhi(a0),CIATBHI(a4)
 
 	move.b	ocr_ciaa_icr(a0),d0
-	tas	d0			; Bit 7 ggf. setzen
+	or.b		#CIAICRF_SETCLR,d0
 	move.b	d0,CIAICR(a4)
 
 	move.b	ocr_ciaa_cra(a0),d0
@@ -5763,7 +5763,7 @@ rd_restore_chips_registers2
 	move.b	ocr_ciab_tbhi(a0),CIATBHI(a5)
 
 	move.b	ocr_ciab_icr(a0),d0
-	tas	d0			; Bit 7 ggf. setzen
+	or.b		#CIAICRF_SETCLR,d0
 	move.b	d0,CIAICR(a5)
 
 	move.b	ocr_ciab_cra(a0),d0

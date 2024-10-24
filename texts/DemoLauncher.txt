@@ -1,9 +1,0 @@
-Yulquen74
-
-I was thinking adding a small buzzer to the PIC that responds like this: 
-
-a short beep = valid command received, 
-2 short beeps = timer cancelled (timer value = 0), 
-longer beep = reset executed.
-
-then user gets a confirmation it works.
