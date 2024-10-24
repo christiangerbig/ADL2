@@ -1,6 +1,6 @@
 ; Programm:	AmigaDemoLauncher (ADL)
 ; Autor:	Christian Gerbig
-; Datum		22.10.2024
+; Datum		23.10.2024
 ; Version:	2.04
 
 ; Requirements
@@ -280,10 +280,15 @@
 ;   dem #-Zeichen.
 
 ; V.2.04
-
 ; - Bugfix: Checksumme wurde falsch ermittelt. Sie wurde zwar ab dem #-Zeichen
 ;   berechnet, jedoch mit einem Byte zu wenig, d. h. das Argument MULTIPART
 ;   wurde nie berücksichtigt.
+; - Es wird jetzt zu Beginn im Speicher nach der Kennung "-DL-" gesucht, um zu
+;   prüfen, ob der ADL bereits vorhanden ist
+; - Wenn der ADL durch einen Eintrag inaktiv wurde, werden die Exceptions und
+;   der CoolCapture-Vektror wieder hergestellt
+; - Argument REMOVE: Es wird auch die Kennung gelöscht
+; - Schwarzer Bildschirm jetzt auch unter OS 2.0
 
 
 	SECTION code_and_variables,CODE
@@ -329,7 +334,7 @@
 	INCLUDE "hardware/intbits.i"
 
 
-	INCDIR "Daten:Asm-Sources.AGA/normsource-includes/"
+	INCDIR "Daten:Asm-Sources/normsource-includes/"
 
 
 	INCLUDE "macros.i"
@@ -1085,7 +1090,8 @@ adl_init_structures
 	bsr	qh_init_get_visual_info_tags
 	bsr	qh_init_edit_window_tags
 	bsr	qh_init_gadgets
-	bsr	rd_init_pal_screen_rgb32_colors
+	bsr	rd_init_pal_screen_colors
+	bsr	rd_init_pal_screen_colors32
 	bsr	rd_init_video_control_tags
 	bsr	rd_init_pal_screen_tags
 	bra	rd_init_invisible_window_tags
@@ -1380,22 +1386,37 @@ qh_init_gadgets
 	rts
 
 
+
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
+		CNOP 0,4
+rd_init_pal_screen_colors
+		lea	rd_pal_screen_rgb4_colors(pc),a0
+		moveq	#0,d0
+		moveq	#pal_screen_colors_number-1,d7
+rd_init_pal_screen_colors_loop
+		move.w	d0,(a0)+ ; COLORxx RGB4-Wert Schwarz
+               	dbf	d7,rd_init_pal_screen_colors_loop
+		rts
+
+
 ; Input
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-rd_init_pal_screen_rgb32_colors
+rd_init_pal_screen_colors32
 	lea	rd_pal_screen_rgb32_colors(pc),a0
 	move.w	#pal_screen_colors_number,s02c_colors_number(a0)
 	moveq	#0,d0
 	move.w	d0,s02c_start_color(a0)	; COLOR00
 	lea	s02c_color00(a0),a0
 	moveq	#pal_screen_colors_number-1,d7
-rd_init_pal_screen_rgb32_colors_loop
+rd_init_pal_screen_colors32_loop
 	move.l	d0,(a0)+		; R32 = schwarz
 	move.l	d0,(a0)+		; G32 = schwarz
 	move.l	d0,(a0)+		; B32 = schwarz
-	dbf	d7,rd_init_pal_screen_rgb32_colors_loop
+	dbf	d7,rd_init_pal_screen_colors32_loop
 	move.l	d0,(a0)
 	rts
 
@@ -1443,7 +1464,8 @@ rd_init_pal_screen_tags
 	lea	rd_pal_screen_name(pc),a1
 	move.l	a1,(a0)+
 	move.l	#SA_Colors32,(a0)+
-	move.l	d0,(a0)+		; Wird später initialisiert
+	lea	rd_pal_screen_rgb32_colors(pc),a1
+	move.l	a1,(a0)+
 	move.l	#SA_VideoControl,(a0)+
 	lea	rd_video_control_tags(pc),a1
 	move.l	#VTAG_SPRITERESN_SET,vctl_VTAG_SPRITERESN+ti_tag(a1)
@@ -1662,21 +1684,41 @@ adl_open_gadtools_library_ok
 	CNOP 0,4
 adl_search_id
 	move.l	_SysBase(pc),a6
+	move.w	#4*LONGWORD_SIZE,a1
 	move.l	MaxLocMem(a6),a2
 	move.l	a2,d7
-	lsr.l	#2,d7			; Chip-Memory Größe in Langworten
+	lsr.l	#4,d7			; Chip-Memory Größe in 16 Bytes
 	subq.l	#1,d7			; Loopend at false
 adl_search_id_loop
-	move.l	-(a2),d0
+	sub.l	a1,a2
+	movem.l	(a2),d0-d3
 	not.l	d0
 	cmp.l	#~("-DL-"),d0
-	beq.s	adl_search_id_skip1
+	beq.s	adl_search_id_skip1_3
+	not.l	d1
+	cmp.l	#~("-DL-"),d1
+	beq.s	adl_search_id_skip1_4
+	not.l	d2
+	cmp.l	#~("-DL-"),d2
+	beq.s	adl_search_id_skip1_2
+	not.l	d3
+	cmp.l	#~("-DL-"),d3
+	beq.s	adl_search_id_skip1_1
 	subq.l	#1,d7
 	bpl.s	adl_search_id_loop
 	bra.s	adl_search_id_skip4
 	CNOP 0,4
-adl_search_id_skip1
+adl_search_id_skip1_1
+	addq.w	#2*LONGWORD_SIZE,a2	; Zeiger auf Reset-Programm
+	bra.s	adl_search_id_skip1_4
+	CNOP 0,4
+adl_search_id_skip1_2
+	addq.w	#LONGWORD_SIZE,a2	; Zeiger auf Reset-Programm
+	bra.s	adl_search_id_skip1_4
+	CNOP 0,4
+adl_search_id_skip1_3
 	subq.w	#LONGWORD_SIZE,a2	; Zeiger auf Reset-Programm
+adl_search_id_skip1_4
 	move.l	CoolCapture(a6),d0
 	beq.s   adl_search_id_skip2
 	cmp.l	a2,d0
@@ -4030,6 +4072,7 @@ rd_play_loop
 	bsr	rd_open_pal_screen
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_active_screen
+	bsr	rd_load_pal_screen_colors
 	bsr	rd_check_pal_screen_mode
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_active_screen
@@ -4802,8 +4845,6 @@ rd_execute_prerunscript_ok
 	CNOP 0,4
 rd_open_pal_screen
 	lea	rd_pal_screen_tags(pc),a1
-	lea	rd_pal_screen_rgb32_colors(pc),a0
-	move.l	a0,sctl_SA_Colors32+ti_data(a1)
 	sub.l	a0,a0			; Keine NewScreen-Struktur
 	CALLINT OpenScreenTagList
 	move.l	d0,rd_pal_screen(a3)
@@ -4817,6 +4858,23 @@ rd_open_pal_screen
 rd_open_pal_screen_ok
 	moveq	#RETURN_OK,d0
 	rts
+
+
+; Input
+; Result
+; d0.l	... Rückgabewert: Return-Code
+	CNOP 0,4
+rd_load_pal_screen_colors
+	cmp.w	#OS3_VERSION,adl_os_version(a3)
+	blt.s   rd_load_pal_screen_colors_skip
+	rts
+	CNOP 0,4
+rd_load_pal_screen_colors_skip
+	move.l	rd_pal_screen(a3),a0
+	ADDF.W	sc_ViewPort,a0
+	lea	rd_pal_screen_rgb4_colors(pc),a1
+	moveq	#pal_screen_colors_number,d0
+	CALLGRAFQ LoadRGB4
 
 
 ; Input
@@ -7416,6 +7474,10 @@ rd_timer_io
 rd_video_control_tags
 	DS.B video_control_tag_list_size
 
+	CNOP 0,2
+rd_pal_screen_rgb4_colors
+	DS.W pal_screen_colors_number
+
 	CNOP 0,4
 rd_pal_screen_rgb32_colors
 	DS.B screen_02_colors_size
@@ -7632,7 +7694,7 @@ whdl_slave_cmd_line_path
 
 
 ; **** Main ****
-	DC.B "$VER: Amiga Demo Launcher 2.04 (22.10.24)",0
+	DC.B "$VER: Amiga Demo Launcher 2.04 (23.10.24)",0
 	EVEN
 
 
