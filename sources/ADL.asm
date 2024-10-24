@@ -1,7 +1,7 @@
 ; Programm:	AmigaDemoLauncher (ADL)
 ; Autor:	Christian Gerbig
-; Datum		18.10.2024
-; Version:	2.02
+; Datum		22.10.2024
+; Version:	2.04
 
 ; Requirements
 ; CPU:		68000+
@@ -267,6 +267,23 @@
 ; - Argumend SCREENFADER entfernt
 ; - Bugfix: PAL wird jetzt über die Exec-Base->VBlankFrequency abgefragt
 ; - Bugfix: LoadView(NULL)erst ab OS2.0
+
+; V.2.03
+; - Bugfix: Wenn weder per Argument noch über die Playliste eine Spielzeit an-
+;           gegeben wurde, dann wurde einerseits der Command-String nicht
+;           initialisiert, jedoch dann beim Versenden nicht mehr grprüft, ob
+;           keine Spielzeit angegeben wurde. Es wurde dann ein Command-String ohne umgewawandelte
+;           0-Spielzeit und ohne Checksumme an das Reset Device geschickt:
+;           $23 00 00 00 00 00 $2c 00,0a laut Yulquen74
+; - Änderung des Format-Strings. Vor dem #-Zeichen wird noch ein Line-Feed eingefügt
+;   Die Berechnung der Checksumme ändert sich nicht. Sie erfolgt immer noch ab
+;   dem #-Zeichen.
+
+; V.2.04
+
+; - Bugfix: Checksumme wurde falsch ermittelt. Sie wurde zwar ab dem #-Zeichen
+;   berechnet, jedoch mit einem Byte zu wenig, d. h. das Argument MULTIPART
+;   wurde nie berücksichtigt.
 
 
 	SECTION code_and_variables,CODE
@@ -745,12 +762,13 @@ old_chips_registers_size	RS.B 0
 
 command_string			RS.B 0
 
+cs_line_feed1			RS.B 1
 cs_hash				RS.B 1
 cs_delay_counter		RS.B rd_nnnn_size ; Dezimal
 cs_parts			RS.B rd_r_size ; Hexadezimal
 cs_separator			RS.B 1
 cs_checksum			RS.B rd_cc_size ; Hexadezimal
-cs_line_feed			RS.B 1
+cs_line_feed2			RS.B 1
 
 command_string_size		RS.B 0
 
@@ -1098,9 +1116,10 @@ adl_init_cool_capture_request
 	CNOP 0,4
 adl_init_command_string
 	lea	rp_command_string(pc),a0
+	move.b	#ASCII_LINE_FEED,cs_line_feed1(a0)
 	move.b	#"#",cs_hash(a0)
 	move.b	#",",cs_separator(a0)
-	move.b	#ASCII_LINE_FEED,cs_line_feed(a0)
+	move.b	#ASCII_LINE_FEED,cs_line_feed2(a0)
 	rts
 
 
@@ -5780,9 +5799,15 @@ rd_init_playtimer_stop_skip
 
 ; Input
 ; Result
-; d0.l	... Kein Rückgabewert
+; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 rd_stop_playtimer
+	tst.w	rd_playtimer_delay(a3)
+	bne.s   rd_stop_playtimer_skip
+	moveq	#RETURN_OK,d0
+	rts
+	CNOP 0,4
+rd_stop_playtimer_skip
 	bsr	rd_set_playtimer
 	tst.l	d0
 	beq	rd_write_playtimer
@@ -6327,8 +6352,8 @@ rp_create_command_string
 	lea	cs_parts(a2),a0         ; Zeiger auf String
 	bsr.s	rp_hex_to_ascii
 
-	moveq	#cs_checksum-command_string,d7 ; Anzahl der ASCII-Zeichen über die die Checksumme gebildet werden soll
-	move.l	a2,a0			; Ab "#"
+	moveq	#cs_checksum-cs_hash,d7 ; Anzahl der ASCII-Zeichen über die die Checksumme gebildet werden soll
+	lea	cs_hash(a2),a0		; Ab "#"
 	bsr	rp_update_command_checksum
 	move.l	d0,d1			; Dezimalzahl
 	bsr.s	rp_dec_to_hex
@@ -7583,7 +7608,7 @@ whdl_slave_cmd_line_path
 
 
 ; **** Main ****
-	DC.B "$VER: Amiga Demo Launcher 2.02 (18.10.24)",0
+	DC.B "$VER: Amiga Demo Launcher 2.04 (22.10.24)",0
 	EVEN
 
 
