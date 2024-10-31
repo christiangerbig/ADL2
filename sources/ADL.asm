@@ -1,7 +1,7 @@
 ; Programm:	AmigaDemoLauncher (ADL)
 ; Autor:	Christian Gerbig
-; Datum		23.10.2024
-; Version:	2.04
+; Datum		31.10.2024
+; Version:	2.05
 
 ; Requirements
 ; CPU:		68000+
@@ -283,17 +283,31 @@
 ; - Bugfix: Checksumme wurde falsch ermittelt. Sie wurde zwar ab dem #-Zeichen
 ;   berechnet, jedoch mit einem Byte zu wenig, d. h. das Argument MULTIPART
 ;   wurde nie berücksichtigt.
-; - Es wird jetzt zu Beginn im Speicher nach der Kennung "-DL-" gesucht, um zu
-;   prüfen, ob der ADL bereits vorhanden ist
+; - Es wird jetzt zu Beginn im Speicher nach der not-verknüpften Kennung "-DL-"
+;   gesucht, um zu prüfen, ob der ADL bereits vorhanden ist
 ; - Wenn der ADL durch einen Eintrag inaktiv wurde, werden die Exceptions und
 ;   der CoolCapture-Vektror wieder hergestellt
 ; - Argument REMOVE: Es wird auch die Kennung gelöscht
 ; - Schwarzer Bildschirm jetzt auch unter OS 2.0
 
-; - CL-Bug unter OS 2.x: DIWHIGH =$00ff anstatt $0000 -> Blank-Screen bei einigen
-;   alten OCS-Intros.
+; * OS2.x: DIWHIGH = $00ff in CL1 -> Blank-Screen bei einigen alten OCS-Intros,
+;   die ihre CL von CL1 aufrufen lassen.
 
+; * File-Requester-Bug unter OS2.x: Filter für Dateiendungen funktioniert nicht.
+;   Es werden überhaupt keine Dateien angezeigt, weil nur eine Stringlänge von
+;   32 Zeichen berücksichtigt wird, der Rest wird abgeschnitten und somit der
+;   String untauglich gemacht.
 
+; V.2.05
+; - Commandstring jetzt mit zwei Line-Feeds vor dem #-Zeichen. Timer startet
+;   jetzt auch nach Coldstart.
+; - Argument QUIET: Wieder hereingenommen, Unterdrückung des Dateirequesters
+; - Guide angepasst
+; - File Requester: Alle Tags über eine Taglist, die AllocAslRequest() übergeben werden
+; - Bugfix: Nach dem Entfernen des ADL per RMB während des Resets wurde er beim
+;   erneuten Aufruf wieder aktiviert. Jetzt wird auch im Reset-Programm ensprechend
+;   die ID gelöscht
+; - Code für Yulquen kann nun per Boolean-Variable aktiviert werden
 
 
 	SECTION code_and_variables,CODE
@@ -356,10 +370,7 @@ RUNMODE_PLAIN_TURBO		EQU $01
 RUNMODE_OCS_VANILLA		EQU $02
 RUNMODE_AGA_VANILLA		EQU $03
 
-
 ; **** Amiga-Demo-Launcher ****
-adl_restore_adl_code_enabled	EQU FALSE
-
 adl_demofile_path_length	EQU 124
 adl_prerunscript_path_length	EQU 64
 
@@ -374,7 +385,6 @@ adl_baud			EQU 2400
 adl_multipart_min		EQU 2
 adl_multipart_max		EQU 16
 
-
 ; **** Demo-Charger ****
 dc_entries_number_default_max	EQU 10
 dc_entries_number_max		EQU 99
@@ -383,7 +393,6 @@ dc_file_request_left		EQU 0
 dc_file_request_top		EQU 0
 dc_file_request_x_size		EQU 320
 dc_file_request_y_size		EQU 200
-
 
 ; **** Queue-Handler ****
 qh_edit_window_left		EQU 0
@@ -441,8 +450,9 @@ qh_negative_button_x_position	EQU ((qh_edit_window_x_size-qh_negative_button_x_s
 qh_negative_button_y_position	EQU ((qh_edit_window_y_size-qh_negative_button_y_size)*89)/100
 qh_negative_button_id		EQU 7
 
-
 ; **** Run-Demo ****
+rd_yulquen74_code_enabled	EQU TRUE
+
 rd_nnnn_size			EQU 4
 rd_r_size			EQU 1
 rd_cc_size			EQU 2
@@ -450,14 +460,12 @@ rd_duration_shift		EQU 16
 
 rd_error_message_delay		EQU PAL_FPS*2 ; 2 Sekunden
 
-
 ; **** WHD-Load ****
 whdl_preload_length		EQU 8
 whdl_preloadsize_length		EQU 20
 whdl_quitkey_length		EQU 11
 whdl_slave_path_length		EQU 124
 whdl_icon_path_length		EQU 124
-
 
 ; **** Reset-Programm ****
 rp_frames_delay			EQU 50
@@ -494,12 +502,6 @@ GET_CUSTOM_TRAP_VECTORS		MACRO
 REMOVE_RESET_PROGRAM		MACRO
 	trap	#6
 	ENDM
-
-	IFEQ adl_restore_adl_code_enabled
-SET_RESTORE_ADL_ACTIVE		MACRO
-		trap	#7
-		ENDM
-	ENDC
 
 
 WAIT_MOUSE			MACRO
@@ -539,10 +541,10 @@ adl_entries_number_max		RS.W 1
 
 adl_reset_program_active	RS.W 1
 
-
 ; **** Demo-Charger ****
 dc_arg_newentry_enabled		RS.W 1
 dc_arg_playlist_enabled		RS.W 1
+dc_arg_quiet_enabled		RS.W 1
 
 	RS_ALIGN_LONGWORD
 dc_file_request			RS.L 1
@@ -558,7 +560,6 @@ dc_playlist_file_buffer		RS.L 1
 dc_playlist_file_handle		RS.L 1
 dc_playlist_entries_number	RS.W 1
 dc_transmitted_entries_number 	RS.W 1
-
 
 ; **** Queue-handler ****
 qh_arg_showqueue_enabled	RS.W 1
@@ -589,7 +590,6 @@ qh_edit_entry_demofile_name	RS.L 1
 qh_edit_entry_offset		RS.W 1
 qh_edit_runmode			RS.B 1
 qh_edit_entry_active		RS.B 1
-
 
 ; **** Run-Demo ****
 rd_arg_prerunscript_enabled	RS.W 1
@@ -628,8 +628,8 @@ rd_invisible_window		RS.L 1
 rd_cleared_sprite_pointer_data	RS.L 1
 rd_old_sprite_resolution	RS.L 1
 
-rd_available_fast_memory_size	RS.L 1
-rd_available_fast_memory	RS.L 1
+rd_fast_memory_block		RS.L 1
+rd_fast_memory_block_size	RS.L 1
 
 rd_old_current_dir_lock		RS.L 1
 
@@ -639,8 +639,9 @@ rd_old_vbr			RS.L 1
 rd_old_cacr			RS.L 1
 rd_old_060_pcr			RS.L 1
 rd_clear_030_mmu_register	RS.L 1
+	IFEQ rd_yulquen74_code_enabled
 rd_old_cfg0			RS.W 1
-
+	ENDC
 
 ; **** WHD-Load ****
 whdl_slave_enabled		RS.W 1
@@ -662,6 +663,7 @@ cra_REMOVE			RS.L 1
 cra_MAXENTRIES			RS.L 1
 cra_NEWENTRY			RS.L 1
 cra_PLAYLIST			RS.L 1
+cra_QUIET			RS.L 1
 ; **** Queue-Handler ****
 cra_SHOWQUEUE			RS.L 1
 cra_EDITENTRY			RS.L 1
@@ -710,6 +712,67 @@ pqe_entry_active		RS.B 1
 pqe_prerunscript_path		RS.B adl_prerunscript_path_length
 
 playback_queue_entry_size 	RS.B 0
+
+
+	RSRESET
+
+command_string			RS.B 0
+
+cs_line_feed1			RS.B 1
+cs_line_feed2			RS.B 1
+cs_hash				RS.B 1
+cs_delay_counter		RS.B rd_nnnn_size ; Dezimal
+cs_parts			RS.B rd_r_size ; Hexadezimal
+cs_separator			RS.B 1
+cs_checksum			RS.B rd_cc_size ; Hexadezimal
+cs_line_feed3			RS.B 1
+
+command_string_size		RS.B 0
+
+
+	RSRESET
+
+file_request_tag_list		RS.B 0
+
+frtl_ASLFR_Window		RS.L 2
+frtl_ASLFR_TitleText		RS.L 2
+frtl_ASLFR_PositiveText		RS.L 2
+frtl_ASLFR_NegativeText		RS.L 2
+frtl_ASLFR_InitialLeftEdge	RS.L 2
+frtl_ASLFR_InitialTopEdge	RS.L 2
+frtl_ASLFR_InitialWidth		RS.L 2
+frtl_ASLFR_InitialHeight	RS.L 2
+frtl_ASLFR_InitialDrawer	RS.L 2
+frtl_ASLFR_InitialPattern	RS.L 2
+frtl_ASLFR_Flags1		RS.L 2
+frtl_TAG_DONE			RS.L 1
+
+file_request_tag_list_size	RS.B 0
+
+
+	RSRESET
+
+edit_window_tag_list		RS.B 0
+
+ewtl_WA_Left			RS.L 2
+ewtl_WA_Top			RS.L 2
+ewtl_WA_Width			RS.L 2
+ewtl_WA_Height			RS.L 2
+ewtl_WA_DetailPen		RS.L 2
+ewtl_WA_BlockPen		RS.L 2
+ewtl_WA_IDCMP			RS.L 2
+ewtl_WA_Title			RS.L 2
+ewtl_WA_PubScreenName		RS.L 2
+ewtl_WA_MinWidth		RS.L 2
+ewtl_WA_MinHeight		RS.L 2
+ewtl_WA_MaxWidth		RS.L 2
+ewtl_WA_MaxHeight		RS.L 2
+ewtl_WA_AutoAdjust		RS.L 2
+ewtl_WA_Flags			RS.L 2
+ewtl_WA_Gadgets			RS.L 2
+ewtl_TAG_DONE			RS.L 1
+
+edit_window_tag_list_size	RS.B 0
 
 
 	RSRESET
@@ -766,46 +829,6 @@ ocr_ciab_cra			RS.B 1
 ocr_ciab_crb			RS.B 1
 
 old_chips_registers_size	RS.B 0
-
-
-	RSRESET
-
-command_string			RS.B 0
-
-cs_line_feed1			RS.B 1
-cs_hash				RS.B 1
-cs_delay_counter		RS.B rd_nnnn_size ; Dezimal
-cs_parts			RS.B rd_r_size ; Hexadezimal
-cs_separator			RS.B 1
-cs_checksum			RS.B rd_cc_size ; Hexadezimal
-cs_line_feed2			RS.B 1
-
-command_string_size		RS.B 0
-
-
-	RSRESET
-
-edit_window_tag_list		RS.B 0
-
-ewtl_WA_Left			RS.L 2
-ewtl_WA_Top			RS.L 2
-ewtl_WA_Width			RS.L 2
-ewtl_WA_Height			RS.L 2
-ewtl_WA_DetailPen		RS.L 2
-ewtl_WA_BlockPen		RS.L 2
-ewtl_WA_IDCMP			RS.L 2
-ewtl_WA_Title			RS.L 2
-ewtl_WA_PubScreenName		RS.L 2
-ewtl_WA_MinWidth		RS.L 2
-ewtl_WA_MinHeight		RS.L 2
-ewtl_WA_MaxWidth		RS.L 2
-ewtl_WA_MaxHeight		RS.L 2
-ewtl_WA_AutoAdjust		RS.L 2
-ewtl_WA_Flags			RS.L 2
-ewtl_WA_Gadgets			RS.L 2
-ewtl_TAG_DONE			RS.L 1
-
-edit_window_tag_list_size	RS.B 0
 
 
 ; **** Amiga Demo-Launcher ****
@@ -905,6 +928,8 @@ dc_start
 	beq.s	dc_check_playlist
 
 ; ** Playlist-Datei nicht angegeben - Neue Einträge über File-Requester **
+	tst.w	dc_arg_quiet_enabled(a3)
+	beq.s	dc_cleanup_entries_buffer
 	bsr	dc_open_asl_library
 	move.l	d0,adl_dos_return_code(a3)
 	bne	dc_cleanup_entries_buffer
@@ -1006,7 +1031,6 @@ adl_quit
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 adl_init_variables
-; **** Main ****
 	lea	_SysBase(pc),a0
 	move.l	exec_base.w,(a0)
 
@@ -1028,6 +1052,7 @@ adl_init_variables
 ; **** Demo-Charger ****
 	move.w	d1,dc_arg_newentry_enabled(a3)
 	move.w	d1,dc_arg_playlist_enabled(a3)
+	move.w	d1,dc_arg_quiet_enabled(a3)
 
 	move.w  d0,dc_multiselect_entries_number(a3)
 
@@ -1128,9 +1153,10 @@ adl_init_cool_capture_request
 adl_init_command_string
 	lea	rp_command_string(pc),a0
 	move.b	#ASCII_LINE_FEED,cs_line_feed1(a0)
+	move.b	#ASCII_LINE_FEED,cs_line_feed2(a0)
 	move.b	#"#",cs_hash(a0)
 	move.b	#",",cs_separator(a0)
-	move.b	#ASCII_LINE_FEED,cs_line_feed2(a0)
+	move.b	#ASCII_LINE_FEED,cs_line_feed3(a0)
 	rts
 
 
@@ -1156,7 +1182,7 @@ dc_init_runmode_request
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 dc_init_file_request_tags
-	lea	dc_file_request_init_tags(pc),a0
+	lea	dc_file_request_tags(pc),a0
 ; ** Tags für Fensterbeeinflussung **
 	move.l	#ASLFR_Window,(a0)+
 	moveq	#0,d0
@@ -1182,20 +1208,15 @@ dc_init_file_request_tags
 	move.l	#dc_file_request_x_size,(a0)+
 	move.l	#ASLFR_InitialHeight,(a0)+
 	move.l	#dc_file_request_y_size,(a0)+
-	move.l	#ASLFR_InitialPattern,(a0)+
-	lea	dc_file_request_pattern(pc),a1
-	move.l	a1,(a0)+
-; ** Optionen **
-	move.l	#ASLFR_Flags1,(a0)+
-	moveq	#FRF_DOPATTERNS+FRF_DOMULTISELECT,d2
-	move.l	d2,(a0)+
-	moveq	#TAG_DONE,d2
-	move.l	d2,(a0)
-
-	lea	dc_file_request_display_tags(pc),a0
 	move.l	#ASLFR_InitialDrawer,(a0)+
 	lea	dc_current_dir_name(pc),a1
 	move.l	a1,(a0)+
+	move.l	#ASLFR_InitialPattern,(a0)+
+	move.l	d0,(a0)+		; Wird später initialisiert
+; ** Optionen **
+	move.l	#ASLFR_Flags1,(a0)+
+	moveq	#FRF_DOPATTERNS|FRF_DOMULTISELECT,d2
+	move.l	d2,(a0)+
 	moveq	#TAG_DONE,d2
 	move.l	d2,(a0)
 	rts
@@ -1688,6 +1709,7 @@ adl_open_gadtools_library_ok
 ; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 adl_search_id
+	move.l	#~("-DL-"),d4
 	move.l	_SysBase(pc),a6
 	move.w	#4*LONGWORD_SIZE,a1
 	move.l	MaxLocMem(a6),a2
@@ -1698,16 +1720,16 @@ adl_search_id_loop
 	sub.l	a1,a2
 	movem.l	(a2),d0-d3
 	not.l	d0
-	cmp.l	#~("-DL-"),d0
+	cmp.l	d4,d0
 	beq.s	adl_search_id_skip1_3
 	not.l	d1
-	cmp.l	#~("-DL-"),d1
+	cmp.l	d4,d1
 	beq.s	adl_search_id_skip1_4
 	not.l	d2
-	cmp.l	#~("-DL-"),d2
+	cmp.l	d4,d2
 	beq.s	adl_search_id_skip1_2
 	not.l	d3
-	cmp.l	#~("-DL-"),d3
+	cmp.l	d4,d3
 	beq.s	adl_search_id_skip1_1
 	subq.l	#1,d7
 	bpl.s	adl_search_id_loop
@@ -1856,13 +1878,18 @@ adl_check_arg_newentry
 	CNOP 0,4
 adl_check_arg_playlist
 	move.l	cra_PLAYLIST(a2),dc_playlist_file_name(a3)
-	beq.s	adl_check_arg_showqueue
+	beq.s	adl_check_arg_quiet
 	clr.w	dc_arg_playlist_enabled(a3)
 	bra	adl_check_cmd_line_ok
 
-; ** Queue-Handler Argument SHOWQUEUE **
+; ** Demo-Charger Argument QUIET **
 	CNOP 0,4
-adl_check_arg_showqueue
+adl_check_arg_quiet
+	move.l	cra_QUIET(a2),d0
+	not.w	d0
+	move.w	d0,dc_arg_quiet_enabled(a3)
+
+; ** Queue-Handler Argument SHOWQUEUE **
 	move.l	cra_SHOWQUEUE(a2),d0
 	beq.s	adl_check_arg_editentry
 	not.w	d0
@@ -1973,27 +2000,27 @@ adl_calculate_playtime
 	move.w	d1,rd_play_duration(a3)
 
 ; ** Run-Demo Argument MULTIPART **
-		move.l	cra_MULTIPART(a2),d0
-		beq.s   adl_check_arg_random
-		tst.w	rd_play_duration(a3)
-		bne.s   adl_check_arg_multipart_skip1
-		bra	adl_check_cmd_line_fail
-		CNOP 0,4
+	move.l	cra_MULTIPART(a2),d0
+	beq.s   adl_check_arg_random
+	tst.w	rd_play_duration(a3)
+	bne.s   adl_check_arg_multipart_skip1
+	bra	adl_check_cmd_line_fail
+	CNOP 0,4
 adl_check_arg_multipart_skip1
-		move.l	d0,a0
-		move.l	(a0),d0		; Anzahl der Demoteile
-		cmp.b	#adl_multipart_min,d0
-		bge.s   adl_check_arg_multipart_skip2
-		bra	adl_check_cmd_line_fail
-		CNOP 0,4
+	move.l	d0,a0
+	move.l	(a0),d0		; Anzahl der Demoteile
+	cmp.b	#adl_multipart_min,d0
+	bge.s   adl_check_arg_multipart_skip2
+	bra	adl_check_cmd_line_fail
+	CNOP 0,4
 adl_check_arg_multipart_skip2
-		cmp.b	#adl_multipart_max,d0
-		ble.s   adl_check_arg_multipart_skip3
-		bra	adl_check_cmd_line_fail
-		CNOP 0,4
+	cmp.b	#adl_multipart_max,d0
+	ble.s   adl_check_arg_multipart_skip3
+	bra	adl_check_cmd_line_fail
+	CNOP 0,4
 adl_check_arg_multipart_skip3
-		subq.b	#1,d0		; Korrektur, nur Werte 1..15
-		or.b	d0,rd_play_duration+BYTE_SIZE(a3)
+	subq.b	#1,d0		; Korrektur, nur Werte 1..15
+	or.b	d0,rd_play_duration+BYTE_SIZE(a3)
 
 ; ** Run-Demo Argument RANDOM **
 adl_check_arg_random
@@ -2161,7 +2188,13 @@ dc_request_title_skip
 	CNOP 0,4
 dc_make_file_request
 	moveq	#ASL_FileRequest,d0
-	lea	dc_file_request_init_tags(pc),a0
+	lea	dc_file_request_tags(pc),a0
+	lea	dc_file_request_pattern_os3x(pc),a1
+	cmp.w	#OS3_VERSION,adl_os_version(a3)
+ 	bge.s	dc_make_file_request_skip
+	lea	dc_file_request_pattern_os2x(pc),a1 ; OS2.x berücksichtigt nur eine Stringlänge von 32 Zeichen
+dc_make_file_request_skip
+	move.l	a1,frtl_ASLFR_InitialPattern+ti_data(a0)
 	CALLASL AllocAslRequest
 	move.l	d0,dc_file_request(a3)
 	bne.s	dc_make_file_request_ok
@@ -2182,7 +2215,7 @@ dc_make_file_request_ok
 	CNOP 0,4
 dc_display_file_request
 	move.l	dc_file_request(a3),a0
-	lea	dc_file_request_display_tags(pc),a1
+	sub.l	a1,a1			; Keine Taglist
 	CALLASL AslRequest
 	tst.l   d0
 	bne.s	dc_display_file_request_ok
@@ -2453,11 +2486,7 @@ dc_copy_reset_program_loop2
 	GET_CUSTOM_TRAP_VECTORS
 	move.l	d0,a0 			; Quelle
 	move.w	#TRAP_0_VECTOR,a1	; Ziel: Ab Trap0-Vektor im chip memory
-	IFEQ adl_restore_adl_code_enabled
-  		moveq	#8-1,d7		; Anzahl der Trap-Vektoren
-	ELSE
-		moveq	#7-1,d7		; Anzahl der Trap-Vektoren
-	ENDC
+	moveq	#7-1,d7			; Anzahl der Trap-Vektoren
 dc_copy_custom_traps_loop
 	move.l	(a0)+,(a1)+
 	dbf	d7,dc_copy_custom_traps_loop
@@ -2773,33 +2802,33 @@ dc_calculate_playtime
 	move.w	d1,pqe_playtime(a1)
 
 ; ** Playlist-Argument MULTIPART **
-		move.l	d6,a1		; Zeiger auf Eintrag im Puffer
-		move.l	pra_MULTIPART(a5),d0
-		beq.s	dc_check_arg_prerunscript
-		move.l	d0,a0
-		move.l	(a0),d0		; Anzahl der Demoteile
-		bne.s	dc_check_arg_multipart_skip1
-		move.l	d6,a0		; Zeiger auf Eintrag im Puffer
-		bsr	dc_parse_playlist_entry_error
-		bra	dc_free_custom_arguments
-		CNOP 0,4
+	move.l	d6,a1			; Zeiger auf Eintrag im Puffer
+	move.l	pra_MULTIPART(a5),d0
+	beq.s	dc_check_arg_prerunscript
+	move.l	d0,a0
+	move.l	(a0),d0			; Anzahl der Demoteile
+	bne.s	dc_check_arg_multipart_skip1
+	move.l	d6,a0			; Zeiger auf Eintrag im Puffer
+	bsr	dc_parse_playlist_entry_error
+	bra	dc_free_custom_arguments
+	CNOP 0,4
 dc_check_arg_multipart_skip1
-		cmp.b	#adl_multipart_min,d0
-		bge.s	dc_check_arg_multipart_skip2
-		move.l	d6,a0		; Zeiger auf Eintrag im Puffer
-		bsr	dc_parse_playlist_entry_error
-		bra	dc_free_custom_arguments
-		CNOP 0,4
+	cmp.b	#adl_multipart_min,d0
+	bge.s	dc_check_arg_multipart_skip2
+	move.l	d6,a0			; Zeiger auf Eintrag im Puffer
+	bsr	dc_parse_playlist_entry_error
+	bra	dc_free_custom_arguments
+	CNOP 0,4
 dc_check_arg_multipart_skip2
-		cmp.b	#adl_multipart_max,d0
-		ble.s	dc_check_arg_multipart_skip3
-		move.l	d6,a0		; Zeiger auf Eintrag im Puffer
-		bsr	dc_parse_playlist_entry_error
-		bra.s	dc_free_custom_arguments
-		CNOP 0,4
+	cmp.b	#adl_multipart_max,d0
+	ble.s	dc_check_arg_multipart_skip3
+	move.l	d6,a0			; Zeiger auf Eintrag im Puffer
+	bsr	dc_parse_playlist_entry_error
+	bra.s	dc_free_custom_arguments
+	CNOP 0,4
 dc_check_arg_multipart_skip3
-		subq.b	#1,d0		; Werte 1..15
-		or.b	d0,pqe_playtime+BYTE_SIZE(a1)
+	subq.b	#1,d0			; Werte 1..15
+	or.b	d0,pqe_playtime+BYTE_SIZE(a1)
 
 ; ** Playlist-Argument PRERUNSCRIPT **
 dc_check_arg_prerunscript
@@ -4085,10 +4114,10 @@ rd_play_loop
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_pal_screen
 	bsr	rd_clear_mousepointer
- 	bsr	rd_blank_display
+ 	bsr	rd_blank_display_loop
 	bsr	rd_wait_monitor_switch
 
-	bsr	rd_turn_off_fast_memory
+	bsr	rd_alloc_fast_memory
 	bsr	rd_load_demofile
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_fast_memory
@@ -4107,13 +4136,12 @@ rd_play_loop
 
 	bsr	rd_save_custom_traps
 	bsr	rd_downgrade_cpu
-	bsr	rd_downgrade_cpu_clock
+	IFEQ rd_yulquen74_code_enabled
+		bsr	rd_downgrade_cpu_clock
+ 	ENDC
 	bsr	rd_get_tod_time
 	bsr	rd_save_chips_registers
 
-	IFEQ adl_restore_adl_code_enabled
-		SET_RESTORE_ADL_ACTIVE	; Reset-Level-7-Interrupt aktivieren
-	ENDC
 	bsr	rd_run_dos_file
 	bsr	rd_execute_whdload_slave
 	move.l	d0,adl_dos_return_code(a3)
@@ -4123,7 +4151,9 @@ rd_play_loop
 	bsr	rd_clear_chips_registers
 	bsr	rd_restore_chips_registers
 	bsr	rd_get_tod_duration
-	bsr	rd_upgrade_cpu_clock
+	IFEQ rd_yulquen74_code_enabled
+		bsr	rd_upgrade_cpu_clock
+	ENDC
 	bsr	rd_upgrade_cpu
 	bsr	rd_restore_custom_traps
 
@@ -4872,6 +4902,7 @@ rd_open_pal_screen_ok
 rd_load_pal_screen_colors
 	cmp.w	#OS3_VERSION,adl_os_version(a3)
 	blt.s   rd_load_pal_screen_colors_skip
+rd_load_pal_screen_colors_quit
 	rts
 	CNOP 0,4
 rd_load_pal_screen_colors_skip
@@ -4879,7 +4910,8 @@ rd_load_pal_screen_colors_skip
 	ADDF.W	sc_ViewPort,a0
 	lea	rd_pal_screen_rgb4_colors(pc),a1
 	moveq	#pal_screen_colors_number,d0
-	CALLGRAFQ LoadRGB4
+	CALLGRAF LoadRGB4
+	bra.s	rd_load_pal_screen_colors_quit
 
 
 ; Input
@@ -4945,12 +4977,6 @@ rd_clear_mousepointer
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-rd_blank_display
-	cmp.w	#OS2_VERSION,adl_os_version(a3)
-	bge.s	rd_blank_display_loop
-rd_blank_display_quit
-	rts
-	CNOP 0,4
 rd_blank_display_loop
 	sub.l	a1,a1			; View auf ECS-Werte zurücksetzen
 	CALLGRAF LoadView
@@ -4964,7 +4990,7 @@ rd_blank_display_loop
 	moveq	#0,d0			
 	move.l	d0,_CUSTOM+BPL1MOD	; OCS Standart Screen-Moduli OS 1.2/1.3
 rd_blank_display_skip
-	bra.s	rd_blank_display_quit
+	rts
 
 
 ; Input
@@ -4991,37 +5017,37 @@ rd_wait_monitor_switch_skip
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-rd_turn_off_fast_memory
+rd_alloc_fast_memory
 	move.l	rd_demofile_path(a3),a0
 	cmp.b	#RUNMODE_PLAIN_TURBO,pqe_runmode(a0)
-	bne.s	rd_turn_off_fast_memory_skip
+	bne.s	rd_alloc_fast_memory_skip1
 	rts
 	CNOP 0,4
-rd_turn_off_fast_memory_skip
+rd_alloc_fast_memory_skip1
 	move.l	#MEMF_FAST|MEMF_LARGEST,d1
 	move.l	d1,d2
 	CALLEXEC AvailMem
-	move.l	d0,rd_available_fast_memory_size(a3)
-	bne.s	rd_turn_off_fast_memory_proceed1
+	move.l	d0,rd_fast_memory_block_size(a3)
+	bne.s	rd_alloc_fast_memory_skip2
 	rts
 	CNOP 0,4
-rd_turn_off_fast_memory_proceed1
+rd_alloc_fast_memory_skip2
 	move.l	d2,d1			; Größter Fast-Memory Block
 	CALLLIBS AllocMem		
-	move.l	d0,rd_available_fast_memory(a3)
+	move.l	d0,rd_fast_memory_block(a3)
 	move.l	d0,a2
-rd_turn_off_fast_memory_loop
+rd_alloc_fast_memory_loop
 	move.l	d2,d1			; Größter Fast-Memory Block
 	CALLLIBS AvailMem
 	move.l	d0,(a2)+
-	bne.s	rd_turn_off_fast_memory_proceed2
+	bne.s	rd_alloc_fast_memory_skip3
 	rts
 	CNOP 0,4
-rd_turn_off_fast_memory_proceed2
+rd_alloc_fast_memory_skip3
 	move.l	d2,d1			; Größter Fast-Memory Block
 	CALLLIBS AllocMem
 	move.l	d0,(a2)+		; Zeiger auf Speichernlock
-	bra.s	rd_turn_off_fast_memory_loop
+	bra.s	rd_alloc_fast_memory_loop
 
 
 ; Input
@@ -5406,7 +5432,7 @@ rd_downgrade_cpu_skip2
 	move.l	rd_demofile_path(a3),a0
 	cmp.b	#RUNMODE_AGA_VANILLA,pqe_runmode(a0)
 	bne.s	rd_disable_060_caches
-	or.w	#CACR060F_FIC+CACR060F_EIC,d1 ; 1/2 Instruction-Cache an
+	or.w	#CACR060F_FIC|CACR060F_EIC,d1 ; 1/2 Instruction-Cache an
 rd_disable_060_caches
 	lea	rd_060_set_cacr(pc),a5
 	CALLLIBS Supervisor
@@ -5449,27 +5475,29 @@ rd_disable_030_mmu_skip
 	bra.s	rd_disable_030_mmu_quit
 
 
+	IFEQ rd_yulquen74_code_enabled
 ; Input
 ; Result
 ; d0.l	... Kein Rückgabewert
-	CNOP 0,4
+		CNOP 0,4
 rd_downgrade_cpu_clock
-	btst	#AFB_68020,adl_cpu_flags+BYTE_SIZE(a3)
-	beq.s	rd_downgrade_cpu_clock_skip
+		btst	#AFB_68020,adl_cpu_flags+BYTE_SIZE(a3)
+		beq.s	rd_downgrade_cpu_clock_skip
 rd_downgrade_cpu_clock_quit
-	rts
-	CNOP 0,4
+		rts
+		CNOP 0,4
 rd_downgrade_cpu_clock_skip
-	move.l	rd_demofile_path(a3),a0
-	cmp.b	#RUNMODE_PLAIN_TURBO,pqe_runmode(a0)
-	beq.s	rd_downgrade_cpu_clock_quit
-	lea	CFG0,a0
-	move.w	(a0),d0
-	move.w	d0,rd_old_cfg0(a3)
-	and.w	#~(CFG0F_CLKSEL0|CFG0F_CLKSEL1),d0 ; SELx-Bits löschen
-	or.w	#CFG0F_CLKSEL1,d0	; Stock speed mode (7 MHz)
-	move.w	d0,(a0)
-	bra.s	rd_downgrade_cpu_clock_quit
+		move.l	rd_demofile_path(a3),a0
+		cmp.b	#RUNMODE_PLAIN_TURBO,pqe_runmode(a0)
+		beq.s	rd_downgrade_cpu_clock_quit
+		lea	CFG0,a0
+		move.w	(a0),d0
+		move.w	d0,rd_old_cfg0(a3)
+		and.w	#~(CFG0F_CLKSEL0|CFG0F_CLKSEL1),d0 ; SELx-Bits löschen
+		or.w	#CFG0F_CLKSEL1,d0	; Stock speed mode (7 MHz)
+		move.w	d0,(a0)
+		bra.s	rd_downgrade_cpu_clock_quit
+	ENDC
 
 
 ; Input
@@ -5760,22 +5788,24 @@ rd_get_tod_duration_save
 	CALLLIBQ Enable
 
 
+	IFEQ rd_yulquen74_code_enabled
 ; Input
 ; Result
 ; d0.l	... Kein Rückgabewert
-	CNOP 0,4
+		CNOP 0,4
 rd_upgrade_cpu_clock
-	btst	#AFB_68020,adl_cpu_flags+BYTE_SIZE(a3)
-	beq.s	rd_upgrade_cpu_clock_skip
+		btst	#AFB_68020,adl_cpu_flags+BYTE_SIZE(a3)
+		beq.s	rd_upgrade_cpu_clock_skip
 rd_upgrade_cpu_clock_quit
-	rts
-	CNOP 0,4
+		rts
+		CNOP 0,4
 rd_upgrade_cpu_clock_skip
-	move.l	rd_demofile_path(a3),a0
-	cmp.b	#RUNMODE_PLAIN_TURBO,pqe_runmode(a0)
-	beq.s	rd_upgrade_cpu_clock_quit
-	move.w	rd_old_cfg0(a3),CFG0
-	bra.s	rd_upgrade_cpu_clock_quit
+		move.l	rd_demofile_path(a3),a0
+		cmp.b	#RUNMODE_PLAIN_TURBO,pqe_runmode(a0)
+		beq.s	rd_upgrade_cpu_clock_quit
+		move.w	rd_old_cfg0(a3),CFG0
+		bra.s	rd_upgrade_cpu_clock_quit
+	ENDC
 
 
 ; Input
@@ -5858,11 +5888,7 @@ rd_restore_custom_traps_skip
 	CNOP 0,4
 rd_copy_custom_traps
 	move.l	rd_custom_traps(a3),a0
-	IFEQ adl_restore_adl_code_enabled
-		moveq	#8-1,d7		; Anzahl der Trap-Vektoren
-	ELSE
-		moveq	#7-1,d7		; Anzahl der Trap-Vektoren
-	ENDC
+	moveq	#7-1,d7			; Anzahl der Trap-Vektoren
 rd_copy_custom_traps_loop
 	move.l	(a0)+,(a1)+	 	; Vektor kopieren
 	dbf	d7,rd_copy_custom_traps_loop
@@ -5953,7 +5979,7 @@ rd_free_fast_memory_quit
 	rts
 	CNOP 0,4
 rd_free_fast_memory_skip1
-	move.l	rd_available_fast_memory(a3),d2
+	move.l	rd_fast_memory_block(a3),d2
 	beq.s	rd_free_fast_memory_quit
 	move.l	d2,a2
 	move.l	_SysBase(pc),a6
@@ -5966,7 +5992,7 @@ rd_free_fast_memory_loop
 	CNOP 0,4
 rd_free_fast_memory_skip2
 	move.l	d2,a1			; Zeiger auf ersten größten Block
-	move.l	rd_available_fast_memory_size(a3),d0 ; Größe des ersten größten Blocks
+	move.l	rd_fast_memory_block_size(a3),d0 ; Größe des ersten größten Blocks
 	CALLLIBS FreeMem
 	bra.s	rd_free_fast_memory_quit
 
@@ -6144,7 +6170,7 @@ rd_close_icon_library
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 rd_write_vbr
-	or.w	#SRF_I0+SRF_I1+SRF_I2,SR ; Level-7-Interruptebene
+	or.w	#SRF_I0|SRF_I1|SRF_I2,SR ; Level-7-Interruptebene
 	nop
 	movec.l d0,VBR
 	nop
@@ -6337,6 +6363,7 @@ rp_skip1
 	btst	#POTINPB_DATLY-8,POTINP(a5) ; RMB ?
 	bne.s	rp_proceed
 	bsr	rp_clear_cool_capture
+	bsr	rp_clear_id
 	bra.s	rp_quit
 	CNOP 0,4
 rp_proceed
@@ -6353,6 +6380,7 @@ rp_proceed
 	move.l	#rp_color_error,d3
 	bsr	rp_screen_colour_flash
 	bsr	rp_clear_cool_capture
+	bsr	rp_clear_id
 	bra.s	rp_quit
 	CNOP 0,4
 rp_skip2
@@ -6399,6 +6427,16 @@ rp_clear_cool_capture
 	move.l	d0,CoolCapture(a6)
 	bsr	rp_update_exec_checksum
 	CALLLIBQ CacheClearU
+
+
+; Input
+; Result
+; d0.l	... Kein Rückgabewert
+	CNOP 0,4
+rp_clear_id
+	lea	rp_id(pc),a0
+	clr.l	(a0)
+	rts
 
 
 ; Input
@@ -6639,15 +6677,6 @@ rp_init_custom_traps
 	CALLLIBS Supervisor
 	move.l	d0,a0
 rp_init_custom_traps_skip
-	IFEQ adl_restore_adl_code_enabled
-		lea	rp_restore_adl_active(pc),a1
-		move.w	#FALSE,(a1)
-		lea	rp_old_level_7_autovector(pc),a1
-		move.l	LEVEL_7_AUTOVECTOR(a0),(a1)
-		lea	rp_level_7_program(pc),a1
-		move.l	a1,LEVEL_7_AUTOVECTOR(a0)
-	ENDC
-
 	lea	rp_old_trap_0_vector(pc),a1
 	lea	rp_custom_trap_0_vector(pc),a2
 
@@ -6681,25 +6710,11 @@ rp_init_custom_traps_skip
 	move.l	a4,TRAP_5_VECTOR(a0)
 	move.l	a4,(a2)+
 
-	IFEQ adl_restore_adl_code_enabled
-		move.l	TRAP_6_VECTOR(a0),(a1)+
-	ELSE
-		move.l	TRAP_6_VECTOR(a0),(a1)
-	ENDC
+	move.l	TRAP_6_VECTOR(a0),(a1)
 	lea	rp_trap_6_program(pc),a4
 	move.l	a4,TRAP_6_VECTOR(a0)
-	IFEQ adl_restore_adl_code_enabled
-		move.l	a4,(a2)+
-	ELSE
-		move.l	a4,(a2)
- 	ENDC
+	move.l	a4,(a2)
 
-	IFEQ adl_restore_adl_code_enabled
-		move.l	TRAP_7_VECTOR(a0),(a1)
-		lea	rp_trap_7_program(pc),a4
-		move.l	a4,TRAP_7_VECTOR(a0)
-		move.l	a4,(a2)
-	ENDC
 	CALLLIBQ CacheClearU
 
 
@@ -6718,16 +6733,9 @@ rp_restore_old_traps
 	beq.s	rp_restore_old_traps_skip2
 	move.l	d0,a1
 rp_restore_old_traps_skip1
-	IFEQ adl_restore_adl_code_enabled
-		move.l	rp_old_level_7_autovector(pc),LEVEL_7_AUTOVECTOR(a1) ; Zeiger alte Level-7-Interrptprogramm eintragen
-	ENDC
 	add.w	#TRAP_0_VECTOR,a1	; Ab Trap0-Vektor in Fast-Memory
 	bsr.s	rp_copy_old_trap_vectors
 rp_restore_old_traps_skip2
-	IFEQ adl_restore_adl_code_enabled
-		move.l	d0,a1
-		move.l	rp_old_level_7_autovector(pc),LEVEL_7_AUTOVECTOR(a1) ; Zeiger alte Level-7-Interrptprogramm eintragen
-	ENDC
 	move.w	#TRAP_0_VECTOR,a1	; Ab Trap0-Vektor in Chip-Memory
 	bsr.s	rp_copy_old_trap_vectors
 	CALLLIBQ CacheClearU
@@ -6740,11 +6748,7 @@ rp_restore_old_traps_skip2
 	CNOP 0,4
 rp_copy_old_trap_vectors
 	lea	rp_old_trap_0_vector(pc),a0
-	IFEQ adl_restore_adl_code_enabled
-		moveq	#8-1,d7		; Anzahl der Trap-Vektoren
-	ELSE
-		moveq	#7-1,d7		; Anzahl der Trap-Vektoren
-	ENDC
+	moveq	#7-1,d7			; Anzahl der Trap-Vektoren
 rd_copy_old_trap_vectors_loop
 	move.l	(a0)+,(a1)+		; Vektor kopieren
 	dbf	d7,rd_copy_old_trap_vectors_loop
@@ -6752,30 +6756,6 @@ rd_copy_old_trap_vectors_loop
 
 
 ; **** Exception-Routinen ****
-	IFEQ adl_restore_adl_code_enabled
-; Input
-; a6	... Exec-Base
-; Result
-; d0.l	... Kein Rückgabewert
-		CNOP 0,4
-rp_level_7_program
-		movem.l d0-d1/a0-a1/a6,-(a7)
-		move.w	rp_restore_adl_active(pc),d0
-		bne.s	rp_no_reset
-		move.l	exec_base.w,a6
-		move.l	rp_reset_program_memory(pc),CoolCapture(a6)
-		moveq	#0,d0
-		move.l	d0,WarmCapture(a6)
-		bsr	rp_update_exec_checksum
-		CALLLIBS CacheClearU
-		CALLLIBQ ColdReboot
-		CNOP 0,4
-rp_no_reset
-		movem.l (a7)+,d0-d1/a0-a1/a6
-		nop
-		rte
-	ENDC
-
 
 ; GET_RESIDENT_ENTRIES_NUMBER
 ; Input
@@ -6866,17 +6846,6 @@ rp_trap_6_program
 	rte
 
 
-	IFEQ adl_restore_adl_code_enabled
-; SET_RESTORE_ADL_ACTIVE
-		CNOP 0,4
-rp_trap_7_program
-		lea	rp_restore_adl_active(pc),a0
-		clr.w	(a0)
-		nop
-		rte
-	ENDC
-
-
 ; Input
 ; Result
 ; d0.l	... Rückgabewert: Inhalt von VBR
@@ -6893,9 +6862,6 @@ rp_read_vbr
 rp_reset_program_memory		DC.L 0
 rp_reset_program_size		DC.L 0
 
-	IFEQ adl_restore_adl_code_enabled
-rp_old_level_7_autovector	DC.L 0
-	ENDC
 rp_old_trap_0_vector		DC.L 0
 rp_old_trap_1_vector		DC.L 0
 rp_old_trap_2_vector		DC.L 0
@@ -6903,9 +6869,7 @@ rp_old_trap_3_vector		DC.L 0
 rp_old_trap_4_vector		DC.L 0
 rp_old_trap_5_vector		DC.L 0
 rp_old_trap_6_vector		DC.L 0
-	IFEQ adl_restore_adl_code_enabled
-rp_old_trap_7_vector		DC.L 0
-	ENDC
+
 rp_custom_trap_0_vector		DC.L 0
 rp_custom_trap_1_vector		DC.L 0
 rp_custom_trap_2_vector		DC.L 0
@@ -6913,10 +6877,6 @@ rp_custom_trap_3_vector		DC.L 0
 rp_custom_trap_4_vector		DC.L 0
 rp_custom_trap_5_vector		DC.L 0
 rp_custom_trap_6_vector		DC.L 0
-	IFEQ adl_restore_adl_code_enabled
-rp_custom_trap_7_vector		DC.L 0
-rp_restore_adl_active		DC.W 0
-	ENDC
 
 rp_old_adkcon			DC.W 0
 
@@ -6934,7 +6894,6 @@ rp_dec_table
 rp_entries_buffer			; Größe wird später berechnet
 
 
-; **** Main ****
 	CNOP 0,4
 _SysBase			DC.L 0
 _DOSBase			DC.L 0
@@ -7023,6 +6982,7 @@ adl_cmd_usage_text
 	DC.B "MAXENTRIES ",155,"3",109,"number 1..n",155,"0",109," Set maximum entries number of playback queue",ASCII_LINE_FEED
 	DC.B "NEWENTRY               Create new entry in playback queue",ASCII_LINE_FEED
 	DC.B "PLAYLIST ",155,"3",109,"file path ",155,"0",109,"    Load and transfer external playlist to playback queue",ASCII_LINE_FEED
+	DC.B "QUIET                  Supress the file requester",ASCII_LINE_FEED
 ; ** Queue-Handler **
 	DC.B "SHOWQUEUE              Show content of playback queue",ASCII_LINE_FEED
 	DC.B "EDITENTRY ",155,"3",109,"number 1..n",155,"0",109,"  Edit entry of playback queue",ASCII_LINE_FEED
@@ -7052,6 +7012,7 @@ adl_cmd_template
 	DC.B "MAXENTRIES/K/N,"
 	DC.B "NEWENTRY/S,"
 	DC.B "PLAYLIST/K,"
+	DC.B "QUIET/S,"
 ; ** Queue-Handler **
 	DC.B "SHOWQUEUE/S,"
 	DC.B "EDITENTRY/K/N,"
@@ -7122,12 +7083,8 @@ dc_runmode_request
 
 
 	CNOP 0,4
-dc_file_request_init_tags
-	DS.B ti_SIZEOF*11
-
-	CNOP 0,4
-dc_file_request_display_tags
-	DS.B ti_SIZEOF*2
+dc_file_request_tags
+	DS.B file_request_tag_list_size
 
 
 dc_playlist_template
@@ -7173,20 +7130,24 @@ dc_file_request_character_s
 	DC.B "s",0
 	EVEN
 
-
-dc_file_request_pattern
+dc_file_request_pattern_os2x
+	DC.B "~(#?.diz|"
+	DC.B "#?.#?nfo|"
+	DC.B "#?.txt|"
+	DC.B "_dl.#?)",0
+	EVEN
+dc_file_request_pattern_os3x
 	DC.B "~(#?.bin|"
-	DC.B "#?.dat|"
-	DC.B "#?.data|"
+	DC.B "#?.dat#?|"
 	DC.B "#?.diz|"
-	DC.B "#?.info|"
-	DC.B "#?.nfo|"
+	DC.B "#?.#?nfo|"
 	DC.B "#?.pak|"
 	DC.B "#?.readme|"
 	DC.B "#?.txt|"
 	DC.B "#?.vars|"
 	DC.B "_dl.#?)",0
 	EVEN
+
 dc_file_request_positive_text
 	DC.B "Use",0
 	EVEN
@@ -7202,7 +7163,7 @@ dc_runmode_request_text_body
 	DC.B "In which mode should the demo run?",ASCII_LINE_FEED,0
 	EVEN
 dc_runmode_request_text_gadgets
-	DC.B "OCS vanilla|AGA vanilla|plain/turbo",0
+	DC.B "OCS vanilla|AGA vanilla|Plain/Turbo",0
 	EVEN
 
 
@@ -7542,23 +7503,23 @@ rd_shell_no_op_cmd_line_end
 
 
 rd_message_text1
-	DC.B "Run mode AGA vanilla not supported on this config.",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B "Run mode AGA vanilla not supported on this config",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_message_text1_end
 	EVEN
 rd_message_text2
-	DC.B ASCII_LINE_FEED,"End of playback queue reached.",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"End of playback queue reached",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_message_text2_end
 	EVEN
 rd_message_text3
-	DC.B ASCII_LINE_FEED,"Entry already played.",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Entry already played",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_message_text3_end
 	EVEN
 rd_message_text4
-	DC.B "No more entries left to play.",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B "No more entries left to play",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_message_text4_end
 	EVEN
 rd_message_text5
-	DC.B "Replay loop stopped.",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B "Replay loop stopped",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_message_text5_end
 	EVEN
 
@@ -7698,9 +7659,7 @@ whdl_slave_cmd_line_path
 	EVEN
 
 
-; **** Main ****
-	DC.B "$VER: Amiga Demo Launcher 2.04 (23.10.24)",0
+	DC.B "$VER: Amiga Demo Launcher 2.05 (31.10.24)",0
 	EVEN
-
 
 	END
