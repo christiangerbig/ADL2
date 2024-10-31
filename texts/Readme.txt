@@ -9,10 +9,12 @@ play them in a very comfortable way
 
 exe files and WHDLoad files supported
 
-With the reset device plugged into the serial port you can set a play
-duration for each demo. After the play time is counted down, there will be an
-automatic reset to play the next demo of the playback queue
+With the reset device plugged into the serial port and some minor soldering
+you change your Amiga to a Demo Launcher machine
 
 Use the Arexx tool CreateDemoPlaylist to create playlists fast and easy
 
-Three startmodes to make old OCS intros run on AGA Amigas
+Several startmodes work as a degrader to make old OCS intros run on AGA Amigas
+
+Set a play duration for each entry. After the play time is counted down,
+the reset device does an automatic reset and the next entry is played

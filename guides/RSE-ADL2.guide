@@ -158,7 +158,7 @@ You have the possibility to type in the filename directly or select it by the mo
 
 After you have selected a file or several files you click the gadget "Use".
 
-Then the run mode requester opens and you have the choice between the modes @{"OCS vanilla" LINK Chapter-1-7-2-1}, @{"AGA vanilla" LINK Chapter-1-7-2-2} and @{"Turbo" LINK Chapter-1-7-2-3}.
+Then the run mode requester opens and you have the choice between the modes @{"OCS vanilla" LINK Chapter-1-7-2-1}, @{"AGA vanilla" LINK Chapter-1-7-2-2} and @{"Plain/Turbo" LINK Chapter-1-7-2-3}.
 
 After you made your choice, the file requester opens again, if not the maximum number files were selected to use already. The title bar of the file requester informs you how many files are left to be selected.
 
@@ -182,11 +182,12 @@ The entries of the playback queue are created via the file requester.
 More details can be found @{"here" LINK Chapter-1-4-1}.
 
 
-The intended implementation of ADL2 when used with the tool @{"Create Demo Playlist" LINK Chapter-2} is executing it from the user-startup like this:
+The intended implementation of ADL2 when used with the tool @{"Create Demo Playlist" LINK Chapter-2} is executing it from the HD user-startup like this:
 
-C:RSE-ADL2 SOFTRESET >NIL:
+C:RSE-ADL2 SOFTRESET QUIET >NIL:
 
 With this implementation, any pending entry in the ADL2 playback queue will be played during boot, and if the entry exits by itself or by user interaction, the ADL2 will then do a software reset.
+With the argument QUIET, the file requester is supressed, if there is no playback queue in memory.
 
 For entries without automatic exit, the @{"reset device" LINK Chapter-2-3-14} may be used, which will do a hardware reset instead.
 During the following boot the next item will be started, and so on, until all entries of the playback queue are played.
@@ -200,7 +201,7 @@ When the playback queue is empty, the file requester will open for new entries.
 
 All arguments are optional. If no arguments are given, a file requester will open for a file selection and the entries maximum of 10 files will be used as default if there is no existing playback queue in memory.
 
-If there is already an existing playback queue, the first entry of the playback queue is played . If called again, the ADL2 will play the next sequential entry if no @{"RANDOM" LINK Chapter-1-5-15} argument was used.
+If there is already an existing playback queue, the first entry of the playback queue is played . If called again, the ADL2 will play the next sequential entry if no @{"RANDOM" LINK Chapter-1-5-16} argument was used.
 
 The ADL2 consists of a main, an entry charger, a queue handler and an entry player part.
 
@@ -220,39 +221,41 @@ Arguments of the entry charger:
 
   @{" PLAYLIST " LINK Chapter-1-5-5}
 
+  @{" QUIET " LINK Chapter-1-5-6}
+
 
 Arguments of the queue handler:
 
-  @{" SHOWQUEUE " LINK Chapter-1-5-6}
+  @{" SHOWQUEUE " LINK Chapter-1-5-7}
 
-  @{" EDITENTRY " LINK Chapter-1-5-7}
+  @{" EDITENTRY " LINK Chapter-1-5-8}
 
-  @{" EDITQUEUE " LINK Chapter-1-5-8}
+  @{" EDITQUEUE " LINK Chapter-1-5-9}
 
-  @{" CLEARQUEUE " LINK Chapter-1-5-9}
+  @{" CLEARQUEUE " LINK Chapter-1-5-10}
 
-  @{" RESETQUEUE " LINK Chapter-1-5-10}
+  @{" RESETQUEUE " LINK Chapter-1-5-11}
 
 
 Arguments of the entry player:
 
-  @{" PLAYENTRY " LINK Chapter-1-5-11}
+  @{" PLAYENTRY " LINK Chapter-1-5-12}
 
-  @{" PRERUNSCRIPT " LINK Chapter-1-5-12}
+  @{" PRERUNSCRIPT " LINK Chapter-1-5-13}
 
-  @{" MINS/SECS " LINK Chapter-1-5-13}
+  @{" MINS/SECS " LINK Chapter-1-5-14}
 
-  @{" MULTIPART " LINK Chapter-1-5-14}
+  @{" MULTIPART " LINK Chapter-1-5-15}
 
-  @{" RANDOM " LINK Chapter-1-5-15}
+  @{" RANDOM " LINK Chapter-1-5-16}
 
-  @{" ENDLESS " LINK Chapter-1-5-16}
+  @{" ENDLESS " LINK Chapter-1-5-17}
 
-  @{" LOOP " LINK Chapter-1-5-17}
+  @{" LOOP " LINK Chapter-1-5-18}
 
-  @{" RESTORESYSTIME " LINK Chapter-1-5-18}
+  @{" RESTORESYSTIME " LINK Chapter-1-5-19}
 
-  @{" SOFTRESET " LINK Chapter-1-5-19}
+  @{" SOFTRESET " LINK Chapter-1-5-20}
 @ENDNODE
 
 
@@ -295,7 +298,14 @@ The argument needs a full file path from where to find the playlist which should
 @ENDNODE
 
 
-@NODE Chapter-1-5-6 "ADL2: List of arguments / SHOWQUEUE"
+@NODE Chapter-1-5-6 "ADL2: List of arguments / QUIET"
+@{B}QUIET@{UB}
+
+If there is no playback queue in memory, the file requester is opened. This can be supressed by the argument QUIET.
+@ENDNODE
+
+
+@NODE Chapter-1-5-7 "ADL2: List of arguments / SHOWQUEUE"
 @{B}SHOWQUEUE@{UB}
 
 The argument prints the content of the playback queue by
@@ -306,42 +316,42 @@ and informs about the free number of entries left in the playback queue.
 @ENDNODE
 
 
-@NODE Chapter-1-5-7 "ADL2: List of arguments / EDITENTRY"
+@NODE Chapter-1-5-8 "ADL2: List of arguments / EDITENTRY"
 @{B}EDITENTRY@{UB} @{I}@{B}number@{UI}@{UB}
 
 With this argument you edit certain entries of the playback queue, change the run mode and the play state.
 @ENDNODE
 
 
-@NODE Chapter-1-5-8 "ADL2: List of arguments / EDITQUEUE"
+@NODE Chapter-1-5-9 "ADL2: List of arguments / EDITQUEUE"
 @{B}EDITQUEUE@{UB}
 
 With this argument you can edit all entries of the playback queue and change the run mode and the playstate.
 @ENDNODE
 
 
-@NODE Chapter-1-5-9 "ADL2: List of arguments / CLEARQUEUE"
+@NODE Chapter-1-5-10 "ADL2: List of arguments / CLEARQUEUE"
 @{B}CLEARQUEUE@{UB}
 
 The argument clears the content of the playback queue.
 @ENDNODE
 
 
-@NODE Chapter-1-5-10 "ADL2: List of arguments / RESETQUEUE"
+@NODE Chapter-1-5-11 "ADL2: List of arguments / RESETQUEUE"
 @{B}RESETQUEUE@{UB}
 
 The argument resets the entry pointer of the playback queue to zero and resets all entry play states.
 @ENDNODE
 
 
-@NODE Chapter-1-5-11 "ADL2: List of arguments / PLAYENTRY"
+@NODE Chapter-1-5-12 "ADL2: List of arguments / PLAYENTRY"
 @{B}PLAYENTRY @{I}@{B}number@{UI}@{UB}
 
 With this argument an entry out of the playback queue can be played. The number ranges from 1 to 10 for a default maximum value or from 1 to @{I}number@{UI} if set by the argument @{"MAXENTRIES" LINK Chapter-1-5-3}.
 @ENDNODE
 
 
-@NODE Chapter-1-5-12 "ADL2: List of arguments / PRERUNSCRIPT"
+@NODE Chapter-1-5-13 "ADL2: List of arguments / PRERUNSCRIPT"
 @{B}PRERUNSCRIPT @{I}file path@{UI}@{UB}
 
 A prerun Amiga DOS script file can be run before the entry starts. The full file path where to find the script is needed and can't be longer than 63 characters. The keyword PRERUNSCRIPT is mandatory.
@@ -352,7 +362,7 @@ This argument has priority over an argument of the playback queue.
 @ENDNODE
 
 
-@NODE Chapter-1-5-13 "ADL2: List of arguments / MINS/SECS"
+@NODE Chapter-1-5-14 "ADL2: List of arguments / MINS/SECS"
 @{B}MIN/MINS @{I}number@{UI}@{UB}
 @{B}SEC/SECS @{I}number@{UI}@{UB}
 
@@ -374,41 +384,41 @@ The maximum playtime is 99 minutes and 59 seconds.
 @ENDNODE
 
 
-@NODE Chapter-1-5-14 "ADL2: List of arguments / MULTIPART"
+@NODE Chapter-1-5-15 "ADL2: List of arguments / MULTIPART"
 @{B}MULTIPART@{UB}
 
 Define the number of parts if an entry has multiple parts which are quit by clicking the left mouse button.
 The reset device will simulate a click of the left mouse button after each part and an automatic reset after the last part at a given playtime.
-Only works together with the argument @{"MINS/SECS" LINK Chapter-1-5-13}.
+Only works together with the argument @{"MINS/SECS" LINK Chapter-1-5-14}.
 @ENDNODE
 
 
-@NODE Chapter-1-5-15 "ADL2: List of arguments / RANDOM"
+@NODE Chapter-1-5-16 "ADL2: List of arguments / RANDOM"
 @{B}RANDOM@{UB}
 
 The argument uses a random function to select an entry out of the playback queue. Because of the fact that all played entries will be tagged, no entry will be played twice.
 @ENDNODE
 
 
-@NODE Chapter-1-5-16 "ADL2: List of arguments / ENDLESS"
+@NODE Chapter-1-5-17 "ADL2: List of arguments / ENDLESS"
 @{B}ENDLESS@{UB}
 
 If there are no more entries left to play, the ADL2 will clear all tags of the entries in the playback queue and restart with the first entry.
 @ENDNODE
 
 
-@NODE Chapter-1-5-17 "ADL2: List of arguments / LOOP"
+@NODE Chapter-1-5-18 "ADL2: List of arguments / LOOP"
 @{B}LOOP@{UB}
 
 The argument prevents that the ADL2 returns to the Shell/Workbench after the entry is quit and will automatically select the next entry out of the playback queue. Normally this will be the sequential entry.
 
-Combined with the argument @{"RANDOM" LINK Chapter-1-5-15} this will be a random entry.
+Combined with the argument @{"RANDOM" LINK Chapter-1-5-16} this will be a random entry.
 
 You can always break a loop with the keys CTRL-C.
 @ENDNODE
 
 
-@NODE Chapter-1-5-18 "Amiga Demo Launcher Version 2: List of the ADL2 arguments / RESTORESYSTIME"
+@NODE Chapter-1-5-19 "Amiga Demo Launcher Version 2: List of the ADL2 arguments / RESTORESYSTIME"
 @{B}RESTORESYSTIME@{UB}
 
 Every entry that turns the system off, stops the system time. If you watch the entry for a longer time, the system time won't be updated after you quit the entry and return to the system. The time will be delayed.
@@ -416,7 +426,7 @@ The argument RESTORESYSTIME prevents this and adds the duration of the entry to 
 @ENDNODE
 
 
-@NODE Chapter-1-5-19 "Amiga Demo Launcher Version 2: List of the ADL2 arguments / SOFTRESET"
+@NODE Chapter-1-5-20 "Amiga Demo Launcher Version 2: List of the ADL2 arguments / SOFTRESET"
 @{B}SOFTRESET@{UB}
 
 The argument does an automatic software reset after the running entry was quit manually regardless of any timer settings of the @{"reset device" LINK Chapter-2-3-14}.
@@ -463,42 +473,42 @@ Just to play one entry:
 
 Or if you want to play entry number 3 you could do this:
 
-1> RSE-ADL2 @{"PLAYENTRY" LINK Chapter-1-5-11} 3
+1> RSE-ADL2 @{"PLAYENTRY" LINK Chapter-1-5-12} 3
 
 
 Or if you didn't select any playtime values while you created the playlist with @{"Create Demo Playlist" LINK Chapter-2}, call all entries in a loop:
 
-1> RSE-ADL2 @{"LOOP" LINK Chapter-1-5-17}
+1> RSE-ADL2 @{"LOOP" LINK Chapter-1-5-18}
 
 
 Or you decide to play entries randomly:
 
-1> RSE-ADL2 @{"RANDOM" LINK Chapter-1-5-15}
+1> RSE-ADL2 @{"RANDOM" LINK Chapter-1-5-16}
 
 
 Or if you didn't select any playtime values while you created the playlist with Create Demo Playlist, play all entries in a loop randomly:
 
-1> RSE-ADL2 @{"LOOP" LINK Chapter-1-5-17} @{"RANDOM" LINK Chapter-1-5-15}
+1> RSE-ADL2 @{"LOOP" LINK Chapter-1-5-18} @{"RANDOM" LINK Chapter-1-5-16}
 
 
 Or you want to play the entries endlessly that after the last entry is played and restart with the first entry:
 
-1> RSE-ADL2 @{"ENDLESS" LINK Chapter-1-5-16}
+1> RSE-ADL2 @{"ENDLESS" LINK Chapter-1-5-17}
 
 
 Or if you didn't select any playtime values while you created the playlist with @{"Create Demo Playlist" LINK Chapter-2}, play all entries in a loop endlessly:
 
-1> RSE-ADL2 @{"LOOP" LINK Chapter-1-5-17} @{"ENDLESS" LINK Chapter-1-5-16}
+1> RSE-ADL2 @{"LOOP" LINK Chapter-1-5-18} @{"ENDLESS" LINK Chapter-1-5-17}
 
 
 Or if you didn't select any playtime values while you created the playlist with Create Demo Playlist, call all entries in a loop randomly and endlessly:
 
-1> RSE-ADL2 @{"LOOP" LINK Chapter-1-5-17} @{"RANDOM" LINK Chapter-1-5-15} @{"ENDLESS" LINK Chapter-1-5-16}
+1> RSE-ADL2 @{"LOOP" LINK Chapter-1-5-18} @{"RANDOM" LINK Chapter-1-5-16} @{"ENDLESS" LINK Chapter-1-5-17}
 
 
 Or you want to use the reset device and replay megademos as WHDLoad files with multiple parts, for example 5 parts that can be only quit with the left mouse button. Each part should have a duration of 20 seconds.
 
-1> RSE-ADL @{"SECS" LINK Chapter-1-5-13} 20 @{"MULTIPART" LINK Chapter-1-5-14} 5
+1> RSE-ADL @{"SECS" LINK Chapter-1-5-14} 20 @{"MULTIPART" LINK Chapter-1-5-15} 5
 
 
 Or you want to remove the ADL2 from memory before all entries are played:
@@ -553,16 +563,16 @@ If there's a different program already using this vector, the ADL2 notices this 
 @NODE Chapter-1-7-3 "ADL2: Technical details / Run modes"
 @{B}Run modes@{UB}
 
-The ADL2 has three run modes. "OCS vanilla" and "AGA vanilla" work like a degrader. Run mode "Turbo" leaves everything untouched.
+The ADL2 has three run modes. "OCS vanilla" and "AGA vanilla" work like a degrader. Run mode "Plain/Turbo" leaves everything untouched.
 
-For every run mode all important CUSTOM/CIA chip registers will be saved before the entry is played and restored after the entry returns to the system.
+For every run mode all important custom/CIA chip registers will be saved before the entry is played and restored after the entry returns to the system.
 This ensures that entries which don't restore these registers properly will not freeze the system.
 
   @{" OCS vanilla " LINK Chapter-1-7-3-1}
 
   @{" AGA vanilla " LINK Chapter-1-7-3-2}
 
-  @{" Turbo " LINK Chapter-1-7-3-3}
+  @{" Plain/Turbo " LINK Chapter-1-7-3-3}
 @ENDNODE
 
 
@@ -583,11 +593,9 @@ The "OCS vanilla" run mode does the following:
 
 Allocate all fast memory if available so that the entry is only loaded into chip memory and can only allocate chip memory itself.
 Some very old OCS intros/cracktros from 1987 or early 1988 don't expect that they could be loaded into fast memory and all data for the DMA be unaccessible. As a result, you won't hear any music and get a blanked display.
-
 A two colour PAL 15 kHz lores screen is opened in front of a potential graphic-card screen and all AGA registers are reset to OCS/ECS compatible values.
-Additionally the mouse pointer is blanked to avoid the vertical bar effect if an entryis played that doesn't turn off sprite DMA correctly.
-
-If the vector table base is moved into fast memory, the VBR register is moved to $00000000 so that old OCS intros/cracktros can initialize their interrupts properly.
+Additionally the mouse pointer is blanked to avoid the vertical bar effect if an entry is played that doesn't turn off sprite DMA correctly.
+If the vector table base is moved into fast memory, the VBR register is moved to $000000 so that old OCS intros/cracktros can initialize their interrupts properly.
 
 These specific characteristics of 680x0 processors are disabled:
 
@@ -630,11 +638,9 @@ The "AGA vanilla" run mode does the following:
 
 Allocate all fast memory if available so that the entry is only loaded into chip memory and can only allocate chip memory itself.
 Some old AGA intros/demos don't expect that they could be loaded into fast memory and all data for the DMA be unaccessible. As a result, you won't hear any music and get a blanked display.
-
 A two colour PAL 15 kHz lores screen is opened in front of a potential graphic-card screen and all AGA registers are reset to OCS/ECS compatible values.
 Additionally the mouse pointer is blanked to avoid the vertical bar effect if an entry is played that doesn't turn off sprite DMA correctly.
-
-If the vector table base is moved into fast memory, the VBR register is moved to $0000000 that old intros can initialize their interrupts properly.
+If the vector table base is moved into fast memory, the VBR register is moved to $00000 that old intros can initialize their interrupts properly.
 
 These specific characteristics of the processors are disabled:
 
@@ -656,8 +662,8 @@ These specific characteristics of the processors are disabled:
 @ENDNODE
 
 
-@NODE Chapter-1-7-3-3 "ADL2: Technical details / run modes / Turbo"
-@{B}Turbo@{UB}
+@NODE Chapter-1-7-3-3 "ADL2: Technical details / run modes / Plain/Turbo"
+@{B}Plain/Turbo@{UB}
 
 This mode is for OCS/ECS/AGA file intros/demos, which don't have any problems with faster CPUs or available fast memory and observed common programming guidelines:
 
@@ -665,7 +671,7 @@ This mode is for OCS/ECS/AGA file intros/demos, which don't have any problems wi
 - absolute addresses itself
 - not using self modifying code
 
-The "Turbo" run mode does the following with your machine:
+The "Plain/Turbo" run mode does the following with your machine:
 
 A two colour PAL 15 kHz lores screen is opened in front of a potential graphic-card screen and all AGA registers are reset to OCS/ECS compatible values.
 Additionally the mouse pointer is blanked to avoid the vertical bar effect if an entry is played that doesn't turn off sprite DMA correctly.
@@ -674,6 +680,8 @@ Additionally the mouse pointer is blanked to avoid the vertical bar effect if an
 
 @NODE Chapter-1-8 "ADL2: Known bugs"
 @{B}1-8 Known bugs@{UB}
+
+With the @{B}OS2.x asl.library@{UB} the file pattern filter of the file requester doesn't work correctly. All files are excluded. You have to clear the pattern field to get the files displayed.
 
 During testing there were some problems in conjunction with the commodity
 @{B}Master Control Program (MCP)@{UB}.
@@ -712,7 +720,7 @@ Prerun mode: An optional AmigaDOS script can be run before the actual entry.
 
 Furthermore, some global script configuration settings can be defined:
 
-The playlist supports the ADL2 @{"run modes" LINK Chapter-1-7-2}, the arguments @{"PRERUNSCRIPT" LINK Chapter-1-5-12} and @{"MINS/SECS" LINK Chapter-1-5-13} and can be automatically saved into an entry configuration file.
+The playlist supports the ADL2 @{"run modes" LINK Chapter-1-7-2}, the arguments @{"PRERUNSCRIPT" LINK Chapter-1-5-13} and @{"MINS/SECS" LINK Chapter-1-5-14} and can be automatically saved into an entry configuration file.
 
 If enabled, one configuration file is created for each entry, with a filename syntax of @{I}_dl.entryname@{UI} (truncated to max 30 characters).
 

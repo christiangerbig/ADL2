@@ -290,6 +290,11 @@
 ; - Argument REMOVE: Es wird auch die Kennung gelöscht
 ; - Schwarzer Bildschirm jetzt auch unter OS 2.0
 
+; - CL-Bug unter OS 2.x: DIWHIGH =$00ff anstatt $0000 -> Blank-Screen bei einigen
+;   alten OCS-Intros.
+
+
+
 
 	SECTION code_and_variables,CODE
 
@@ -4844,8 +4849,8 @@ rd_execute_prerunscript_ok
 ; d0.l	... Rückgabewert: Return-Code
 	CNOP 0,4
 rd_open_pal_screen
-	lea	rd_pal_screen_tags(pc),a1
 	sub.l	a0,a0			; Keine NewScreen-Struktur
+	lea	rd_pal_screen_tags(pc),a1
 	CALLINT OpenScreenTagList
 	move.l	d0,rd_pal_screen(a3)
 	bne.s	rd_open_pal_screen_ok
@@ -4956,8 +4961,8 @@ rd_blank_display_loop
 	move.l	rd_demofile_path(a3),a0
 	cmp.b	#RUNMODE_OCS_VANILLA,pqe_runmode(a0)
 	bne.s	rd_blank_display_skip
-	moveq	#0,d0			; OCS Standart Screen-Moduli
-	move.l	d0,_CUSTOM+BPL1MOD
+	moveq	#0,d0			
+	move.l	d0,_CUSTOM+BPL1MOD	; OCS Standart Screen-Moduli OS 1.2/1.3
 rd_blank_display_skip
 	bra.s	rd_blank_display_quit
 
