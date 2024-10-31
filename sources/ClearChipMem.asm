@@ -73,9 +73,6 @@ variables_size			RS.B 0
 	lea	variables(pc),a3
 	bsr.s	init_variables
 	bsr.s	alloc_chip_memory
-wm
-	btst	#2,$dff016
-	bne.s	wm
 	bsr.s	free_chip_memory
 	movem.l	(a7)+,d2-d7/a2-a6
 	rts
