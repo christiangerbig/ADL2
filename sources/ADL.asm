@@ -3664,7 +3664,7 @@ qh_check_event_refresh_window
 	move.l	a5,a0
 	CALLGADTOOLS GT_BeginRefresh
 	move.l	a5,a0			; Window
-	moveq	#TRUE,d0
+	moveq	#0,d0
 	CALLLIBS GT_EndRefresh
 
 qh_process_window_events_ok
