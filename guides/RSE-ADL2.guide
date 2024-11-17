@@ -1,6 +1,6 @@
 @DATABASE
 
-@$VER: RSE-ADL2.guide 1.02 (2024-10-18)
+@$VER: RSE-ADL2.guide 1.03 (2024-11-13)
 @AUTHOR Dissident and Yulquen74 of Resistance
 @(C) 2024 by Resistance
 
@@ -256,6 +256,8 @@ Arguments of the entry player:
   @{" RESTORESYSTIME " LINK Chapter-1-5-19}
 
   @{" SOFTRESET " LINK Chapter-1-5-20}
+
+  @{" RESETONERROR " LINK Chapter-1-5-21}
 @ENDNODE
 
 
@@ -430,6 +432,13 @@ The argument RESTORESYSTIME prevents this and adds the duration of the entry to 
 @{B}SOFTRESET@{UB}
 
 The argument does an automatic software reset after the running entry was quit manually regardless of any timer settings of the @{"reset device" LINK Chapter-2-3-14}.
+@ENDNODE
+
+
+@NODE Chapter-1-5-21 "Amiga Demo Launcher Version 2: List of the ADL2 arguments / RESETONERROR"
+@{B}RESETONERROR@{UB}
+
+If an error occurs during the exection of an entry, there will be an automatic software reset after 2 seconds.
 @ENDNODE
 
 

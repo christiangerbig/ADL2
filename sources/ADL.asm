@@ -1,7 +1,7 @@
 ; Programm:	AmigaDemoLauncher (ADL)
 ; Autor:	Christian Gerbig
-; Datum		31.10.2024
-; Version:	2.05
+; Datum		17.11.2024
+; Version:	2.06
 
 ; Requirements
 ; CPU:		68000+
@@ -309,6 +309,16 @@
 ;   die ID gelöscht
 ; - Code für Yulquen kann nun per Boolean-Variable aktiviert werden
 
+; V.2.06
+; - Argument QUIET: Jetzt wird auch die Start-Message unterdrückt
+; - Neues Argument RESETONERROR: Wird es angegeben, dann wird nach jedem Run
+;   Demo-Fehler nach 2s ein Reset ausgeführt
+; - Bei jedem Run Demo-Fehler wird jetzt die Indexnummer des Eintrags/Demos, der
+;   den Fehler erzeugt hat, ausgegeben
+; - Bugfix: "No more demos left to play" wurde doppelt ausggeben, weil der Check 2x
+;            aufgerufen wurde
+
+
 
 	SECTION code_and_variables,CODE
 
@@ -353,7 +363,7 @@
 	INCLUDE "hardware/intbits.i"
 
 
-	INCDIR "Daten:Asm-Sources/normsource-includes/"
+	INCDIR "Daten:Asm-Sources/custom-includes/"
 
 
 	INCLUDE "macros.i"
@@ -598,6 +608,7 @@ rd_arg_endless_enabled		RS.W 1
 rd_arg_loop_enabled		RS.W 1
 rd_arg_restoresystime_enabled	RS.W 1
 rd_arg_softreset_enabled	RS.W 1
+rd_arg_resetonerror_enabled	RS.W 1
 
 	RS_ALIGN_LONGWORD
 rd_serial_message_port		RS.L 1
@@ -681,6 +692,7 @@ cra_ENDLESS			RS.L 1
 cra_LOOP			RS.L 1
 cra_RESTORESYSTIME		RS.L 1
 cra_SOFTRESET			RS.L 1
+cra_RESETONERROR		RS.L 1
 
 cmd_results_array_size		RS.B 0
 
@@ -915,7 +927,10 @@ adl_check_queue_empty
 
 ; **** Demo-Charger ****
 dc_start
+	tst.w	dc_arg_quiet_enabled(a3)
+	beq.s	dc_start_skip
 	bsr	adl_print_intro_message
+dc_start_skip
 	bsr	dc_check_entries_number_max
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_read_arguments
@@ -1079,6 +1094,7 @@ adl_init_variables
 	move.w	d1,rd_arg_loop_enabled(a3)
 	move.w	d1,rd_arg_restoresystime_enabled(a3)
 	move.w	d1,rd_arg_softreset_enabled(a3)
+	move.w	d1,rd_arg_resetonerror_enabled(a3)
 
 	move.w	d0,rd_playtimer_delay(a3)
 	move.w	d0,rd_play_duration(a3)
@@ -1847,7 +1863,6 @@ adl_check_arg_remove
 	move.w	d0,adl_arg_remove_enabled(a3)
 	bra.s	adl_check_cmd_line_ok
 
-
 ; ** Demo-Charger Argument MAXENTRIES **
 	CNOP 0,4
 adl_check_arg_maxentries
@@ -2057,12 +2072,17 @@ adl_check_arg_loop
 
 ; ** Run-Demo Argument SOFTRESET **
 	move.l	cra_SOFTRESET(a2),d0
-	beq.s	adl_check_arg_softreset_skip
+	beq.s	rd_check_arg_resetonerror
 	tst.w	rd_arg_loop_enabled(a3)
-	beq.s	adl_check_arg_softreset_skip
+	beq.s	rd_check_arg_resetonerror
 	not.w	d0
 	move.w	d0,rd_arg_softreset_enabled(a3)
-adl_check_arg_softreset_skip
+
+; ** Run-Demo Argument RESETONERROR **
+rd_check_arg_resetonerror
+	move.l	cra_RESETONERROR(a2),d0
+	not.w	d0
+	move.w	d0,rd_arg_resetonerror_enabled(a3)
 	bra	adl_check_cmd_line_ok
 
 
@@ -3003,7 +3023,6 @@ dc_do_free_entries_buffer
 	bra.s	dc_free_entries_buffer_quit
 
 
-
 ; **** Queue-Handler ****
 ; Input
 ; Result
@@ -3302,7 +3321,6 @@ qh_create_bwd_button_skip
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,a4
 	move.l	d0,qh_bwd_button_gadget(a3)
-
 ; ** Integer Gadget **
 	lea	qh_new_gadget(pc),a1
 	move.w	#qh_integer_gadget_x_position,gng_LeftEdge(a1)
@@ -3321,7 +3339,6 @@ qh_create_bwd_button_skip
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,a4
 	move.l	d0,qh_integer_gadget_gadget(a3)
-
 ; ** Forward-Button Gadget **
 	lea	qh_new_gadget(pc),a1
 	move.w	#qh_fwd_button_x_position,gng_LeftEdge(a1)
@@ -3348,7 +3365,6 @@ qh_create_fwd_button_skip
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,a4
 	move.l	d0,qh_fwd_button_gadget(a3)
-
 ; ** Cycle Gadget **
 qh_create_cycle_gadget
 	lea	qh_new_gadget(pc),a1
@@ -3382,7 +3398,6 @@ qh_create_cycle_gadget_skip
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,a4
 	move.l	d0,qh_cycle_gadget_gadget(a3)
-
 ; ** Mutually-Exclusive Gadget **
 	lea	qh_new_gadget(pc),a1
 	move.w	#qh_mx_gadget_x_position,gng_LeftEdge(a1)
@@ -3413,7 +3428,6 @@ qh_create_mx_gadget_skip
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,a4
 	move.l	d0,qh_mx_gadget_gadget(a3)
-
 ; ** Positive-Button Gadget **
 	lea	qh_new_gadget(pc),a1
 	move.w	#qh_positive_button_x_position,gng_LeftEdge(a1)
@@ -3940,11 +3954,11 @@ adl_print_io_error
 	move.l	adl_dos_return_code(a3),d1
 	moveq	#ERROR_NO_FREE_STORE,d0
 	cmp.l	d0,d1
-	bge.s	adl_print_io_error_skip
+	bge.s	adl_print_io_error_skip1
 adl_print_io_error_quit
 	rts
 	CNOP 0,4
-adl_print_io_error_skip
+adl_print_io_error_skip1
 	lea	adl_error_header(pc),a0
 	move.l	a0,d2                   ; Header für Fehlermeldung
 	CALLDOS PrintFault
@@ -4016,14 +4030,14 @@ adl_close_dos_library
 
 
 ; Input
-; a0	... Zeiger auf Fehlertext
+; a0	... Zeiger auf Text
 ; d0.l	... Länge des Textes
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
 adl_print_text
 	move.l	adl_output_handle(a3),d1
-	move.l	a0,d2			; Zeiger auf Fehlertext
+	move.l	a0,d2			; Zeiger auf Text
 	move.l	d0,d3			; Anzahl der Zeichen zum Schreiben
 	CALLDOSQ Write
 
@@ -4070,7 +4084,7 @@ rd_start
 rd_play_loop
 	bsr	rd_check_queue
 	move.l	d0,adl_dos_return_code(a3)
-	bne	rd_cleanup_io_error
+	bne	rd_cleanup_cleared_sprite_data
 	bsr	rd_get_new_entry_offset
 	bsr	rd_get_demofile_name
 	move.l	d0,adl_dos_return_code(a3)
@@ -4183,10 +4197,6 @@ rd_cleanup_current_dir
 rd_cleanup_io_error
 	bsr	adl_print_io_error
 
-	bsr	rd_check_queue
-	move.l	d0,adl_dos_return_code(a3)
-	bne.s	rd_cleanup_cleared_sprite_data
-
 	bsr	rd_check_user_break
 	move.l	d0,adl_dos_return_code(a3)
 	bne.s	rd_cleanup_cleared_sprite_data
@@ -4213,6 +4223,39 @@ rd_cleanup_icon_library
 
 rd_quit
 	bra	adl_cleanup_read_arguments
+
+
+; Input
+; a0	... Zeiger auf Fehlerext
+; d0.l	... Länge des Textes
+; Result
+; d0.l	... Kein Rückgabewert
+	CNOP 0,4
+rd_print_error_text
+	movem.l	d0/a0,-(a7)
+	lea	rd_error_text_header_index(pc),a0
+	move.w	rd_entry_offset(a3),d1
+	subq.w	#1,d1			; Previous entry index
+        moveq	#2,d7
+	bsr	rp_dec_to_ascii
+	move.l	adl_output_handle(a3),d1
+	lea	rd_error_text_header(pc),a0
+	move.l	a0,d2			; Zeiger auf Text
+	moveq	#rd_error_text_header_end-rd_error_text_header,d3			; Anzahl der Zeichen zum Schreiben
+	CALLDOS Write
+	movem.l	(a7)+,d0/a0
+	move.l	adl_output_handle(a3),d1
+	move.l	a0,d2			; Zeiger auf Text
+	move.l	d0,d3			; Anzahl der Zeichen zum Schreiben
+	CALLLIBS Write
+	tst.w	rd_arg_resetonerror_enabled(a3)
+	bne.s	rd_print_error_text_quit
+	MOVEF.L	rd_error_message_delay,d1
+	CALLLIBS Delay
+	CALLEXECQ ColdReboot
+	CNOP 0,4
+rd_print_error_text_quit
+	rts
 
 
 ; Input
@@ -4446,8 +4489,8 @@ rd_get_active_screen_mode
 	CALLGRAF GetVPModeID
 	cmp.l	#INVALID_ID,d0
 	bne.s	rd_get_active_screen_mode_skip
-	lea	rd_error_text10(pc),a0
-	moveq	#rd_error_text10_end-rd_error_text10,d0
+	lea	rd_error_text8(pc),a0
+	moveq	#rd_error_text8_end-rd_error_text8,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -4684,9 +4727,9 @@ rd_open_demofile
 	CALLDOS Open
 	move.l	d0,rd_demofile_handle(a3)
 	bne.s	rd_open_demofile_ok
-	lea	rd_error_text11(pc),a0
-	moveq	#rd_error_text11_end-rd_error_text11,d0
-	bsr	adl_print_text
+	lea	rd_error_text9(pc),a0
+	moveq	#rd_error_text9_end-rd_error_text9,d0
+	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
@@ -4723,9 +4766,9 @@ rd_close_demofile
 rd_check_demofile_header
 	cmp.l	#MAGIC_COOKIE,rd_demofile_MAGIC_COOKIE(a3)
 	beq.s	rd_check_demofile_header_ok
-	lea	rd_error_text12(pc),a0
-	moveq	#rd_error_text12_end-rd_error_text12,d0
-	bsr	adl_print_text
+	lea	rd_error_text10(pc),a0
+	moveq	#rd_error_text10_end-rd_error_text10,d0
+	bsr	rd_print_error_text
 	MOVEF.L ERROR_FILE_NOT_OBJECT,d0
 	rts
 	CNOP 0,4
@@ -4774,9 +4817,9 @@ rd_set_new_current_dir
 	CALLDOS Lock
 	move.l	d0,rd_demofile_dir_lock(a3)
 	bne.s	rd_set_new_current_dir_skip
-	lea	rd_error_text13(pc),a0
-	moveq	#rd_error_text13_end-rd_error_text13,d0
-	bsr	adl_print_text
+	lea	rd_error_text11(pc),a0
+	moveq	#rd_error_text11_end-rd_error_text11,d0
+	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
@@ -4828,9 +4871,9 @@ rd_check_prerunscript_path_loop
 	addq.b	#1,d0
 	cmp.b	#adl_prerunscript_path_length-1,d0
 	blt.s	rd_check_prerunscript_path_skip
-	lea	rd_error_text14(pc),a0
-	moveq	#rd_error_text14_end-rd_error_text14,d0
-	bsr	adl_print_text
+	lea	rd_error_text12(pc),a0
+	moveq	#rd_error_text12_end-rd_error_text12,d0
+	bsr	rd_print_error_text
 	MOVEF.L	ERROR_INVALID_COMPONENT_NAME,d0
 	rts
         CNOP 0,4
@@ -4863,9 +4906,9 @@ rd_copy_prerunscript_path_loop
 	CALLDOS	SystemTagList
 	tst.l	d0
 	beq.s	rd_execute_prerunscript_ok
-	lea	rd_error_text15(pc),a0
-	moveq	#rd_error_text15_end-rd_error_text15,d0
-	bsr	adl_print_text
+	lea	rd_error_text13(pc),a0
+	moveq	#rd_error_text13_end-rd_error_text13,d0
+	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
@@ -4884,9 +4927,9 @@ rd_open_pal_screen
 	CALLINT OpenScreenTagList
 	move.l	d0,rd_pal_screen(a3)
 	bne.s	rd_open_pal_screen_ok
-	lea	rd_error_text16(pc),a0
-	moveq	#rd_error_text16_end-rd_error_text16,d0
-	bsr	adl_print_text
+	lea	rd_error_text14(pc),a0
+	moveq	#rd_error_text14_end-rd_error_text14,d0
+	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
@@ -4926,9 +4969,9 @@ rd_check_pal_screen_mode
 	CALLGRAF GetVPModeID
 	cmp.l	#PAL_MONITOR_ID|LORES_KEY,d0
 	beq.s	rd_check_pal_screen_mode_ok
-	lea	rd_error_text17(pc),a0
-	moveq	#rd_error_text17_end-rd_error_text17,d0
-	bsr	adl_print_text
+	lea	rd_error_text15(pc),a0
+	moveq	#rd_error_text15_end-rd_error_text15,d0
+	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
@@ -4948,9 +4991,9 @@ rd_open_invisible_window
 	CALLINT OpenWindowTagList
 	move.l	d0,rd_invisible_window(a3)
 	bne.s	rd_open_invisible_window_ok
-	lea	rd_error_text18(pc),a0
-	moveq	#rd_error_text18_end-rd_error_text18,d0
-	bsr	adl_print_text
+	lea	rd_error_text16(pc),a0
+	moveq	#rd_error_text16_end-rd_error_text16,d0
+	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
@@ -5059,9 +5102,9 @@ rd_load_demofile
 	CALLDOS LoadSeg
 	move.l	d0,rd_demofile_seglist(a3)
 	bne.s	rd_load_demofile_ok
-	lea	rd_error_text19(pc),a0
-	moveq	#rd_error_text19_end-rd_error_text19,d0
-	bsr	adl_print_text
+	lea	rd_error_text17(pc),a0
+	moveq	#rd_error_text17_end-rd_error_text17,d0
+	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
@@ -5112,8 +5155,8 @@ rd_check_icon_tooltypes
 	CALLICON GetDiskObject
 	move.l	d0,whdl_disk_object(a3)
 	bne.s	rd_check_tooltype_preload
-	lea	rd_error_text20(pc),a0
-	moveq	#rd_error_text20_end-rd_error_text20,d0
+	lea	rd_error_text18(pc),a0
+	moveq	#rd_error_text18_end-rd_error_text18,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -5309,45 +5352,45 @@ rd_set_playtimer
 	beq.s	rd_set_playtimer_ok
 	cmp.b	#SerErr_DevBusy,d0	; Serial-Device bereits in Benutzung ?
 	bne.s	rd_check_baud_mismatch
-	lea	rd_error_text21a(pc),a0
-	moveq	#rd_error_text21a_end-rd_error_text21a,d0
-	bsr	adl_print_text
+	lea	rd_error_text19a(pc),a0
+	moveq	#rd_error_text19a_end-rd_error_text19a,d0
+	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
 rd_check_baud_mismatch
 	cmp.b	#SerErr_BaudMismatch,d0	; Baudrate nicht von der Hardware unterstützt ?
 	bne.s	rd_check_invalid_parameters
-	lea	rd_error_text21b(pc),a0
-	moveq	#rd_error_text21b_end-rd_error_text21b,d0
-	bsr	adl_print_text
+	lea	rd_error_text19b(pc),a0
+	moveq	#rd_error_text19b_end-rd_error_text19b,d0
+	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
 rd_check_invalid_parameters
 	cmp.b	#SerErr_InvParam,d0	; Falsche Parameter ?
 	bne.s	rd_check_line_error
-	lea	rd_error_text21c(pc),a0
-	moveq	#rd_error_text21c_end-rd_error_text21c,d0
-	bsr	adl_print_text
+	lea	rd_error_text19c(pc),a0
+	moveq	#rd_error_text19c_end-rd_error_text19c,d0
+	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
 rd_check_line_error
 	cmp.b	#SerErr_LineErr,d0 	; Überlauf der Daten ?
 	bne.s	rd_check_no_data_set_ready
-	lea	rd_error_text21d(pc),a0
-	moveq	#rd_error_text21d_end-rd_error_text21d,d0
-	bsr	adl_print_text
+	lea	rd_error_text19d(pc),a0
+	moveq	#rd_error_text19d_end-rd_error_text19d,d0
+	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
 rd_check_no_data_set_ready
 	cmp.b	#SerErr_NoDSR,d0	; Data-Set nicht bereit ?
 	bne.s	rd_set_playtimer_ok
-	lea	rd_error_text21e(pc),a0
-	moveq	#rd_error_text21e_end-rd_error_text21e,d0
-	bsr	adl_print_text
+	lea	rd_error_text19e(pc),a0
+	moveq	#rd_error_text19e_end-rd_error_text19e,d0
+	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
@@ -5371,9 +5414,9 @@ rd_write_playtimer
 	CALLEXEC DoIO
 	move.b	io_Error(a2),d0
 	beq.s	rd_write_playtimer_ok
-	lea	rd_error_text22(pc),a0
-	moveq	#rd_error_text22_end-rd_error_text22,d0
-	bsr	adl_print_text
+	lea	rd_error_text20(pc),a0
+	moveq	#rd_error_text20_end-rd_error_text20,d0
+	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
@@ -5627,9 +5670,9 @@ rd_execute_whdload_slave
 	CALLDOS SystemTagList
 	tst.l	d0
 	beq.s	rd_execute_whdload_slave_skip
-	lea	rd_error_text23(pc),a0
-	moveq	#rd_error_text23_end-rd_error_text23,d0
-	bsr	adl_print_text
+	lea	rd_error_text21(pc),a0
+	moveq	#rd_error_text21_end-rd_error_text21,d0
+	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	rts
 	CNOP 0,4
@@ -6999,7 +7042,8 @@ adl_cmd_usage_text
 	DC.B "ENDLESS                Play entries of playback queue endlessly",ASCII_LINE_FEED
 	DC.B "LOOP                   Play entries until no more entries left to play",ASCII_LINE_FEED
 	DC.B "RESTORESYSTIME         Restore system time after entry was played",ASCII_LINE_FEED
-	DC.B "SOFTRESET              Automatic reset after (manually) quitting entry",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B "SOFTRESET              Automatic reset after (manually) quitting entry",ASCII_LINE_FEED
+	DC.B "RESETONERROR           Automatic reset after an error during entry execution",ASCII_LINE_FEED,ASCII_LINE_FEED
 adl_cmd_usage_text_end
 	EVEN
 
@@ -7029,7 +7073,8 @@ adl_cmd_template
 	DC.B "ENDLESS/S,"
 	DC.B "LOOP/S,"
 	DC.B "RESTORESYSTIME/S,"
-	DC.B "SOFTRESET/S",0
+	DC.B "SOFTRESET/S,"
+	DC.B "RESETONERROR/S",0
 	EVEN
 
 
@@ -7343,9 +7388,10 @@ qh_negative_button_text		DC.B "Quit",0
 
 
 qh_show_entry_header
-	DC.B ASCII_LINE_FEED,"Nr."
+	DC.B ASCII_LINE_FEED,"#"
 qh_show_entry_current_number
-	DC.B "   ",34
+	DS.B 2
+	DC.B " ",34
 qh_show_entry_current_number_end
 	EVEN
 qh_show_entry_space
@@ -7524,113 +7570,112 @@ rd_message_text5_end
 	EVEN
 
 
+rd_error_text_header
+	DC.B "#"
+rd_error_text_header_index
+	DS.B 2
+	DC.B " "
+rd_error_text_header_end
+	EVEN
 rd_error_text1
-	DC.B ASCII_LINE_FEED,"Couldn't open ciaa.resource",ASCII_LINE_FEED
+	DC.B "Couldn't open ciaa.resource",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text1_end
 	EVEN
 rd_error_text2
-	DC.B ASCII_LINE_FEED,"Couldn't open ciab.resource",ASCII_LINE_FEED
+	DC.B "Couldn't open ciab.resource",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text2_end
 	EVEN
 rd_error_text3
-	DC.B ASCII_LINE_FEED,"Couldn't open timer.device",ASCII_LINE_FEED
+	DC.B "Couldn't open timer.device",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text3_end
 	EVEN
 rd_error_text4
-	DC.B ASCII_LINE_FEED,"Couldn't open icon.library",ASCII_LINE_FEED
+	DC.B "Couldn't open icon.library",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text4_end
 	EVEN
 rd_error_text5
-	DC.B ASCII_LINE_FEED,"Couldn't create serial message port",ASCII_LINE_FEED
+	DC.B "Couldn't create serial message port",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text5_end
 	EVEN
 rd_error_text6
-	DC.B ASCII_LINE_FEED,"Couldn't open serial.device",ASCII_LINE_FEED
+	DC.B "Couldn't open serial.device",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text6_end
 	EVEN
 rd_error_text7
-	DC.B ASCII_LINE_FEED,"Couldnt allocate sprite data structure"
+	DC.B "Couldnt allocate sprite data structure"
 rd_error_text7_end
 	EVEN
 rd_error_text8
-	DC.B ASCII_LINE_FEED,"Couldnt allocate colour values table"
+	DC.B "Invalid monitor ID",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text8_end
 	EVEN
 rd_error_text9
-	DC.B ASCII_LINE_FEED,"Couldnt allocate colour cache"
+	DC.B "Couldn't open demo file",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text9_end
 	EVEN
 rd_error_text10
-	DC.B ASCII_LINE_FEED,"Invalid monitor ID",ASCII_LINE_FEED
+	DC.B "No executable demo file"
 rd_error_text10_end
 	EVEN
 rd_error_text11
-	DC.B ASCII_LINE_FEED,"Couldn't open demo file",ASCII_LINE_FEED
+	DC.B "Couldn't find demo directory",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text11_end
 	EVEN
 rd_error_text12
-	DC.B ASCII_LINE_FEED,"No executable demo file"
+	DC.B "Prerun script filepath is longer than 63 characters"
 rd_error_text12_end
 	EVEN
 rd_error_text13
-	DC.B ASCII_LINE_FEED,"Couldn't find demo directory",ASCII_LINE_FEED
+	DC.B "Couldn't execute prerun script file",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text13_end
 	EVEN
 rd_error_text14
-	DC.B ASCII_LINE_FEED,"Prerun script filepath is longer than 63 characters"
+	DC.B "Couldn't open degrade screen",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text14_end
 	EVEN
 rd_error_text15
-	DC.B ASCII_LINE_FEED,"Couldn't execute prerun script file",ASCII_LINE_FEED
+	DC.B "Lores PAL screen not supported",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text15_end
 	EVEN
 rd_error_text16
-	DC.B ASCII_LINE_FEED,"Couldn't open degrade screen",ASCII_LINE_FEED
+	DC.B "Couldn't open invisible window",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text16_end
 	EVEN
 rd_error_text17
-	DC.B ASCII_LINE_FEED,"Lores PAL screen not supported",ASCII_LINE_FEED
+	DC.B "Couldn't load demo file",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text17_end
 	EVEN
 rd_error_text18
-	DC.B ASCII_LINE_FEED,"Couldn't open invisible window",ASCII_LINE_FEED
+	DC.B "Couldn't open WHDLoad .info file",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text18_end
 	EVEN
-rd_error_text19
-	DC.B ASCII_LINE_FEED,"Couldn't load demo file",ASCII_LINE_FEED
-rd_error_text19_end
+rd_error_text19a
+	DC.B "Serial device in use",ASCII_LINE_FEED,ASCII_LINE_FEED
+rd_error_text19a_end
+	EVEN
+rd_error_text19b
+	DC.B "Baud rate not supported by hardware",ASCII_LINE_FEED,ASCII_LINE_FEED
+rd_error_text19b_end
+	EVEN
+rd_error_text19c
+	DC.B "Bad parameter",ASCII_LINE_FEED,ASCII_LINE_FEED
+rd_error_text19c_end
+	EVEN
+rd_error_text19d
+	DC.B "Hardware data overrun",ASCII_LINE_FEED,ASCII_LINE_FEED
+rd_error_text19d_end
+	EVEN
+rd_error_text19e
+	DC.B "No data set ready",ASCII_LINE_FEED,ASCII_LINE_FEED
+rd_error_text19e_end
 	EVEN
 rd_error_text20
-	DC.B ASCII_LINE_FEED,"Couldn't open WHDLoad .info file",ASCII_LINE_FEED
+	DC.B "Write to serial port failed",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text20_end
 	EVEN
-rd_error_text21a
-	DC.B ASCII_LINE_FEED,"Serial device in use",ASCII_LINE_FEED
-rd_error_text21a_end
-	EVEN
-rd_error_text21b
-	DC.B ASCII_LINE_FEED,"Baud rate not supported by hardware",ASCII_LINE_FEED
-rd_error_text21b_end
-	EVEN
-rd_error_text21c
-	DC.B ASCII_LINE_FEED,"Bad parameter",ASCII_LINE_FEED
-rd_error_text21c_end
-	EVEN
-rd_error_text21d
-	DC.B ASCII_LINE_FEED,"Hardware data overrun",ASCII_LINE_FEED
-rd_error_text21d_end
-	EVEN
-rd_error_text21e
-	DC.B ASCII_LINE_FEED,"No data set ready",ASCII_LINE_FEED
-rd_error_text21e_end
-	EVEN
-rd_error_text22
-	DC.B ASCII_LINE_FEED,"Write to serial port failed",ASCII_LINE_FEED
-rd_error_text22_end
-	EVEN
-rd_error_text23
-	DC.B ASCII_LINE_FEED,"Couldn't execute WHDLoad slave file",ASCII_LINE_FEED
-rd_error_text23_end
+rd_error_text21
+	DC.B "Couldn't execute WHDLoad slave file",ASCII_LINE_FEED,ASCII_LINE_FEED
+rd_error_text21_end
 	EVEN
 
 
@@ -7659,7 +7704,7 @@ whdl_slave_cmd_line_path
 	EVEN
 
 
-	DC.B "$VER: Amiga Demo Launcher 2.05 (31.10.24)",0
+	DC.B "$VER: Amiga Demo Launcher 2.06 (17.11.24)",0
 	EVEN
 
 	END

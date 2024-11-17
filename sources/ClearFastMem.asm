@@ -1,6 +1,6 @@
-; Programm:	ClearChipMem
+; Programm:	ClearFastMem
 ; Autor:	Christian Gerbig
-; Datum		25.10.2024
+; Datum		16.11.2024
 ; Version:	1.0
 
 
@@ -64,8 +64,8 @@
 
 	RSRESET
 
-chip_memory_block		RS.L 1
-chip_memory_block_size		RS.L 1
+fast_memory_block		RS.L 1
+fast_memory_block_size		RS.L 1
 
 variables_size			RS.B 0
 
@@ -73,8 +73,8 @@ variables_size			RS.B 0
 	movem.l d2-d7/a2-a6,-(a7)
 	lea	variables(pc),a3
 	bsr.s	init_variables
-	bsr.s	alloc_chip_memory
-	bsr.s	free_chip_memory
+	bsr.s	alloc_fast_memory
+	bsr.s	free_fast_memory
 	movem.l	(a7)+,d2-d7/a2-a6
 	moveq	#TRUE,d0
 	rts
@@ -95,56 +95,56 @@ init_variables
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-alloc_chip_memory
-	move.l	#MEMF_CHIP|MEMF_LARGEST,d1
+alloc_fast_memory
+	move.l	#MEMF_FAST|MEMF_LARGEST,d1
 	move.l	d1,d2
 	move.l	d1,d3
 	or.l	#MEMF_CLEAR,d3
 	CALLEXEC AvailMem
-	move.l	d0,chip_memory_block_size(a3)
-	bne.s	alloc_chip_memory_skip1
+	move.l	d0,fast_memory_block_size(a3)
+	bne.s	alloc_fast_memory_skip1
 	rts
 	CNOP 0,4
-alloc_chip_memory_skip1
-	move.l	d3,d1			; Größten Chip-Memory Block belegen und löschen
+alloc_fast_memory_skip1
+	move.l	d3,d1			; Größten Fast-Memory Block belegen und löschen
 	CALLLIBS AllocMem
-	move.l	d0,chip_memory_block(a3)
+	move.l	d0,fast_memory_block(a3)
 	move.l	d0,a2
-alloc_chip_memory_loop
-	move.l	d2,d1			; Nächster größter Chip-Memory Block
+alloc_fast_memory_loop
+	move.l	d2,d1			; Nächster größter Fast-Memory Block
 	CALLLIBS AvailMem
 	move.l	d0,(a2)+
-	bne.s	alloc_chip_memory_skip2
+	bne.s	alloc_fast_memory_skip2
 	rts
 	CNOP 0,4
-alloc_chip_memory_skip2
-	move.l	d3,d1			; Nächsten größter Chip-Memory Block blegen und löschen
+alloc_fast_memory_skip2
+	move.l	d3,d1			; Nächsten größter Fast-Memory Block blegen und löschen
 	CALLLIBS AllocMem
 	move.l	d0,(a2)+		; Zeiger auf Speichernlock
-	bra.s	alloc_chip_memory_loop
+	bra.s	alloc_fast_memory_loop
 
 
 ; Input
 ; Result
 ; d0.l	... Kein Rückgabewert
 	CNOP 0,4
-free_chip_memory
-	move.l	chip_memory_block(a3),d2
-	beq.s	free_chip_memory_quit
+free_fast_memory
+	move.l	fast_memory_block(a3),d2
+	beq.s	free_fast_memory_quit
 	move.l	d2,a2
 	move.l	_SysBase(pc),a6
-free_chip_memory_loop
+free_fast_memory_loop
 	move.l	(a2)+,d0		; Größe des Speicherbereichs
-	beq.s	free_chip_memory_skip2
+	beq.s	free_fast_memory_skip2
 	move.l	(a2)+,a1		; Zeiger auf Speicherbereich
 	CALLLIBS FreeMem
-	bra.s	free_chip_memory_loop
+	bra.s	free_fast_memory_loop
 	CNOP 0,4
-free_chip_memory_skip2
+free_fast_memory_skip2
 	move.l	d2,a1			; Zeiger auf ersten größten Block
-	move.l	chip_memory_block_size(a3),d0 ; Größe des ersten größten Blocks
+	move.l	fast_memory_block_size(a3),d0 ; Größe des ersten größten Blocks
 	CALLLIBS FreeMem
-free_chip_memory_quit
+free_fast_memory_quit
 	rts
 
 
