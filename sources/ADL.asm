@@ -1,8 +1,3 @@
-; Programm:	AmigaDemoLauncher (ADL)
-; Autor:	Christian Gerbig
-; Datum		17.11.2024
-; Version:	2.06
-
 ; Requirements
 ; CPU:		68000+
 ; Chipset:	OCS/ECS PAL+
@@ -11,313 +6,143 @@
 
 ; Historie / Changes
 
-; Lader für Intros und Demos "DemoSelector"
-; Mit CoolCapture-Abfrage
-; Level-7-Interrupt: Code kann optional aktiviert werden
-;                    Funktion: Mit einem Level7-Taster kann per Level-7-Interrupt
-;                    ein Softare-Reset ausgelöst werdem und das Reset-Programm
-;                    wird wieder als CoolCapture installiert. Sehr hilfreich bei
-;                    Intros wie "Tristar-Party", die die Coolcapture löschen
-; Mit erweiterter Fehlerausgabe über IOErr()
-; Mit Abfrage der WB-Message als Option, jedoch bis jetzt nicht genutzt
-; Mit 123-Zeichen Pfadlänge für Demo
-; Mit 63-Zeichen Pfadlänge für Scriptfile
-; Mit "AGA 020" - Modus
-; Mit ID für Trap0-Routine
-; Völlig überarbeiterter Prozessablauf, es kann jetzt der DemoSelector immer
-; wieder aufgerufen werden und es können jederzeit weitere Demos hinzugefügt
-; werden
-; Mit ReadArgs()-Nutzung
-; Mit überarbeiteter Timer-Value-Parsing-Routine
-; Mit Berücksichtigung eines Pre-Script-Files bei der Playlist
-; Prüfung des Dateinamen auf maximale Länge
-; Stoppen des Timers nach vorzeitigem Verlassen des Demos durch ein Tastatur-
-; Reset mit der Reset-Routine
-; Entfernen des Reset-Programms nach einem Tastatur-Reset, wenn bereits alle
-; Demos ausgeführt wurden. Jedoch nur, wenn vorher RunDemo ohne die Option
-; ENDLESS aufgerufen wurde.
-; Beim Reset wird durch einen gefärbten Playfieldschirm angezeigt, dass der Demo
-; Launcher im Speicher noch aktiv ist
-; Wird beim Reset die rechte Maustaste gedrückt, dann wird der Demo Launcher
-; aus dem Speicher entfernt.
-; Fehlerabfrage verfeinert
-; Genauere Fehlermeldungen
-; Es werden im Dateirequester mehr Endungen ausmaskiert
-; Nach dem Parsen der Playliste wird ausgegeben, wie viele Einträge noch in
-; die Wiedergabeliste transferiert werden können
-
-; Demo-Abspieler "RunDemo"
-; Dummy-Screen mit Dummy-Fenster wird in Schwarz umgeblendet
-; Mit exe-file-Test
-; Mit Aktivierung der Reset-Routine
-; Mit erweiterter Fehlerausgabe IOError()
-; Mit Abfrage der WB-Message als Option, jedoch bis jetzt nicht genutzt
-; Mit 123-Zeichen Pfadlänge für Demo
-; Mit 63-Zeichen Pfadlänge für Scriptfile
-; Mit "AGA 020"-Startmodus
-; Mit Abschalten der 68030/68040-MMU
-; Mit geänderter NOFASTMEM-Routine
-; Mit Rückkehr zur WB und wieder Einblenden des Screens
-; Aktivieren des Zurücksetzens Level-7-interrupt-vektors (optional im Code)
-; Mit ReadArgs()-Nutzung
-; Mit Ausgabe des Strings über das serial.device
-; Mit neuen Argumenten
-; Mit geänderter 68040/60 MMU-Routine
-; Ab- und Anschalten der 68030/40/60 MMU (optional im Code)
-; Mit überarbeiteter Timer-Value-Parsing-Routine
-; Mit dem Argument scriptfile
-; Prüfung der Dateinamen auf maximale Länge
-; Stoppen des Timers bei vorzeitigem Verlassen des Demos
-; Entfernen des Demo Launchers aus dem Speicher nach dem Verlassen des
-; letzten Demos, wenn nicht das Argument ENDLESS angegeben wurde
-; Abschalten der 040/060-MMU erneut geändert. 030-MMU-Routine deaktiviert,
-; kann aber optional angeschaltet werden
-; Diese Version mit dem Abschalten der MMU funktioniert auf realem A1200/060
-; beim Test mit Polka Brothers/FridayAtEight und Coccon/Catabasis. Die Demos
-; werden nicht verlangsamt abgespielt !
-; Neues Argument REMOVE: Demo Launcher wird vorzeitig aus dem Speicher ent-
-; fernt
-; Fehlerausgabe bei Nichtladen der Datei verfeinert und korrigiert
-; Fehlerabfrage korrigiert
-; Ausgabe des Namens des Demos das ausgeführt wird
-; Änderung des Arguments scriptfile in PRERUNSCRIPT
-
-; Gesamtprogramm "AmigaDemoLauncher"
-; Neues Argument NEWENTRY: Manuelles Erstellen eines Eintrags über den Amiga
-; Demo Launcher ohne eine Playlist zu laden
-; Neues Argument QUIET: Wenn keine interne Playlist vorhanden ist, dann wird
-; der Dateirequester unterdrückt, der Amiga Demo Launcher vorzeitig beendet
-; und der Returncode 5 für eine Batch-Verarbeitung zurückgegeben zurückgegeben
-; Neues Argument SHOWQUEUE: Anzeigen des Inhalts der Playback Queue mit
-; laufender Nummer, Demoname und Tag-Status
-; Neues Argument PLAYENTRY: Abspielen eines bestimmten Eintrags aus der
-; Playback Queue
-; Lokale Optimierungen
-; Equals erweitert
-; Texte geändert
-; Beseitigung Fehlerausgabe bei Speicherplatzmangel
-; File-Requester: Je nachdem, ob die Workbench geladen wurde oder nicht
-; variert der Cancel-Text und die darauffolgende Aktion: "Quit" -> Rückkehr
-; zur Shell, "Reboot" -> Software-Reset
-; Kurzer Hinweis auf HELP argument nur bei Start von der WB aus.
-; Weitere CacheClearU-Aufrufe eingefügt
-; Falsche Ermittlung des Zeigers auf die ColorMap-Struktur korrigiert
-; Pattern-String für File-Requester geändert
-; Fehlerhafte Abfrage, ob ein Software-Reset bei nicht geladener WB ausge-
-; führt wird oder nicht war an den Status der geladenen/nicht geladenen WB
-; gebunden -> Reset nach Transferieren einer Playliste aus einem CLI heraus,
-; ohne dass die WB geladen ist. Lösung: Eine neue Variable "dc_reset_active"
-; wird nun abgefragt und nur auf TRUE gesetzt, wenn im File-Requester der
-; Button "Reboot" existiert
-; Longword-Alignment bei Variablen durch Dummies garantiert
-; Reihenfolge der Aktivierung MMU/Caches bei "AGA 020"-Modus geändert: Erst
-; werden die Caches aktiviert, dann die MMU
-; "No AGA" runmode: Nun wird auch die MMU deaktiviert
-; Abfrage der AGA-Chip-Version verbessert
-; Argument SOFTRESET: Wird nur ausgeführt, wenn die Argumente LOOP und QUIET
-; nicht angegeben wurden. Bei QUIET erfolgt nur eine Ausführung, wenn Demos
-; in der Playback Queue sind.
-; Reboot-File-Requester: Kein Reset, wenn keine Datei ausgewählt wurde, oder
-; es einen Fehler > 5 gab. Es erfolgt die Fehlerausgabe. Wurde keine weitere
-; Datei ausgewählt, dann erfolgt ein Reset.
-; NoAGA Startmode: Es wird bei der MMU config für den Instruction Cache der
-; Modus "cache inhibited, precise" anstatt "cachable, writethrough" verwendet
-; Aufruf von PFLUSHA bevor die MMU deaktiviert wird
-; Es werden jetzt alle wichtigen Hardware-Register wieder hergestellt oder
-; zurück gesetzt
-; Wiederherstellen des unteren 1MB CHIP-Memories im "OCS"-Startmode hat sich
-; als nicht prakatikabel erwiesen
-; Neue Startmodes: "Stock-OCS", "Stock-AGA" und "Fast-OCS/AGA" ersetzen und
-; erweitern die alten.
-; "Stock-OCS"	= 68000 downgrade/OCS downgrade/NOFASTMEM
-; "Stock-AGA"	= 68020 downgrade/NOFASTMEM
-; "Fast-OCS/AGA"	= keine Einschränkungen
-; Geänderte MMU-030 off-Routine, die jetzt die Translation-Register bei der
-; Konfiguration berücksichtigt
-; Geänderte MMU-040/060-Routine, URP/SRP werden nicht mehr auf NULL gesetzt
-; Überarbeitete Textausgabe des Arguments SHOWQUEUE
-; Änderung Argument SOFTRESET: Wird es angegeben, dann wird der File-Requester
-; mit dem "Reboot" Gadget dargestellt und nach dem Anklicken, wenn mindestens
-; eine Datei gewählt wurde, ein Reset ausgeführt. Ansonsten wird das "Quit"
-; Gadget dargestellt.
-; File Requester: Zeiger auf negativen Standart-Text "Quit" in der Requester-
-; Struktur wird jetzt früher initialisiert. Der Zeiger auf den Alterntiv-Text
-; "Reboot" wird erst kurz vor dem Aufruf von AllocAslRequest() initialisiert
-; File Requester: Es wird nun auch geprüft, ob ein Verzeichnisname angegeben
-; wurde
-; Änderung der Mindestconfig: OS 2.04, 68020, OCS anstatt OS 3.0, 68020, AGA
-; => A500/A2000 mit OS2/OS3 + Turbokarte und A3000/030 werden ebenfalls
-; unterstützt.
-; Differenziertere Fehlerausgabe beim Fehlen einzelner Mindestkomponenten
-; Kleinere Optimierungen
-; Abfrage der rechten Maustaste in der Reset-Routine geändert. Das POTGO-
-; Register wird vorher auf den Standartwert zurückgesetzt.
-; Anzeigen, dass AllocAbs() der Reset-Routine nicht erfolgreich war
-; Es wird jetzt trotzdem die Playback-Liste angelegt, wenn mindestens eine
-; Datei ausgewählt wurde und die zweite Datei ein leerer String ist. Somit
-; bleiben alle Einträge vor dem Leerstring erhalten, obwohl mit einer Fehler-
-; meldung abgebrochen wird
-; Unterstützung von WHDLoad Slave-Dateien: Das aus der Playback-Liste zu
-; ladende Demo wird darauf untersucht, ob es sich um eine Slave-Datei handelt.
-; Fällt der Test positiv aus, dann werden die ToolTypes der WHDLoad .info-
-; Datei daraufhin überprüft, ob die Argumente PRELOAD, PRELOADSIZE oder
-; QUITKEY angegeben wurden. Es wird dann ein Kommando-String erstellt, der
-; über die Funktion SystemTagList() ausgeführt wird und das Demo über WHDLoad
-; startet
-; Neues Argument LMBEXIT n: n=2..10 Bei einem Demo mit mehreren Teilen wird
-; vom Reset Device automatisch das Drücken der linken Maustaste n-mal nach
-; der vorgegebenen Spielzeit simuliert und somit zum nächsten Teil gesprungen.
-; Die Spielzeit wird dabei wieder zurückgesetzt und von Neuem heruntergezählt.
-; Intern wird mit n=1..9 gearbeitet und n zu der Spielzeit einfach dazu-
-; addiert, bevor der Sekundenwert in Hex/ASCII umgewandelt wird. Wird keine
-; Spielzeit angegeben, dann wird das Argument ignoriert und eine Fehlermeldung
-; ausgegeben.
-; Abbruch einer LOOP-Ausführung erst bei Fehlernummer = 20 (DOS-ERROR FAIL)
-; oder > 121 (Datei ist nicht ausführbar)
-; Routinen zur Umwandlung von Zahlen umgeschrieben und Fehler bereinigt		 		 			<
-; Fehler in Routine zum Warten auf eine Rasterzeile bereinigt
-; Fehler bei der Berechnung der Länge des Demo-Dateinamens bereinigt
-; Das Argument LOOP kann jetzt über CTRL-C abgebrochen werden. Bevor das Demo
-; per Mausklick beendet wird, muss die Tastenkombination CTRL-C dauerhaft
-; gedrückt werden, damit nach dem Einblenden die Abfrage der Tastenkmbination
-; funktioniert
-; ADKCON wird jetzt richtig zurückgesetzt, bevor der alte Inhalt hineinge-
-; schrieben wird
-
 ; V.2.0
-; - Code komplett überarbeitet
+; - Code completely revised
 ; - DemoSelector = Demo-Charger
-; - Texte geändert
-; - Umbenennung der Run-Modi für die Playlist:
-;   "OCS" ->	"OCSVANILLA"
-;   "AGA" ->	"AGAVANILLA"
-;   "FAST" ->	"TURBO"
-; - Neue Werte und Bezeichnung der Run-Modi:
-;   RUNMODE_PLAIN_TURBO	= $01
-;   RUNMODE_OCS_VANILLA	= $02
-;   RUNMODE_AGA_VANILLA	= $03
-; - Argument NOFADER -> FADER (Umkehrung der Logik), es wird jetzt der aktive
-;   Screen ausgefadet und nicht mehr der Custom-Screen
-; - Änderung der Minimum-Config: 68020/OS3.0/AGA-Chipset
-; - Bugfix Argument RESETLOADPOS: Es wurde die "entries_number" auf Null ge-
-;   setzt, anstatt auf den Wert 1
-; - Option: Abfrage der WB-Message entfernt, da es passieren kann, dass dies
-;   berets von einem Demo gemacht wird und 2x die WB-Message nicht beant-
-;   wortet werden kann
-; - Prerunscript-Check völlig überarbeitet, in LOOP-Modus wird für jedes Demo
-;   das gleiche Prerun-Script ausgeführt, wenn es über das Argument PRERUNSCRIPT
-;   angegeben wurde
-; - Argument QUIET: wieder herausgenommen
-; - Argument RANDOM: komplett überarbeitet
-; - Argument ENDLESS: komplett überarbeitet
-; - Argument LMBEXIT: Code kann optional aktiviert werden
-; - File-Requester: Es gibt keinen Reboot-Button mehr, die komplette Logik
-;                   wurde entfernet
-; - Argument playlist: Es muss nun das Keyword PLAYLIST mit angegeben werden,
-;   da sonst alle angegebenen Zeichen als Playlist interpretiert werden
-; - Argumente-Check: Gesonderte Fehlerabfrage für Keywords ohne Wert entfernt,
-;                    da dies schon von ReadArgs() übernommen wird und die Funktion
-;                    eine Null zurückgibt
-; - Neue Logik Argument PRERUNSCRIPT in Verbindung mit einer eingespielten
-;   Playliste: Wenn kein Argument PRERUNSCRIPT angegeben wurde, dann wird ein
-;   eventuell per Playlist angegebenes Prerun-Scriptfile zum Demo ausgeführt.
-;   Im LOOP-Modus wird dann für jedes Demo ein separates Prerun-Scriptfile
-;   ausgeführt
-; - Abfrage des Arguments REMOVE vorverlegt
-; - Argument PLAYLIST: Nach dem Übertragen der Playlist in den Speicher wird
-;                      nun diePlayback-Queue ausgegeben
-; - Neues Argument CLEARQUEUE: Löschen der kompletten Playback-Liste im Speicher
-; - Argument RESETLOADPOS in RESETQUEUE umbenannt
-; - Wenn alle Demos aus der Liste gespielt wurden wird der ADL nicht mehr
-;   automtisch aus dem Speicher entfernt
-; - File-Requester: Der Filter berücksichtigt jetzt auch die Endung ".data"
-; - Neues Argument: EDITQUEUE - Alle Einträge können nacheinander besabeitet werden
-; - Neuer Bereich: Queue-Handler qh_
-; - Edit-Window: Gadgets für Entry-Nummer, Runmode und Entry-Active,
-;                Änderungrn können in der Playback-Queue gespeichert werden
-; - Neues Argument: EDITENTRY n - Ein bestimmter Einztrak kann bearbeitet werden
-; - Umbenennung des Arguments FADER in SCREENFADER
-; - Bugfix: Die Werte aus der Playlist für den Run-Modus und die Spielzeit wurden nicht mehr
-;           in die Playback-Queue übernommen
+; - Texts changed
+; - Renaming of the run modes for the playlist:
+;   OCS -> OCSVANILLA
+;   AGA -> AGAVANILLA
+;   FAST -> TURBO
+; - New values and names for the run modes:
+;   RUNMODE_PLAIN_TURBO = $01
+;   RUNMODE_OCS_VANILLA = $02
+;   RUNMODE_AGA_VANILLA = $03
+; - Argument NOFADER -> FADER (reversal of the logic), the active screen is
+;   now faded out and no longer the custom screen
+; - Change of the minimum config: 68020/OS3.0/AGA chipset
+; - Bugfix argument RESETLOADPOS: The entries_number was set to zero instead
+;   of 1.
+; - Option: Query of the WB message removed, as it can happen that this is
+;   done by a demo and the message cannot be requested twice.
+; - Prerunscript check completely revised, in LOOP mode the same prerun script
+;   is used for each demo.
+; - QUIET argument: removed
+; - RANDOM argument: completely revised
+; - ENDLESS argument: completely revised
+; - LMBEXIT argument: code can be optionally activated
+; - File requester: There is no reboot button anymore, the complete logic
+;   has been removed
+; - PLAYLIST argument: The keyword PLAYLIST must now be specified, otherwise
+;   all argument characters are interpreted as a playlist file name.
+; - Arguments check: Separate error query for keywords without value removed,
+;   as this is already taken over by ReadArgs() and the function function
+;   returns a zero
+; - New logic argument PRERUNSCRIPT in connection with a transferred playlist:
+;   If no PRERUNSCRIPT argument has been specified, then a prerun script file
+;   that may have been specified via playlist is executed for the entry.
+;   In LOOP mode, a separate prerun script file is executed for each demo.
+; - REMOVE argument: query is moved at the top
+; - PLAYLIST argument: After the playlist has been transferred to memory
+;   now the playback queue is printed
+; - New argument CLEARQUEUE: Deletes the complete playback list in memory
+; - Argument RESETLOADPOS renamed to RESETQUEUE
+; - When all demos from the list have been played, the ADL is no longer
+;   automatically removed from memory
+; - File requester: The filter now also takes the extension ".data" into
+;   account
+; - New argument EDITQUEUE: All entries can be edited one after the other
+; - New label prefix: Queue handler qh_
+; - Edit window: Gadgets for entry number, run mode and entry state.
+;   Changes can be saved in the playback queue
+; - New argument EDITENTRY: - A specific single ebtry can be edited
+; - Renaming of the FADER argument to SCREENFADER
+; - Bugfix: The values from the playlist for the run mode and the playing time
+;   were no longer saved in the playback queue.
 
 ; V.2.01
-; - Bugfix: Wenn der letzte Eintrag der Liste wieder manuell auf "not played"
-;           gesetzt wird und der ADL danach erneut gestartet wird, dann wird
-;           nicht mehr der folgende leere Eintrag gespielt, sondern es erfolgt
-;           eine Warnmeldung
-; - Screen-Degrader-Routine komplett überarbeitet
-; - Neues Argument: RESTORESYSTIME - Systemzeit wird korrigiert
+; - Bugfix: If the last entry in the list is manually set to "not played"
+;   and the ADL is then restarted, the following empty entry is no longer
+;   played, but a warning message is printed.
+; - Screen degrader routine completely revised.
+; - New argument RESTORESYSTIME: System time is corrected after an entry was
+;   executed which turns off the system.
 
 ; V.2.02
-; - Minimalkponfiguration geändert: 68000/OS2.0/OCS-Chipset
-; - Bugfix: Nach dem Check des Arguments PLAYENTRY erfolgen weitere Checks, sodass
-;           eine Kombination mit dem Argument SCREENFADER erfolgen kann
-; - Farbtabelle des Custom-Screen wird wieder korrekt angelegt und der Tagliste
-;   zugewiesen
-; - Spriteauflösung wird bereits über den Active Screen ermittelt
-; - Über das Screentag SA_VideoControl wird bereits mit dem Öffnen des PAL-Screens
-;   die Spriteauflösung auf Lores gesetzt
-; - Nutzung des Registers CFG0 zur Änderung der CPU-Taktfrequenz (Yulquen74-Turboboard-Lösung)
-; - Neues Argument: MULTIPART zur Nutzung für WHDLoad-Demos, bei denen über LMB Teile beendet werden.
-; - Guide überarbeitet
-; - RUNMODE_TURBO in RUNMODE_PLAIN_TURBO umbenannt
-; - Auf 68000er: Runmode-Check, wenn Runmode "AGA vanilla" auf 68000er-Config,
-;   dann Fehlerausgabe mit anschließendem Reset nach 2 Sekunden wenn kein
-;   Argument LOOP angegeben wurde
-; - Argumend SCREENFADER entfernt
-; - Bugfix: PAL wird jetzt über die Exec-Base->VBlankFrequency abgefragt
-; - Bugfix: LoadView(NULL)erst ab OS2.0
+; - Minimal configuration changed: 68000/OS2.0/OCS chipset
+; - Bugfix: After checking the PLAYENTRY argument, further checks are carried
+;   out so that it can be combined with the SCREENFADER argument
+; - Color table of the custom screen is created correctly again and assigned
+;   to the tag list
+; - Sprite resolution is determined via the active screen
+; - The screen tag SA_VideoControl is used to set the sprite resolution to
+;   Lores
+; - Use of register CFG0 to change the CPU clock frequency (Yulquen74 turbo
+;   board solution)
+; - New argument MULTIPART: For use of WHDLoad demos where parts are
+;   terminated via LMB.
+; - Guide revised
+; - RUNMODE_TURBO renamed to RUNMODE_PLAIN_TURBO
+; - On 68000: Runmode-Check, if Runmode "AGA vanilla" on 68000-Config,
+;   then error output with subsequent reset after 2 seconds if no LOOP
+;   argument was given
+; - SCREENFADER argument removed
+; - Bugfix: PAL bit is now queried via the Exec-Base->VBlankFrequency
+; - Bugfix: LoadView(NULL) only starting with OS2.0
 
 ; V.2.03
-; - Bugfix: Wenn weder per Argument noch über die Playliste eine Spielzeit an-
-;           gegeben wurde, dann wurde einerseits der Command-String nicht
-;           initialisiert, jedoch dann beim Versenden nicht mehr grprüft, ob
-;           keine Spielzeit angegeben wurde. Es wurde dann ein Command-String ohne umgewawandelte
-;           0-Spielzeit und ohne Checksumme an das Reset Device geschickt:
-;           $23 00 00 00 00 00 $2c 00,0a laut Yulquen74
-; - Änderung des Format-Strings. Vor dem #-Zeichen wird noch ein Line-Feed eingefügt
-;   Die Berechnung der Checksumme ändert sich nicht. Sie erfolgt immer noch ab
-;   dem #-Zeichen.
+; - Bugfix: If no playing time was specified either by argument or via
+;   playlist, then the command string was not initialized and as a
+;   consequence sent without a converted 0 playing time:
+;   "$23 00 00 00 00 00 $2c 00,0a" according to Yulquen74
+; - Change of the format string. A line feed is inserted before the #
+;   character. The calculation of the checksum does not change. It still
+;   takes place starting with the # character.
 
 ; V.2.04
-; - Bugfix: Checksumme wurde falsch ermittelt. Sie wurde zwar ab dem #-Zeichen
-;   berechnet, jedoch mit einem Byte zu wenig, d. h. das Argument MULTIPART
-;   wurde nie berücksichtigt.
-; - Es wird jetzt zu Beginn im Speicher nach der not-verknüpften Kennung "-DL-"
-;   gesucht, um zu prüfen, ob der ADL bereits vorhanden ist
-; - Wenn der ADL durch einen Eintrag inaktiv wurde, werden die Exceptions und
-;   der CoolCapture-Vektror wieder hergestellt
-; - Argument REMOVE: Es wird auch die Kennung gelöscht
-; - Schwarzer Bildschirm jetzt auch unter OS 2.0
-
-; * OS2.x: DIWHIGH = $00ff in CL1 -> Blank-Screen bei einigen alten OCS-Intros,
-;   die ihre CL von CL1 aufrufen lassen.
-
-; * File-Requester-Bug unter OS2.x: Filter für Dateiendungen funktioniert nicht.
-;   Es werden überhaupt keine Dateien angezeigt, weil nur eine Stringlänge von
-;   32 Zeichen berücksichtigt wird, der Rest wird abgeschnitten und somit der
-;   String untauglich gemacht.
+; - Bugfix: Checksum was determined incorrectly. It was calculated from the #
+;   character, but with one byte too little, i.e. the argument MULTIPART was
+;   never taken into account.
+; - The memory is now searched at the beginning for the identifier "-DL-"
+;   to check whether the ADL already exists
+; - If the ADL has become inactive due to an entry, the exceptions and the
+;   CoolCapture vector are restored.
+; - REMOVE argument: The ADL identifier is also deleted.
+; - Black screen now also under OS 2.0
 
 ; V.2.05
-; - Commandstring jetzt mit zwei Line-Feeds vor dem #-Zeichen. Timer startet
-;   jetzt auch nach Coldstart.
-; - Argument QUIET: Wieder hereingenommen, Unterdrückung des Dateirequesters
-; - Guide angepasst
-; - File Requester: Alle Tags über eine Taglist, die AllocAslRequest() übergeben werden
-; - Bugfix: Nach dem Entfernen des ADL per RMB während des Resets wurde er beim
-;   erneuten Aufruf wieder aktiviert. Jetzt wird auch im Reset-Programm ensprechend
-;   die ID gelöscht
-; - Code für Yulquen kann nun per Boolean-Variable aktiviert werden
+; - Command string now with two line feeds before the # character so that the
+;   timer also starts after a cold start.
+; - QUIET argument: added again, suppression of the file requester
+; - Guide adjusted
+; - File requester: All tags via a tag list passed to AllocAslRequest()
+; - Bugfix: After removing the ADL via RMB during the reset, it was reactivated
+;   when called again. Now the reset program also deletes the id in memory
+; - Code for Yulquen can now be activated via boolean variable
 
 ; V.2.06
-; - Argument QUIET: Jetzt wird auch die Start-Message unterdrückt
-; - Neues Argument RESETONERROR: Wird es angegeben, dann wird nach jedem Run
-;   Demo-Fehler nach 2s ein Reset ausgeführt
-; - Bei jedem Run Demo-Fehler wird jetzt die Indexnummer des Eintrags/Demos, der
-;   den Fehler erzeugt hat, ausgegeben
-; - Bugfix: "No more demos left to play" wurde doppelt ausggeben, weil der Check 2x
-;            aufgerufen wurde
+; - QUIET argument: Included again. Now the start message is also suppressed.
+; - New argument RESETONERROR: After every run-demo error a reset is executed
+;   after 2 seconds.
+; - For each run-demo error, the index number of the entry that generated
+;   the error is now printed.
+; - Bugfix: "No more demos left to play" was printed twice, because the check
+;   was called twice
 
+; V.2.07
+; - error text output improved
+; - all comments translated to English
+; - Bugfix: during reset the timer was not stopped with the proper value via SERDAT
+;   d1 may have random values
+
+
+; OS2.x bugs
+; - DIWHIGH = $00ff (first copperlist) -> Blank screen with some old OCS intros,
+;   which use a second custom copperlist called by the first system copperlist.
+; - Asl file requester: Filter for file extensions does not work properly.
+;   If the filter string is longer than 32 characters, no files are displayed,
+;   because only a string length of 32 characters is taken into account. The
+;   rest is truncated and thus the string is made unsuitable.
 
 
 	SECTION code_and_variables,CODE
@@ -372,15 +197,16 @@
 	INCLUDE "equals.i"
 
 
-FirstCode			EQU 4	; Offset in SegList
+FirstCode			EQU 4	; offset in SegList
 
 MAGIC_COOKIE			EQU $000003f3
+magic_cookie_length		EQU LONGWORD_SIZE
 
 RUNMODE_PLAIN_TURBO		EQU $01
 RUNMODE_OCS_VANILLA		EQU $02
 RUNMODE_AGA_VANILLA		EQU $03
 
-; **** Amiga-Demo-Launcher ****
+; Amiga-Demo-Launcher
 adl_demofile_path_length	EQU 124
 adl_prerunscript_path_length	EQU 64
 
@@ -395,7 +221,9 @@ adl_baud			EQU 2400
 adl_multipart_min		EQU 2
 adl_multipart_max		EQU 16
 
-; **** Demo-Charger ****
+adl_used_trap_vectors_number	EQU 7
+
+; Demo-Charger
 dc_entries_number_default_max	EQU 10
 dc_entries_number_max		EQU 99
 
@@ -404,7 +232,7 @@ dc_file_request_top		EQU 0
 dc_file_request_x_size		EQU 320
 dc_file_request_y_size		EQU 200
 
-; **** Queue-Handler ****
+; Queue-Handler
 qh_edit_window_left		EQU 0
 qh_edit_window_top		EQU 0
 qh_edit_window_x_size		EQU 260
@@ -460,7 +288,7 @@ qh_negative_button_x_position	EQU ((qh_edit_window_x_size-qh_negative_button_x_s
 qh_negative_button_y_position	EQU ((qh_edit_window_y_size-qh_negative_button_y_size)*89)/100
 qh_negative_button_id		EQU 7
 
-; **** Run-Demo ****
+; Run-Demo
 rd_yulquen74_code_enabled	EQU TRUE
 
 rd_nnnn_size			EQU 4
@@ -468,16 +296,16 @@ rd_r_size			EQU 1
 rd_cc_size			EQU 2
 rd_duration_shift		EQU 16
 
-rd_error_message_delay		EQU PAL_FPS*2 ; 2 Sekunden
+rd_error_message_delay		EQU PAL_FPS*2 ; 2 seconds
 
-; **** WHD-Load ****
+; WHD-Load
 whdl_preload_length		EQU 8
 whdl_preloadsize_length		EQU 20
 whdl_quitkey_length		EQU 11
 whdl_slave_path_length		EQU 124
 whdl_icon_path_length		EQU 124
 
-; **** Reset-Programm ****
+; Reset-Program
 rp_frames_delay			EQU 50
 rp_rasterlines_delay		EQU 5
 
@@ -514,11 +342,11 @@ REMOVE_RESET_PROGRAM		MACRO
 	ENDM
 
 
-WAIT_MOUSE			MACRO
-wm
+WAIT_MOUSE			MACRO	; only for testing purposes
+wm_loop\@
 	move.w	$dff006,$dff180
 	btst	#2,$dff016
-	bne.s	wm
+	bne.s	wm_loop\@
 	ENDM
 
 
@@ -533,7 +361,7 @@ wm
 
 	RSRESET
 
-; **** Amiga-Demo-Launcher ****
+; Amiga-Demo-Launcher
 adl_os_version			RS.W 1
 adl_cpu_flags			RS.W 1
 	RS_ALIGN_LONGWORD
@@ -551,7 +379,7 @@ adl_entries_number_max		RS.W 1
 
 adl_reset_program_active	RS.W 1
 
-; **** Demo-Charger ****
+; Demo-Charger
 dc_arg_newentry_enabled		RS.W 1
 dc_arg_playlist_enabled		RS.W 1
 dc_arg_quiet_enabled		RS.W 1
@@ -571,7 +399,7 @@ dc_playlist_file_handle		RS.L 1
 dc_playlist_entries_number	RS.W 1
 dc_transmitted_entries_number 	RS.W 1
 
-; **** Queue-handler ****
+; Queue-handler
 qh_arg_showqueue_enabled	RS.W 1
 qh_arg_editentry_enabled	RS.W 1
 qh_arg_editqueue_enabled	RS.W 1
@@ -585,12 +413,12 @@ qh_edit_window			RS.L 1
 qh_screen_visual_info		RS.L 1
 qh_context_gadget		RS.L 1
 
-qh_text_gadget_gadget		RS.L 1
+qh_text_gadget			RS.L 1
 qh_bwd_button_gadget		RS.L 1
-qh_integer_gadget_gadget	RS.L 1
+qh_integer_gadget		RS.L 1
 qh_fwd_button_gadget		RS.L 1
-qh_cycle_gadget_gadget		RS.L 1
-qh_mx_gadget_gadget		RS.L 1
+qh_cycle_gadget			RS.L 1
+qh_mx_gadget			RS.L 1
 
 qh_check_window_events_active	RS.W 1
 
@@ -601,7 +429,7 @@ qh_edit_entry_offset		RS.W 1
 qh_edit_runmode			RS.B 1
 qh_edit_entry_active		RS.B 1
 
-; **** Run-Demo ****
+; Run-Demo
 rd_arg_prerunscript_enabled	RS.W 1
 rd_arg_random_enabled		RS.W 1
 rd_arg_endless_enabled		RS.W 1
@@ -654,7 +482,7 @@ rd_clear_030_mmu_register	RS.L 1
 rd_old_cfg0			RS.W 1
 	ENDC
 
-; **** WHD-Load ****
+; WHD-Load
 whdl_slave_enabled		RS.W 1
 	RS_ALIGN_LONGWORD
 whdl_disk_object		RS.L 1
@@ -667,21 +495,21 @@ adl_variables_size		RS.B 0
 
 cmd_results_array		RS.B 0
 
-; **** Amiga-Demo-Launcher ****
+; Amiga-Demo-Launcher
 cra_HELP			RS.L 1
 cra_REMOVE			RS.L 1
-; **** Demo-Charger ****
+; Demo-Charger
 cra_MAXENTRIES			RS.L 1
 cra_NEWENTRY			RS.L 1
 cra_PLAYLIST			RS.L 1
 cra_QUIET			RS.L 1
-; **** Queue-Handler ****
+; Queue-Handler
 cra_SHOWQUEUE			RS.L 1
 cra_EDITENTRY			RS.L 1
 cra_EDITQUEUE			RS.L 1
 cra_CLEARQUEUE			RS.L 1
 cra_RESETQUEUE			RS.L 1
-; **** Run-Demo ****
+; Run-Demo
 cra_PLAYENTRY			RS.L 1
 cra_PRERUNSCRIPT		RS.L 1
 cra_MINS			RS.L 1
@@ -733,10 +561,10 @@ command_string			RS.B 0
 cs_line_feed1			RS.B 1
 cs_line_feed2			RS.B 1
 cs_hash				RS.B 1
-cs_delay_counter		RS.B rd_nnnn_size ; Dezimal
-cs_parts			RS.B rd_r_size ; Hexadezimal
+cs_delay_counter		RS.B rd_nnnn_size ; before: decimal number
+cs_parts			RS.B rd_r_size ; before: hexadecimal number
 cs_separator			RS.B 1
-cs_checksum			RS.B rd_cc_size ; Hexadezimal
+cs_checksum			RS.B rd_cc_size ; before: hexadecimal number
 cs_line_feed3			RS.B 1
 
 command_string_size		RS.B 0
@@ -791,7 +619,7 @@ edit_window_tag_list_size	RS.B 0
 
 sprite_pointer_data		RS.B 0
 
-spd_control_word1		RS.W 1 ; 1x Bandwidth
+spd_control_word1		RS.W 1	; 1x bandwidth
 spd_control_word2		RS.W 1
 spd_color_descriptor		RS.W 2
 spd_end_of_data			RS.W 2
@@ -809,7 +637,7 @@ omr_dtt0                        RS.L 1
 omr_dtt1                        RS.L 1
 omr_itt0                        RS.L 1
 omr_itt1                        RS.L 1
-omr_tc	                        RS.L 1
+omr_tc				RS.L 1
 
 old_mmu_registers_size		RS.B 0
 
@@ -843,7 +671,7 @@ ocr_ciab_crb			RS.B 1
 old_chips_registers_size	RS.B 0
 
 
-; **** Amiga Demo-Launcher ****
+; Amiga Demo-Launcher
 	movem.l d2-d7/a2-a6,-(a7)
 	lea	adl_variables(pc),a3
 	bsr	adl_init_variables
@@ -877,12 +705,12 @@ old_chips_registers_size	RS.B 0
 	bsr	adl_check_cmd_line
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_read_arguments
-; ** Amiga-Demo-Launcher Argumente **
+; Amiga-Demo-Launcher arguments
 	tst.w	adl_arg_help_enabled(a3)
 	beq     adl_cleanup_read_arguments
 	tst.w	adl_arg_remove_enabled(a3)
 	beq	adl_cleanup_read_arguments
-; ** Queue-Handler Argumente **
+; Queue-Handler arguments
 	tst.w	qh_arg_showqueue_enabled(a3)
 	bne.s	adl_check_arg_editentry_enabled
 	bsr	qh_show_queue
@@ -916,7 +744,7 @@ adl_check_queue_empty
 	bsr	qh_check_queue_empty
 	tst.l	d0
 	bne.s	dc_start
-; ** Demo-Charger Argumente **
+; Demo-Charger arguments
 	tst.w	dc_arg_newentry_enabled(a3)
 	beq.s	dc_start
 	tst.w	dc_arg_playlist_enabled(a3)
@@ -925,7 +753,7 @@ adl_check_queue_empty
 	tst.w	adl_reset_program_active(a3)
 	beq	rd_start
 
-; **** Demo-Charger ****
+; Demo-Charger
 dc_start
 	tst.w	dc_arg_quiet_enabled(a3)
 	beq.s	dc_start_skip
@@ -942,7 +770,7 @@ dc_start_skip
 	tst.w	dc_arg_playlist_enabled(a3)
 	beq.s	dc_check_playlist
 
-; ** Playlist-Datei nicht angegeben - Neue Einträge über File-Requester **
+; no playlist file given by argument - new entries via file requester
 	tst.w	dc_arg_quiet_enabled(a3)
 	beq.s	dc_cleanup_entries_buffer
 	bsr	dc_open_asl_library
@@ -982,7 +810,7 @@ dc_cleanup_entries_buffer
 	bsr	dc_free_entries_buffer
 	bra	adl_cleanup_read_arguments
 
-; ** Playlist-Datei angegeben **
+; playlist file given by argument
 	CNOP 0,4
 dc_check_playlist
 	bsr	dc_lock_playlist_file
@@ -1020,7 +848,7 @@ dc_cleanup_locked_playlist_file
         bra	dc_cleanup_reset_program
 
 
-; **** Amiga Demo-Launcher ****
+; Amiga Demo-Launcher
 	CNOP 0,4
 adl_cleanup_read_arguments
 	bsr	adl_free_read_arguments
@@ -1041,16 +869,15 @@ adl_quit
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 adl_init_variables
 	lea	_SysBase(pc),a0
 	move.l	exec_base.w,(a0)
 
-
-; **** Amiga-Demo-Launcher ****
+; Amiga-Demo-Launcher
 	moveq	#TRUE,d0
 	move.l	d0,adl_dos_return_code(a3)
 
@@ -1063,8 +890,7 @@ adl_init_variables
 	move.w	d0,adl_entries_number(a3)
 	move.w	#dc_entries_number_default_max,adl_entries_number_max(a3)
 
-
-; **** Demo-Charger ****
+; Demo-Charger
 	move.w	d1,dc_arg_newentry_enabled(a3)
 	move.w	d1,dc_arg_playlist_enabled(a3)
 	move.w	d1,dc_arg_quiet_enabled(a3)
@@ -1074,8 +900,7 @@ adl_init_variables
 	move.w	d0,dc_playlist_entries_number(a3)
 	move.w	d0,dc_transmitted_entries_number(a3)
 
-
-; **** Queue-Handler ****
+; Queue-Handler 
 	move.w	d1,qh_arg_showqueue_enabled(a3)
 	move.w	d1,qh_arg_editentry_enabled(a3)
 	move.w	d1,qh_arg_editqueue_enabled(a3)
@@ -1086,8 +911,7 @@ adl_init_variables
 
 	move.w	d0,qh_check_window_events_active(a3)
 
-
-; **** Run-Demo ****
+; Run-Demo 
 	move.w	d1,rd_arg_prerunscript_enabled(a3)
 	move.w	d1,rd_arg_random_enabled(a3)
 	move.w	d1,rd_arg_endless_enabled(a3)
@@ -1107,12 +931,10 @@ adl_init_variables
 
 	move.l	d0,rd_clear_030_mmu_register(a3)
 
-
-; **** WHD-Load ****
+; WHD-Load 
 	move.w	d1,whdl_slave_enabled(a3)
 
-
-; **** Reset-Programm ****
+; Reset-Program
 	lea	rp_entries_number_max(pc),a0
 	move.w	#dc_entries_number_default_max,(a0)
 
@@ -1124,9 +946,9 @@ adl_init_variables
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 adl_init_structures
 	bsr.s	adl_init_cool_capture_request
@@ -1143,28 +965,28 @@ adl_init_structures
 	bra	rd_init_invisible_window_tags
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 adl_init_cool_capture_request
 	lea	adl_cool_capture_request(pc),a0
 	moveq	#EasyStruct_SIZEOF,d2
-	move.l	d2,(a0)+		; Größe der Struktur
+	move.l	d2,(a0)+
 	moveq	#0,d0
-	move.l	d0,(a0)+		; Keine Flags
+	move.l	d0,(a0)+		; no flags
 	lea	adl_install_request_title(pc),a1
-	move.l	a1,(a0)+		; Zeiger auf Titeltext
+	move.l	a1,(a0)+
 	lea	adl_install_request_text_body(pc),a1
-	move.l	a1,(a0)+		; Zeiger auf Text in Requester
+	move.l	a1,(a0)+
 	lea	adl_install_request_text_gadgets(pc),a1
-	move.l	a1,(a0)			; Zeiger auf Gadgettexte
+	move.l	a1,(a0)
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 adl_init_command_string
 	lea	rp_command_string(pc),a0
@@ -1176,34 +998,35 @@ adl_init_command_string
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 dc_init_runmode_request
 	lea	dc_runmode_request(pc),a0
-	move.l	d2,(a0)+		; Größe der Struktur
-	move.l	d0,(a0)+		; Keine Flags
+	moveq	#EasyStruct_SIZEOF,d2
+	move.l	d2,(a0)+
+	move.l	d0,(a0)+		; no flags
 	lea	dc_runmode_request_title(pc),a1
-	move.l	a1,(a0)+		; Zeiger auf Titeltext
+	move.l	a1,(a0)+
 	lea	dc_runmode_request_text_body(pc),a1
-	move.l	a1,(a0)+		; Zeiger auf Text in Requester
+	move.l	a1,(a0)+
 	lea	dc_runmode_request_text_gadgets(pc),a1
-	move.l	a1,(a0)			; Zeiger auf Gadgettexte
+	move.l	a1,(a0)
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 dc_init_file_request_tags
 	lea	dc_file_request_tags(pc),a0
-; ** Tags für Fensterbeeinflussung **
+; window tags
 	move.l	#ASLFR_Window,(a0)+
 	moveq	#0,d0
 	move.l	d0,(a0)+
-; ** Texte für Textanzeige **
+; text tags
 	move.l	#ASLFR_TitleText,(a0)+
 	lea	dc_file_request_title(pc),a1
 	move.l	a1,(a0)+
@@ -1213,7 +1036,7 @@ dc_init_file_request_tags
 	move.l	#ASLFR_NegativeText,(a0)+
 	lea	dc_file_request_negative_text(pc),a1
 	move.l	a1,(a0)+
-; ** Grundparameter für File-Requester **
+; file requester tags
 	move.l	#ASLFR_InitialLeftEdge,(a0)+
 	moveq	#dc_file_request_left,d2
 	move.l	d2,(a0)+
@@ -1228,8 +1051,8 @@ dc_init_file_request_tags
 	lea	dc_current_dir_name(pc),a1
 	move.l	a1,(a0)+
 	move.l	#ASLFR_InitialPattern,(a0)+
-	move.l	d0,(a0)+		; Wird später initialisiert
-; ** Optionen **
+	move.l	d0,(a0)+		; will be initialized later
+; option tags
 	move.l	#ASLFR_Flags1,(a0)+
 	moveq	#FRF_DOPATTERNS|FRF_DOMULTISELECT,d2
 	move.l	d2,(a0)+
@@ -1238,9 +1061,9 @@ dc_init_file_request_tags
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 qh_init_get_visual_info_tags
 	lea	qh_get_visual_info_tags(pc),a0
@@ -1249,9 +1072,9 @@ qh_init_get_visual_info_tags
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 qh_init_edit_window_tags
 	lea	qh_edit_window_tags(pc),a0
@@ -1291,22 +1114,21 @@ qh_init_edit_window_tags
 	move.l	#WA_Flags,(a0)+
 	move.l	#WFLG_CLOSEGADGET|WFLG_ACTIVATE|WFLG_DEPTHGADGET|WFLG_DRAGBAR,(a0)+
 	move.l	#WA_Gadgets,(a0)+
-	move.l	d0,(a0)+		; Wird später initialisiert
+	move.l	d0,(a0)+		; will be initialized later
 	moveq	#TAG_DONE,d2
 	move.l	d2,(a0)
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 qh_init_gadgets
-; ** CreateContext() **
+; CreateContext() 
 	lea	qh_gadget_list(pc),a0
 	clr.l	(a0)
-
-; ** NewGadget allgemein **
+; NewGadget()
 	lea	qh_topaz_80(pc),a0
 	lea	topaz_font_name(pc),a1
 	move.l	a1,ta_name(a0)
@@ -1314,14 +1136,12 @@ qh_init_gadgets
 	moveq	#0,d0
 	move.b	d0,ta_style(a0)
 	move.b	d0,ta_flags(a0)
-
 	lea	qh_new_gadget(pc),a0
 	lea	qh_topaz_80(pc),a1
 	move.l	a1,gng_TextAttr(a0)
 	moveq	#0,d0
    	move.l	d0,gng_UserData(a0)
-
-; ** Text Gadget **
+; text gadget
 	lea	qh_text_gadget_tags(pc),a0
 	move.l	#GTTX_Text,(a0)+
 	moveq	#0,d0
@@ -1331,30 +1151,26 @@ qh_init_gadgets
 	move.l	d0,(a0)+
 	moveq	#TAG_DONE,d0
 	move.l	d0,(a0)
-
 	lea	qh_set_text_gadget_tags(pc),a0
 	move.l	#GTTX_Text,(a0)+
 	moveq	#0,d0
 	move.l	d0,(a0)+
 	moveq	#TAG_DONE,d0
 	move.l	d0,(a0)
-
-; ** Button Gadgets **
+; button gadgets
 	lea	qh_button_tags(pc),a0
 	move.l	#GA_Disabled,(a0)+
 	moveq	#BOOL_FALSE,d0
 	move.l	d0,(a0)+
 	moveq	#TAG_DONE,d0
 	move.l	d0,(a0)
-
 	lea	qh_set_button_tags(pc),a0
 	move.l	#GA_Disabled,(a0)+
 	moveq	#BOOL_FALSE,d0
 	move.l	d0,(a0)+
 	moveq	#TAG_DONE,d0
 	move.l	d0,(a0)
-
-; ** Integer Gadget **
+; integer gadget
 	lea	qh_integer_gadget_tags(pc),a0
 	move.l	#GTIN_Number,(a0)+
 	moveq	#0,d0
@@ -1365,15 +1181,13 @@ qh_init_gadgets
 	move.l	d0,(a0)+
 	moveq	#TAG_DONE,d0
 	move.l	d0,(a0)
-
 	lea	qh_set_integer_gadget_tags(pc),a0
 	move.l	#GTIN_Number,(a0)+
 	moveq	#0,d0
 	move.l	d0,(a0)+
 	moveq	#TAG_DONE,d0
 	move.l	d0,(a0)
-
-; ** Cycle Gadget **
+; cycle gadget
 	lea	qh_cycle_gadget_array(pc),a0
 	lea	qh_cycle_gadget_choice_text1(pc),a1
 	move.l	a1,(a0)+
@@ -1382,7 +1196,6 @@ qh_init_gadgets
 	lea	qh_cycle_gadget_choice_text3(pc),a1
 	move.l	a1,(a0)+
 	clr.w	(a0)
-
 	lea	qh_cycle_gadget_tags(pc),a0
 	move.l	#GTCY_Labels,(a0)+
 	lea	qh_cycle_gadget_array(pc),a1
@@ -1392,15 +1205,13 @@ qh_init_gadgets
 	move.l	d0,(a0)+
 	moveq	#TAG_DONE,d0
 	move.l	d0,(a0)
-
 	lea	qh_set_cycle_gadget_tags(pc),a0
 	move.l	#GTCY_Active,(a0)+
 	moveq	#0,d0
 	move.l	d0,(a0)+
 	moveq	#TAG_DONE,d0
 	move.l	d0,(a0)
-
-; ** Mutually-Exclusive Gadget **
+; mutually exclusive gadget
 	lea	qh_mx_gadget_array(pc),a0
 	lea	qh_mx_gadget_choice_text1(pc),a1
 	move.l	a1,(a0)+
@@ -1408,7 +1219,6 @@ qh_init_gadgets
 	move.l	a1,(a0)+
 	moveq	#0,d0
 	move.l	d0,(a0)
-
 	lea	qh_mx_gadget_tags(pc),a0
 	move.l	#GTMX_Labels,(a0)+
 	lea	qh_mx_gadget_array(pc),a1
@@ -1418,7 +1228,6 @@ qh_init_gadgets
 	move.l	d0,(a0)+
 	moveq	#TAG_DONE,d0
 	move.l	d0,(a0)
-
 	lea	qh_set_mx_gadget_tags(pc),a0
 	move.l	#GTMX_Active,(a0)+
 	moveq	#0,d0
@@ -1428,24 +1237,23 @@ qh_init_gadgets
 	rts
 
 
-
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 		CNOP 0,4
 rd_init_pal_screen_colors
 		lea	rd_pal_screen_rgb4_colors(pc),a0
 		moveq	#0,d0
 		moveq	#pal_screen_colors_number-1,d7
 rd_init_pal_screen_colors_loop
-		move.w	d0,(a0)+ ; COLORxx RGB4-Wert Schwarz
+		move.w	d0,(a0)+	; COLORxx RGB4 value black
                	dbf	d7,rd_init_pal_screen_colors_loop
 		rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_init_pal_screen_colors32
 	lea	rd_pal_screen_rgb32_colors(pc),a0
@@ -1455,17 +1263,17 @@ rd_init_pal_screen_colors32
 	lea	s02c_color00(a0),a0
 	moveq	#pal_screen_colors_number-1,d7
 rd_init_pal_screen_colors32_loop
-	move.l	d0,(a0)+		; R32 = schwarz
-	move.l	d0,(a0)+		; G32 = schwarz
-	move.l	d0,(a0)+		; B32 = schwarz
+	move.l	d0,(a0)+		; R32 = black
+	move.l	d0,(a0)+		; G32 = black
+	move.l	d0,(a0)+		; B32 = black
 	dbf	d7,rd_init_pal_screen_colors32_loop
 	move.l	d0,(a0)
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_init_video_control_tags
 	lea	rd_video_control_tags(pc),a0
@@ -1474,9 +1282,9 @@ rd_init_video_control_tags
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_init_pal_screen_tags
 	lea	rd_pal_screen_tags(pc),a0
@@ -1537,9 +1345,9 @@ rd_init_pal_screen_tags
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_init_invisible_window_tags
 	lea	rd_invisible_window_tags(pc),a0
@@ -1566,7 +1374,7 @@ rd_init_invisible_window_tags
 	lea	rd_invisible_window_name(pc),a1
 	move.l	a1,(a0)+
 	move.l	#WA_CustomScreen,(a0)+
-	move.l	d0,(a0)+		; Zeiger wird später initialisiert
+	move.l	d0,(a0)+		; will be initalized later
 	move.l	#WA_MinWidth,(a0)+
 	moveq	#invisible_window_x_size,d2
 	move.l	d2,(a0)+
@@ -1589,9 +1397,9 @@ rd_init_invisible_window_tags
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 adl_open_dos_library
 	lea	dos_library_name(pc),a1
@@ -1608,9 +1416,9 @@ adl_open_dos_library_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code/Error-Code
+; input
+; result
+; d0.l	... return value: return code/error code
 	CNOP 0,4
 adl_get_output
 	CALLDOS Output
@@ -1623,9 +1431,9 @@ adl_get_output_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 adl_check_system_properties
 	move.l	_SysBase(pc),a0
@@ -1642,7 +1450,7 @@ adl_check_system_properties_fail
 	rts
 	CNOP 0,4
 adl_check_system_properties_skip
-	cmp.b	#PAL_FPS,VBlankFrequency(a0) ; Erst ab Kick1.3
+	cmp.b	#PAL_FPS,VBlankFrequency(a0) ; OS1.3+
 	beq.s	adl_check_system_properties_ok
 	lea	adl_error_text2(pc),a0
 	move.l	#adl_error_text2_end-adl_error_text2,d0
@@ -1654,9 +1462,9 @@ adl_check_system_properties_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 adl_open_graphics_library
 	lea	graphics_library_name(pc),a1
@@ -1676,9 +1484,9 @@ adl_open_graphics_library_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 adl_open_intuition_library
 	lea	intuition_library_name(pc),a1
@@ -1698,9 +1506,9 @@ adl_open_intuition_library_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 adl_open_gadtools_library
 	lea	gadtools_library_name(pc),a1
@@ -1720,9 +1528,9 @@ adl_open_gadtools_library_ok
 	rts	
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 adl_search_id
 	move.l	#~("-DL-"),d4
@@ -1730,8 +1538,8 @@ adl_search_id
 	move.w	#4*LONGWORD_SIZE,a1
 	move.l	MaxLocMem(a6),a2
 	move.l	a2,d7
-	lsr.l	#4,d7			; Chip-Memory Größe in 16 Bytes
-	subq.l	#1,d7			; Loopend at false
+	lsr.l	#4,d7			; chip memory size in 16 bytes
+	subq.l	#1,d7			; loopend at false
 adl_search_id_loop
 	sub.l	a1,a2
 	movem.l	(a2),d0-d3
@@ -1752,33 +1560,33 @@ adl_search_id_loop
 	bra.s	adl_search_id_skip4
 	CNOP 0,4
 adl_search_id_skip1_1
-	addq.w	#2*LONGWORD_SIZE,a2	; Zeiger auf Reset-Programm
+	addq.w	#QUADWORD_SIZE,a2	; pointer reset program
 	bra.s	adl_search_id_skip1_4
 	CNOP 0,4
 adl_search_id_skip1_2
-	addq.w	#LONGWORD_SIZE,a2	; Zeiger auf Reset-Programm
+	addq.w	#LONGWORD_SIZE,a2	; pointer reset program
 	bra.s	adl_search_id_skip1_4
 	CNOP 0,4
 adl_search_id_skip1_3
-	subq.w	#LONGWORD_SIZE,a2	; Zeiger auf Reset-Programm
+	subq.w	#LONGWORD_SIZE,a2	; pointer reset program
 adl_search_id_skip1_4
 	move.l	CoolCapture(a6),d0
 	beq.s   adl_search_id_skip2
 	cmp.l	a2,d0
 	beq.s	adl_search_id_skip3
-	sub.l	a0,a0			; Requester erscheint auf Workbench
+	sub.l	a0,a0			; requester on workbench/public screen
 	lea	adl_cool_capture_request(pc),a1
-	move.l	a0,a2			; Keine IDCMP-Flags
+	move.l	a0,a2			; no IDCMP flags
 	move.l	a3,-(a7)
-	move.l	a0,a3			; Keine Argumentenliste
+	move.l	a0,a3			; no arguments list
 	CALLINT EasyRequestArgs
 	move.l	(a7)+,a3
-	cmp.l	#BOOL_TRUE,d0		; Gadget "Proceed" ?
+	cmp.l	#BOOL_TRUE,d0		; gadget "Proceed" ?
 	beq.s	adl_search_id_skip4
 adl_search_id_fail
 	moveq	#RETURN_FAIL,d0
 	rts
-; Update values
+; update values
 	CNOP 0,4
 adl_search_id_skip2
 	move.l	a2,CoolCapture(a6)
@@ -1801,7 +1609,7 @@ adl_search_id_skip3
 adl_search_id_ok
 	moveq	#RETURN_OK,d0
 	rts
-; Set default values
+; default values
 	CNOP 0,4
 adl_search_id_skip4
 	moveq	#dc_entries_number_default_max,d2 
@@ -1811,16 +1619,16 @@ adl_search_id_skip4
 	bra.s	adl_search_id_ok
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 adl_check_cmd_line
 	lea	adl_cmd_template(pc),a0
-	move.l	a0,d1			; Zeiger auf Befelsschablone
+	move.l	a0,d1
 	lea	adl_cmd_results(pc),a2
-	move.l	a2,d2			; Zeiger auf Ergebnis-Felder
-	moveq	#0,d3			; Keine eigene RDArgs-Struktur
+	move.l	a2,d2
+	moveq	#0,d3			; no custom RDArgs structure
 	CALLDOS ReadArgs
 	move.l	d0,adl_read_arguments(a3)
 	bne.s   adl_check_arg_help
@@ -1834,9 +1642,9 @@ adl_check_cmd_line_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 adl_print_cmd_usage
 	lea	adl_cmd_usage_text(pc),a0
@@ -1844,7 +1652,7 @@ adl_print_cmd_usage
 	bra	adl_print_text
 
 
-; ** ADL-Argument HELP ***
+; ADL argument HELP
 	CNOP 0,4
 adl_check_arg_help
 	move.l	cra_HELP(a2),d0
@@ -1854,7 +1662,7 @@ adl_check_arg_help
 	bsr.s	adl_print_cmd_usage
 	bra.s	adl_check_cmd_line_ok
 
-; ** ADL-Argument REMOVE **
+; ADL argument REMOVE 
 	CNOP 0,4
 adl_check_arg_remove
 	move.l	cra_REMOVE(a2),d0
@@ -1863,7 +1671,7 @@ adl_check_arg_remove
 	move.w	d0,adl_arg_remove_enabled(a3)
 	bra.s	adl_check_cmd_line_ok
 
-; ** Demo-Charger Argument MAXENTRIES **
+; Demo-Charger argument MAXENTRIES
 	CNOP 0,4
 adl_check_arg_maxentries
 	move.l	cra_MAXENTRIES(a2),d0
@@ -1871,7 +1679,7 @@ adl_check_arg_maxentries
 	tst.w	adl_reset_program_active(a3)
 	beq.s	adl_check_arg_newentry
 	move.l	d0,a0
-	move.l	(a0),d0			;  Anzahl
+	move.l	(a0),d0			; number of entries
 	cmp.w	#dc_entries_number_max,d0
 	ble.s   adl_update_entries_number_max
 	bra.s	adl_check_cmd_line_fail
@@ -1881,7 +1689,7 @@ adl_update_entries_number_max
 	lea	rp_entries_number_max(pc),a0
 	move.w	d0,(a0)
 
-; ** Demo-Charger Argument NEWENTRY **
+; Demo-Charger argument NEWENTRY
 adl_check_arg_newentry
 	move.l	cra_NEWENTRY(a2),d0
 	beq.s	adl_check_arg_playlist
@@ -1889,7 +1697,7 @@ adl_check_arg_newentry
 	move.w	d0,dc_arg_newentry_enabled(a3)
 	bra	adl_check_cmd_line_ok
 
-; ** Demo-Charger Argument PLAYLIST **
+; Demo-Charger argument PLAYLIST
 	CNOP 0,4
 adl_check_arg_playlist
 	move.l	cra_PLAYLIST(a2),dc_playlist_file_name(a3)
@@ -1897,27 +1705,27 @@ adl_check_arg_playlist
 	clr.w	dc_arg_playlist_enabled(a3)
 	bra	adl_check_cmd_line_ok
 
-; ** Demo-Charger Argument QUIET **
+; Demo-Charger argument QUIET
 	CNOP 0,4
 adl_check_arg_quiet
 	move.l	cra_QUIET(a2),d0
 	not.w	d0
 	move.w	d0,dc_arg_quiet_enabled(a3)
 
-; ** Queue-Handler Argument SHOWQUEUE **
+; Queue-Handler argument SHOWQUEUE
 	move.l	cra_SHOWQUEUE(a2),d0
 	beq.s	adl_check_arg_editentry
 	not.w	d0
 	move.w	d0,qh_arg_showqueue_enabled(a3)
 	bra	adl_check_cmd_line_ok
 
-; ** Queue-Handler Argument EDITENTRY **
+; Queue-Handler argument EDITENTRY
 	CNOP 0,4
 adl_check_arg_editentry
 	move.l	cra_EDITENTRY(a2),d0
 	beq.s	adl_check_arg_editqueue
 	move.l	d0,a0
-	move.l	(a0),d0		; Entry-Nummer
+	move.l	(a0),d0		; entry number
 	cmp.w	#adl_entries_number_min,d0
 	bge.s	arg_check_arg_editentry_max
 	bra	adl_check_cmd_line_fail
@@ -1932,7 +1740,7 @@ adl_check_arg_editentry_set
 	clr.w	qh_arg_editentry_enabled(a3)
 	bra	adl_check_cmd_line_ok
 
-; ** Queue-Handler Argument EDITQUEUE **
+; Queue-Handler argument EDITQUEUE
 	CNOP 0,4
 adl_check_arg_editqueue
 	move.l	cra_EDITQUEUE(a2),d0
@@ -1941,7 +1749,7 @@ adl_check_arg_editqueue
 	move.w	d0,qh_arg_editqueue_enabled(a3)
 	bra	adl_check_cmd_line_ok
 
-; ** Queue-Handler Argument CLEARQUEUE **
+; Queue-Handler argument CLEARQUEUE
 	CNOP 0,4
 adl_check_arg_clearqueue
 	move.l	cra_CLEARQUEUE(a2),d0
@@ -1950,7 +1758,7 @@ adl_check_arg_clearqueue
 	move.w	d0,qh_arg_clearqueue_enabled(a3)
 	bra	adl_check_cmd_line_ok
 
-; ** Queue-Handler Argument RESETQUEUE **
+; Queue-Handler argument RESETQUEUE
 	CNOP 0,4
 adl_check_arg_resetqueue
 	move.l	cra_RESETQUEUE(a2),d0
@@ -1959,13 +1767,13 @@ adl_check_arg_resetqueue
 	move.w	d0,qh_arg_resetqueue_enabled(a3)
 	bra	adl_check_cmd_line_ok
 
-; ** Run-Demo Argument PLAYENTRY **
+; Run-Demo argument PLAYENTRY
 	CNOP 0,4
 adl_check_arg_playentry
 	move.l	cra_PLAYENTRY(a2),d0
 	beq.s	adl_check_arg_prerunscript
 	move.l	d0,a0
-	move.l	(a0),d0		; Entry-Nummer
+	move.l	(a0),d0		; entry number
 	cmp.w	#adl_entries_number_min,d0
 	bge.s	arg_check_arg_playentry_max
 	bra	adl_check_cmd_line_fail
@@ -1978,30 +1786,30 @@ arg_check_arg_playentry_max
 adl_check_arg_playentry_set
 	move.w	d0,rd_entry_offset(a3)
 
-; ** Run-Demo Argument PRERUNSCRIPT **
+; Run-Demo argument PRERUNSCRIPT
 adl_check_arg_prerunscript
 	move.l	cra_PRERUNSCRIPT(a2),rd_prerunscript_path(a3)
 	beq.s	adl_check_arg_secs
 	clr.w	rd_arg_prerunscript_enabled(a3)
 
-; ** Run-Demo Argument SECS **
+; Run-Demo argument SECS
 adl_check_arg_secs
 	move.l	cra_SECS(a2),d0
 	beq.s	adl_check_arg_mins
 	move.l	d0,a0
-	move.l	(a0),d0			; Sekundenwert
+	move.l	(a0),d0			; seconds value
 	moveq	#adl_seconds_max,d2
 	cmp.l	d2,d0
 	ble.s   adl_check_arg_mins
 	bra	adl_check_cmd_line_fail
 
-; ** Run-Demo Argument MINS **
+; Run-Demo argument MINS
 	CNOP 0,4
 adl_check_arg_mins
 	move.l	cra_MINS(a2),d1
 	beq.s	adl_calculate_playtime
 	move.l	d1,a0
-	move.l	(a0),d1			; Minutenwert
+	move.l	(a0),d1			; minutes value
 	moveq	#adl_minutes_max,d2
 	cmp.l	d2,d1
 	ble.s   adl_calculate_playtime
@@ -2009,12 +1817,12 @@ adl_check_arg_mins
 
 	CNOP 0,4
 adl_calculate_playtime
-	MULUF.W	adl_seconds_factor,d1,d2 ; Umrechnung Minuten in Sekunden
-	add.w	d0,d1			; Gesamtwert in Sekunden
+	MULUF.W	adl_seconds_factor,d1,d2 ; conversion minutes to seconds
+	add.w	d0,d1			; total value in seconds
 	MULUF.W	rd_duration_shift,d1,d0
 	move.w	d1,rd_play_duration(a3)
 
-; ** Run-Demo Argument MULTIPART **
+; Run-Demo argument MULTIPART
 	move.l	cra_MULTIPART(a2),d0
 	beq.s   adl_check_arg_random
 	tst.w	rd_play_duration(a3)
@@ -2023,7 +1831,7 @@ adl_calculate_playtime
 	CNOP 0,4
 adl_check_arg_multipart_skip1
 	move.l	d0,a0
-	move.l	(a0),d0		; Anzahl der Demoteile
+	move.l	(a0),d0			; number of demo parts
 	cmp.b	#adl_multipart_min,d0
 	bge.s   adl_check_arg_multipart_skip2
 	bra	adl_check_cmd_line_fail
@@ -2034,16 +1842,16 @@ adl_check_arg_multipart_skip2
 	bra	adl_check_cmd_line_fail
 	CNOP 0,4
 adl_check_arg_multipart_skip3
-	subq.b	#1,d0		; Korrektur, nur Werte 1..15
+	subq.b	#1,d0			; only values 1..15
 	or.b	d0,rd_play_duration+BYTE_SIZE(a3)
 
-; ** Run-Demo Argument RANDOM **
+; Run-Demo argument RANDOM
 adl_check_arg_random
 	move.l	cra_RANDOM(a2),d0
 	not.w	d0
 	move.w	d0,rd_arg_random_enabled(a3)
 
-; ** Run-Demo Argument ENDLESS **
+; Run-Demo argument ENDLESS
 	move.l	cra_ENDLESS(a2),d0
 	not.w	d0
 	move.w	d0,rd_arg_endless_enabled(a3)
@@ -2059,18 +1867,18 @@ adl_update_endless_enabled
 	lea	rp_endless_enabled(pc),a0
 	move.w	d0,(a0)
 
-; ** Run-Demo Argument LOOP **
+; Run-Demo argument LOOP
 adl_check_arg_loop
 	move.l	cra_LOOP(a2),d0
 	not.w	d0
 	move.w	d0,rd_arg_loop_enabled(a3)
 
-; ** Run-Demo Argument RESTORESYSTIME **
+; Run-Demo argument RESTORESYSTIME
 	move.l	cra_RESTORESYSTIME(a2),d0
 	not.w	d0
 	move.w	d0,rd_arg_restoresystime_enabled(a3)
 
-; ** Run-Demo Argument SOFTRESET **
+; Run-Demo argument SOFTRESET
 	move.l	cra_SOFTRESET(a2),d0
 	beq.s	rd_check_arg_resetonerror
 	tst.w	rd_arg_loop_enabled(a3)
@@ -2078,7 +1886,7 @@ adl_check_arg_loop
 	not.w	d0
 	move.w	d0,rd_arg_softreset_enabled(a3)
 
-; ** Run-Demo Argument RESETONERROR **
+; Run-Demo argument RESETONERROR
 rd_check_arg_resetonerror
 	move.l	cra_RESETONERROR(a2),d0
 	not.w	d0
@@ -2086,9 +1894,9 @@ rd_check_arg_resetonerror
 	bra	adl_check_cmd_line_ok
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 adl_print_intro_message
 	tst.w	adl_reset_program_active(a3)
@@ -2105,16 +1913,17 @@ adl_print_intro_message_skip
 	bra.s	adl_print_intro_message_quit
 
 
-; **** Demo-Charger ****
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code/Error-Code
+; Demo-Charger
+
+; input
+; result
+; d0.l	... return value: return code/error code
 	CNOP 0,4
 dc_alloc_entries_buffer
 	tst.w	adl_reset_program_active(a3)
 	beq.s	dc_alloc_entries_buffer_ok
 	move.w	adl_entries_number_max(a3),d0
-	mulu.w	#playback_queue_entry_size,d0 ; Größe des Puffers
+	mulu.w	#playback_queue_entry_size,d0 ; total size of playback queue
 	move.l	#MEMF_CLEAR|MEMF_ANY|MEMF_PUBLIC|MEMF_REVERSE,d1
 	CALLEXEC AllocMem
 	move.l	d0,adl_entries_buffer(a3)
@@ -2130,9 +1939,9 @@ dc_alloc_entries_buffer_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	.... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	.... return value: return code
 	CNOP 0,4
 dc_open_asl_library
 	lea	asl_library_name(pc),a1
@@ -2152,9 +1961,9 @@ dc_open_asl_library_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code/Error-Code
+; input
+; result
+; d0.l	... return value: return code/error code
 	CNOP 0,4
 dc_get_program_dir
 	CALLDOS GetProgramDir
@@ -2167,9 +1976,9 @@ dc_get_program_dir
 	rts
 	CNOP 0,4
 dc_get_program_dir_name
-	move.l	d0,d1			; Verzeichnis-Lock
+	move.l	d0,d1			; directory lock
 	lea	dc_current_dir_name(pc),a0
-	move.l	a0,d2			; Zeiger auf Puffer für Verzeichnisname
+	move.l	a0,d2			; pointer buffer directory name
 	MOVEF.L	adl_demofile_path_length,d3
 	CALLLIBS NameFromLock
 	tst.l	d0
@@ -2185,26 +1994,26 @@ dc_get_program_dir_name_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 dc_display_remaining_files
 	lea	dc_file_request_remaining_files(pc),a0
 	moveq	#0,d1
 	move.w	adl_entries_number_max(a3),d1
-	sub.w	adl_entries_number(a3),d1 ; Verbleibende Anzahl der zu ladenden Dateien berechnen
+	sub.w	adl_entries_number(a3),d1 ; remaining number of free entries
 	cmp.w	#adl_entries_number_min,d1
 	bne.s	dc_request_title_skip
-	clr.b	dc_file_request_character_s-dc_file_request_remaining_files(a0) ; "s" von Demo"s" löschen
+	clr.b	dc_file_request_character_s-dc_file_request_remaining_files(a0) ; delete "s" of demos
 dc_request_title_skip
-	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
+	moveq	#2,d7			; number of digits to convert
 	bra	rp_dec_to_ascii
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 dc_make_file_request
 	moveq	#ASL_FileRequest,d0
@@ -2212,7 +2021,7 @@ dc_make_file_request
 	lea	dc_file_request_pattern_os3x(pc),a1
 	cmp.w	#OS3_VERSION,adl_os_version(a3)
  	bge.s	dc_make_file_request_skip
-	lea	dc_file_request_pattern_os2x(pc),a1 ; OS2.x berücksichtigt nur eine Stringlänge von 32 Zeichen
+	lea	dc_file_request_pattern_os2x(pc),a1 ; OS2.x only considers 32 characters string length
 dc_make_file_request_skip
 	move.l	a1,frtl_ASLFR_InitialPattern+ti_data(a0)
 	CALLASL AllocAslRequest
@@ -2229,13 +2038,13 @@ dc_make_file_request_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 dc_display_file_request
 	move.l	dc_file_request(a3),a0
-	sub.l	a1,a1			; Keine Taglist
+	sub.l	a1,a1			; no tag list
 	CALLASL AslRequest
 	tst.l   d0
 	bne.s	dc_display_file_request_ok
@@ -2247,30 +2056,30 @@ dc_display_file_request_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 dc_get_demofile_path
 	clr.w   dc_multiselect_entries_number(a3)
 	move.l	dc_file_request(a3),a2
 	move.l	fr_NumArgs(a2),d6
-	move.w	d6,d0			; Anzahl der ausgewählten Dateien
+	move.w	d6,d0			; number of selected files
 	add.w   adl_entries_number(a3),d0
 	cmp.w   adl_entries_number_max(a3),d0
 	blt.s   dc_get_demofile_path_skip1
 	move.w  adl_entries_number_max(a3),d6
-	sub.w   adl_entries_number(a3),d6 ; noch verbleibende Einträge
+	sub.w   adl_entries_number(a3),d6 ; remaining number of free entries
 dc_get_demofile_path_skip1
 	move.w  d6,dc_multiselect_entries_number(a3)
-	moveq	#0,d5			; Erster Eintrag in ArgLists
+	moveq	#0,d5			; first entry in ArgLists
 	move.l	fr_ArgList(a2),a6
-	subq.w	#1,d6			; Loopend at false
+	subq.w	#1,d6			; loopend at false
 dc_get_demofile_path_loop
 	move.w	d5,d0
 	MULUF.W	8,d0,d1
-	move.l	wa_Name(a6,d0.w),a0	; Zeiger auf Dateiname
-	move.l	fr_Drawer(a2),a1	; Zeiger auf Verzeichnisname
+	move.l	wa_Name(a6,d0.w),a0	; pointer file name
+	move.l	fr_Drawer(a2),a1	; pointer directory name
 	move.l	a2,-(a7)
 	bsr.s	dc_check_demofile_path
 	move.l	(a7)+,a2
@@ -2279,20 +2088,20 @@ dc_get_demofile_path_loop
 	rts
 	CNOP 0,4
 dc_get_demofile_path_skip2
-	addq.w	#1,d5			; nächster Eintrag in ArgLists
+	addq.w	#1,d5			; next entry in ArgLists
 	dbf	d6,dc_get_demofile_path_loop
 	moveq	#RETURN_OK,d0
 	rts
 
 
-; Input
-; a0	... Zeiger auf Dateiname
-; a1 	... Zeiger auf Verzeichnisname
-; Result
-; d0.l	... Rückgabewert: Return-Code/Error Code
+; input
+; a0	... pointer file name
+; a1 	... pointer directory name
+; result
+; d0.l	... return value: return code/Error Code
 	CNOP 0,4
 dc_check_demofile_path
-	tst.b	(a1)			; Verzeichnisname vorhanden ?
+	tst.b	(a1)			; directory name exists ?
  	bne.s	dc_check_demofile_name
 	lea	dc_error_text14(pc),a0
 	moveq	#dc_error_text14_end-dc_error_text14,d0
@@ -2301,7 +2110,7 @@ dc_check_demofile_path
 	rts
 	CNOP 0,4
 dc_check_demofile_name
-	tst.b	(a0)			; Dateiname vorhanden ?
+	tst.b	(a0)			; file name exists ?
 	bne.s	dc_get_playback_entry_offset
 	lea	dc_error_text15(pc),a0
 	moveq	#dc_error_text15_end-dc_error_text15,d0
@@ -2313,23 +2122,23 @@ dc_get_playback_entry_offset
 	move.w	adl_entries_number(a3),d0
 	mulu.w	#playback_queue_entry_size,d0
 	move.l	adl_entries_buffer(a3),a2
-	add.l   d0,a2			; Zeiger auf Eintrag im Puffer
+	add.l   d0,a2			; pointer current entry in playback queue
 	move.l	a2,dc_current_entry(a3)
 	move.l	a0,-(a7)
-	move.l	a2,a0			; Zeiger auf Eintrag im Puffer
+	move.l	a2,a0			; pointer current entry in playback queue
 	bsr	dc_clear_playlist_entry
-	move.l	(a7)+,a0		; Zeiger auf Dateiname
+	move.l	(a7)+,a0		; pointer file name
 dc_check_demo_dir_name
-	tst.b	(a1)			; Ende von Verzeichnisname (Nullbyte) ?
+	tst.b	(a1)			; end of directory name (nullbyte) ?
 	beq.s	dc_copy_demofile_name_loop
 	cmp.b	#"/",(a1)
 	bne.s	dc_copy_demo_dir_name
-	addq.w	#1,a1			; Nächstes Zeichen im Verzeichnisnamen
+	addq.w	#BYTE_SIZE,a1		; next character in directory name
 	bra.s	dc_check_demo_dir_name
 	CNOP 0,4
 dc_copy_demo_dir_name
-	lea	dc_current_dir_name(pc),a4 ; Zeiger auf Puffer für aktuellen Verzeichnisnamen
-	moveq	#0,d0			; Zähler für Länge des Dateipfads zurücksetzen
+	lea	dc_current_dir_name(pc),a4
+	moveq	#0,d0			; length counter directory path
 dc_copy_demo_dir_name_loop
 	addq.b	#1,d0
 	cmp.b	#adl_demofile_path_length-1,d0
@@ -2346,15 +2155,15 @@ dc_copy_demo_dir_skip
 	move.b	(a1),(a2)+
 	move.b	(a1)+,(a4)+
 	tst.b	(a1)
-	bne.s	dc_copy_demo_dir_name_loop ; Schleife, so lange bis Endes des Verzeichnisnamens erreicht ist
-	clr.b	(a4)			; Nullbyte setzen
+	bne.s	dc_copy_demo_dir_name_loop ; loop until nullbyte found
+	clr.b	(a4)			; add nullbyte
 	cmp.b	#":",-1(a1)
 	beq.s	dc_copy_demofile_name_loop
 	cmp.b	#"/",-1(a1)
 	beq.s	dc_copy_demofile_name_loop
 	move.b	#"/",(a2)+
 dc_copy_demofile_name_loop
-	addq.b	#1,d0
+	addq.b	#BYTE_SIZE,d0
 	cmp.b	#adl_demofile_path_length-1,d0
 	blt.s	dc_copy_demofile_name_skip
 	move.l	dc_current_entry(a3),a0
@@ -2377,49 +2186,49 @@ dc_copy_demofile_name_skip
 	CNOP 0,4
 dc_check_demofile_nullbyte
 	tst.b	(a0)
-	bne.s	dc_copy_demofile_name_loop ; Schleife bis Endes des Verzeichnisnamens erreicht
-	clr.b	(a2)			; Nullbyte setzen
+	bne.s	dc_copy_demofile_name_loop ; loop until nullbytwe found
+	clr.b	(a2)			; add nullbyte
 	addq.w	#1,adl_entries_number(a3)
 	moveq	#RETURN_OK,d0
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 dc_free_file_request
 	move.l	dc_file_request(a3),a0
 	CALLASLQ FreeAslRequest
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 dc_display_runmode_request
-	sub.l	a0,a0			; Requester erscheint auf Workbench/Public-Screen
+	sub.l	a0,a0			; requester on workbench/public screen
 	lea	dc_runmode_request(pc),a1
-	move.l	a0,a2			; Keine IDCMP-Flags
+	move.l	a0,a2			; no IDCMP flags
 	move.l	a3,-(a7)
-	move.l	a0,a3			; Keine Argumentenliste
+	move.l	a0,a3			; no arguments list
 	CALLINT EasyRequestArgs
 	move.l	(a7)+,a3
-	addq.b  #1,d0                   ; Ergebnis korrigieren
-	MOVEF.L playback_queue_entry_size,d1 ; Größe des Eintrags
+	addq.b  #1,d0                   ; adjust result
+	MOVEF.L playback_queue_entry_size,d1
 	move.l	dc_current_entry(a3),a0
 	move.w	dc_multiselect_entries_number(a3),d7
-	subq.w	#1,d7			; Loopend at false
+	subq.w	#1,d7			; loopend at false
 dc_start_loop
 	move.b	d0,pqe_runmode(a0)
-	sub.l	d1,a0			; vorheriger Pfadname
+	sub.l	d1,a0			; previous entry
 	dbf	d7,dc_start_loop
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 dc_check_entries_number_max
 	move.w  adl_entries_number(a3),d0
@@ -2434,9 +2243,9 @@ dc_check_entries_number_max_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 dc_print_entries_max_message
 	lea     dc_message_text(pc),a0
@@ -2444,9 +2253,9 @@ dc_print_entries_max_message
 	bra     adl_print_text
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code/Error-Code
+; input
+; result
+; d0.l	... return value: return code/error code
 	CNOP 0,4
 dc_init_reset_program
 	tst.w	adl_entries_number(a3)
@@ -2459,11 +2268,11 @@ dc_check_reset_program_active
 	beq	dc_update_entries_number
 	lea	rp_entry_offset(pc),a0
 	move.w	rd_entry_offset(a3),(a0)
-	move.l	#rp_entries_buffer-rp_start,d0 ; Programmgröße
+	move.l	#rp_entries_buffer-rp_start,d0 ; reset program size
 	move.w	d0,d7
 	move.w	adl_entries_number_max(a3),d1
-	mulu.w	#playback_queue_entry_size,d1 ; Größe des Puffers
-	add.l	d1,d0			; Gesamtlänge inkusive Puffergröße
+	mulu.w	#playback_queue_entry_size,d1 ; total playback queue size
+	add.l	d1,d0			; total size of reset program section
 	lea	rp_reset_program_size(pc),a0
 	move.l	d0,(a0)
 	move.l	#MEMF_CLEAR|MEMF_CHIP|MEMF_PUBLIC|MEMF_REVERSE,d1
@@ -2478,25 +2287,25 @@ dc_check_reset_program_active
 	rts
 	CNOP 0,4
 dc_copy_reset_program
-	lea	rp_start(pc),a0		; Quelle
-	move.l	d0,a1			; Ziel: Speicherbereich
-	move.l	d0,a2			; Reset-Programm im Speicher
+	lea	rp_start(pc),a0		; source
+	move.l	d0,a1			; destination
+	move.l	d0,a2			; pointer reset program
 	move.l	d0,CoolCapture(a6)
-	subq.w	#1,d7			; Loopend at false
+	subq.w	#1,d7			; loopend at false
 dc_copy_reset_program_loop1
 	move.b	(a0)+,(a1)+
 	dbf	d7,dc_copy_reset_program_loop1
-	move.l	adl_entries_buffer(a3),a0 ; Quelle
+	move.l	adl_entries_buffer(a3),a0 ; source
 	move.w	adl_entries_number_max(a3),d7
-	mulu.w	#playback_queue_entry_size,d7 ; Puffergröße zum Kopieren berechnen
-	subq.w	#1,d7			; Loopend at false
+	mulu.w	#playback_queue_entry_size,d7 ; total size of reset program section
+	subq.w	#1,d7			; loopend at false
 dc_copy_reset_program_loop2
 	move.b	(a0)+,(a1)+
 	dbf	d7,dc_copy_reset_program_loop2
 	bsr	rp_update_exec_checksum
 	CALLLIBS CacheClearU
 
-	jsr	rp_init_custom_traps-rp_start(a2) ; Zeiger auf eigene Exception/Trap-Routinen initialisieren
+	jsr	rp_init_custom_traps-rp_start(a2)
 	tst.b	adl_cpu_flags+BYTE_SIZE(a3)
 	beq.s	dc_update_entries_number
 	lea	rp_read_VBR(pc),a5
@@ -2504,9 +2313,9 @@ dc_copy_reset_program_loop2
 	tst.l	d0			; VBR = $000000 ?
 	beq.s	dc_update_entries_number
 	GET_CUSTOM_TRAP_VECTORS
-	move.l	d0,a0 			; Quelle
-	move.w	#TRAP_0_VECTOR,a1	; Ziel: Ab Trap0-Vektor im chip memory
-	moveq	#7-1,d7			; Anzahl der Trap-Vektoren
+	move.l	d0,a0 			; source
+	move.w	#TRAP_0_VECTOR,a1	; target chip memory
+	moveq	#adl_used_trap_vectors_number-1,d7
 dc_copy_custom_traps_loop
 	move.l	(a0)+,(a1)+
 	dbf	d7,dc_copy_custom_traps_loop
@@ -2519,18 +2328,18 @@ dc_update_entries_number
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 dc_close_asl_library
 	move.l	_ASLBase(pc),a1
 	CALLEXECQ CloseLibrary
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 dc_lock_playlist_file
 	move.l	dc_playlist_file_name(a3),d1
@@ -2549,9 +2358,9 @@ dc_lock_playlist_file_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code/Error-Code
+; input
+; result
+; d0.l	... return value: return code/error code
 	CNOP 0,4
 dc_alloc_playlist_file_fib
 	MOVEF.L fib_SIZEOF,d0
@@ -2570,9 +2379,9 @@ dc_alloc_playlist_file_fib_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 dc_get_playlist_file_length
 	move.l	dc_playlist_file_lock(a3),d1
@@ -2593,9 +2402,9 @@ dc_get_playlist_file_length_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code/Error-Code
+; input
+; result
+; d0.l	... return value: return code/error code
 	CNOP 0,4
 dc_alloc_playlist_file_buffer
 	move.l	dc_playlist_file_length(a3),d0
@@ -2614,9 +2423,9 @@ dc_alloc_playlist_file_buffer_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 dc_open_playlist_file
 	move.l	dc_playlist_file_name(a3),d1
@@ -2635,14 +2444,14 @@ dc_open_playlist_file_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 dc_read_playlist_file
 	move.l	dc_playlist_file_handle(a3),d1
-	move.l	dc_playlist_file_length(a3),d3
 	move.l	dc_playlist_file_buffer(a3),d2
+	move.l	dc_playlist_file_length(a3),d3
 	CALLDOS Read
 	tst.l	d0
 	bne.s	dc_read_playlist_file_ok
@@ -2657,9 +2466,9 @@ dc_read_playlist_file_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 dc_parse_playlist_file
 	lea	dc_parsing_begin_text(pc),a0
@@ -2668,12 +2477,12 @@ dc_parse_playlist_file
 	move.w	adl_entries_number(a3),d0
 	mulu.w	#playback_queue_entry_size,d0
 	move.l	adl_entries_buffer(a3),a0
-	add.l   d0,a0			; Zeiger auf Eintrag im Puffer
+	add.l   d0,a0			; pointer entry in playback queue
 	move.l	a0,d6
 	move.l	dc_playlist_file_buffer(a3),a2
 	move.l	dc_playlist_file_length(a3),d7
 dc_parse_playlist_file_loop1
-	subq.w	#1,d7			; Loopend at false
+	subq.w	#1,d7			; loopend at false
 	bpl.s	dc_parse_playlist_file_proceed
 	bsr	dc_parse_playlist_file_result
 	moveq	#RETURN_OK,d0
@@ -2681,8 +2490,8 @@ dc_parse_playlist_file_loop1
 	CNOP 0,4
 dc_parse_playlist_file_proceed
 	addq.w	#1,dc_playlist_entries_number(a3)
-	MOVEF.L	DOS_RDARGS,d1		; ReadArgs-Struktur erzeugen
-	moveq	#0,d2			; Keine Tags
+	MOVEF.L	DOS_RDARGS,d1
+	moveq	#0,d2			; no tags
 	CALLDOS AllocDosObject
 	tst.l	d0
 	bne.s	dc_parse_playlist_file_skip
@@ -2693,9 +2502,9 @@ dc_parse_playlist_file_proceed
 	rts
 	CNOP 0,4
 dc_parse_playlist_file_skip
-	moveq	#0,d4			; Zähler für Länge einer Befehlszeile zurücksetzen
-	move.l	d0,a4			; Zeiger auf RDArgs-Struktur
-	move.l	a2,CS_Buffer(a4)	; Zeiger auf Playlist-File-Puffer eintragen
+	moveq	#0,d4			; counter length of command line
+	move.l	d0,a4			; pointer RDArgs structure
+	move.l	a2,CS_Buffer(a4)	; pointer playlist file buffer
 dc_parse_playlist_file_loop2
 	addq.w	#1,d4
 	cmp.b	#ASCII_LINE_FEED,(a2)+
@@ -2709,7 +2518,7 @@ dc_parse_playlist_entry
 	move.l	d4,CS_Length(a4)
 	lea	dc_playlist_results_array(pc),a5
 	moveq	#0,d0
-	move.l	d0,pra_demofile(a5)	; Alle Ergebnis-Felder der Argumente löschen
+	move.l	d0,pra_demofile(a5)	; clear whole results array
 	move.l	d0,pra_OCSVANILLA(a5)
 	move.l	d0,pra_AGAVANILLA(a5)
 	move.l	d0,pra_PLAINTURBO(a5)
@@ -2718,9 +2527,9 @@ dc_parse_playlist_entry
 	move.l	d0,pra_MULTIPART(a5)
 	move.l	d0,pra_PRERUNSCRIPT(a5)
 	lea	dc_playlist_template(pc),a0
-	move.l	a0,d1			; Zeiger auf Befelsschablone für Playlist-Argumente
-	move.l	a5,d2			; Zeiger auf Ergebnis-Felder für Playlist-Argumente
-	move.l	a4,d3			; Eigene RDArgs-Struktur
+	move.l	a0,d1			; pointer playlist template
+	move.l	a5,d2			; pointer playlist results array
+	move.l	a4,d3			; own RDArgs structure
 	CALLDOS ReadArgs
 	tst.l	d0
 	bne.s	dc_parse_playlist_entry_skip
@@ -2728,41 +2537,41 @@ dc_parse_playlist_entry
 	bra	dc_free_DosObject
 	CNOP 0,4
 dc_parse_playlist_entry_skip
-	move.l	d6,a0			; Zeiger auf Eintrag im Puffer
+	move.l	d6,a0			; pointer entry in playback queue
 	bsr	dc_clear_playlist_entry
 
-; ** Playlist-Argument demofile **
+; Playlist argument demofile
 	move.l	pra_demofile(a5),d0
 	bne.s	dc_copy_demofile_path
-	move.l	d6,a0			; Zeiger auf Eintrag im Puffer
+	move.l	d6,a0			; pointer entry in playback queue
 	bsr	dc_parse_playlist_entry_error
 	bra	dc_free_custom_arguments
 	CNOP 0,4
 dc_copy_demofile_path
-	move.l	d0,a0			; Zeiger auf Dateiname des Demos
-	move.l	d6,a1			; Zeiger auf Eintrag im Puffer
-	moveq	#0,d0			; Zähler für Länge des Dateipfads
+	move.l	d0,a0			; pointer entry file name
+	move.l	d6,a1			; pointer entry in playback queue
+	moveq	#0,d0			; counter length of file path
 dc_copy_demofile_path_loop
 	addq.b	#1,d0
 	cmp.b	#adl_demofile_path_length-1,d0
 	blt.s	dc_copy_demofile_path_skip
-	move.l	d6,a0			; Zeiger auf Eintrag im Puffer
+	move.l	d6,a0			; pointer entry in playback queue
 	bsr	dc_parse_playlist_entry_error
 	bra	dc_free_custom_arguments
 	CNOP 0,4
 dc_copy_demofile_path_skip
 	move.b	(a0)+,(a1)+
-	bne.s	dc_copy_demofile_path_loop ; Schleife, bis Nullbyte gefunden wurde
+	bne.s	dc_copy_demofile_path_loop ; loop until nullbyte found
 
-	move.l	d6,a1			; Zeiger auf Eintrag im Puffer
+	move.l	d6,a1			; pointer entry in playback queue
 	clr.b	pqe_runmode(a1)
-; ** Playlist-Argument OCSVANILLA **
+; Playlist argument OCSVANILLA
 	tst.l	pra_OCSVANILLA(a5)
 	beq.s	dc_check_arg_AGAVANILLA
 	move.b	#RUNMODE_OCS_VANILLA,pqe_runmode(a1)
 	bra.s	dc_check_entry_run_mode
 
-; ** Playlist-Argument AGAVANILLA **
+; Playlist argument AGAVANILLA
 	CNOP 0,4
 dc_check_arg_agavanilla
 	tst.l	pra_AGAVANILLA(a5)
@@ -2770,7 +2579,7 @@ dc_check_arg_agavanilla
 	move.b	#RUNMODE_AGA_VANILLA,pqe_runmode(a1)
 	bra.s	dc_check_entry_run_mode
 
-; ** Playlist-Argument TURBO **
+; Playlist argument TURBO
 	CNOP 0,4
 dc_check_arg_turbo
 	tst.l	pra_PLAINTURBO(a5)
@@ -2778,97 +2587,97 @@ dc_check_arg_turbo
 	move.b	#RUNMODE_PLAIN_TURBO,pqe_runmode(a1)
 
 dc_check_entry_run_mode
-	move.l	d6,a1			; Zeiger auf Eintrag im Puffer
+	move.l	d6,a1			; pointer entry in playback queue
 	tst.b	pqe_runmode(a1)
 	bne.s   dc_check_arg_secs
-	move.l	d6,a0			; Zeiger auf Eintrag im Puffer
+	move.l	d6,a0			; pointer entry in playback queue
 	bsr	dc_parse_playlist_entry_error
 	bra	dc_free_custom_arguments
 
-; ** Playlist-Argument SECS **
+; Playlist-Argument SECS 
 	CNOP 0,4
 dc_check_arg_secs
-	move.l	d6,a1			; Zeiger auf Eintrag im Puffer
+	move.l	d6,a1			; pointer entry in playback queue
 	move.l	pra_SECS(a5),d0
 	beq.s	dc_check_arg_mins
 	move.l	d0,a0
-	move.l	(a0),d0			; Sekundenwert
+	move.l	(a0),d0			; seconds value
 	moveq	#adl_seconds_max,d2
 	cmp.l	d2,d0
 	ble.s   dc_check_arg_mins
-	move.l	d6,a0			; Zeiger auf Eintrag im Puffer
+	move.l	d6,a0			; pointer entry in playback queue
 	bsr	dc_parse_playlist_entry_error
 	bra	dc_free_custom_arguments
 
-; ** Playlist-Argument MINS **
+; Playlist-Argument MINS 
 	CNOP 0,4
 dc_check_arg_mins
 	move.l	pra_MINS(a5),d1
 	beq.s	dc_calculate_playtime
 	move.l	d1,a0
-	move.l	(a0),d1			; Minutenwert
+	move.l	(a0),d1			; minutes value
 	moveq	#adl_minutes_max,d2
 	cmp.l	d2,d1
 	ble.s	dc_calculate_playtime
-	move.l	d6,a0			; Zeiger auf Eintrag im Puffer
+	move.l	d6,a0			; pointer entry in playback queue
 	bsr	dc_parse_playlist_entry_error
 	bra	dc_free_custom_arguments
 
 	CNOP 0,4
 dc_calculate_playtime
-	MULUF.W	adl_seconds_factor,d1,d2 ; Umrechnung Minuten in Sekunden
-	add.l	d0,d1			; Gesamtwert in Sekunden
+	MULUF.W	adl_seconds_factor,d1,d2 ; conversion minutes to seconds
+	add.l	d0,d1			; total value in seconds
 	MULUF.W	rd_duration_shift,d1,d0
 	move.w	d1,pqe_playtime(a1)
 
-; ** Playlist-Argument MULTIPART **
-	move.l	d6,a1			; Zeiger auf Eintrag im Puffer
+; Playlist argument MULTIPART
+	move.l	d6,a1			; pointer entry in playback queue
 	move.l	pra_MULTIPART(a5),d0
 	beq.s	dc_check_arg_prerunscript
 	move.l	d0,a0
-	move.l	(a0),d0			; Anzahl der Demoteile
+	move.l	(a0),d0			; number of demo parts
 	bne.s	dc_check_arg_multipart_skip1
-	move.l	d6,a0			; Zeiger auf Eintrag im Puffer
+	move.l	d6,a0			; pointer entry in playback queue
 	bsr	dc_parse_playlist_entry_error
 	bra	dc_free_custom_arguments
 	CNOP 0,4
 dc_check_arg_multipart_skip1
 	cmp.b	#adl_multipart_min,d0
 	bge.s	dc_check_arg_multipart_skip2
-	move.l	d6,a0			; Zeiger auf Eintrag im Puffer
+	move.l	d6,a0			; pointer entry in playback queue
 	bsr	dc_parse_playlist_entry_error
 	bra	dc_free_custom_arguments
 	CNOP 0,4
 dc_check_arg_multipart_skip2
 	cmp.b	#adl_multipart_max,d0
 	ble.s	dc_check_arg_multipart_skip3
-	move.l	d6,a0			; Zeiger auf Eintrag im Puffer
+	move.l	d6,a0			; pointer entry in playback queue
 	bsr	dc_parse_playlist_entry_error
 	bra.s	dc_free_custom_arguments
 	CNOP 0,4
 dc_check_arg_multipart_skip3
-	subq.b	#1,d0			; Werte 1..15
+	subq.b	#1,d0			; only values 1..15
 	or.b	d0,pqe_playtime+BYTE_SIZE(a1)
 
-; ** Playlist-Argument PRERUNSCRIPT **
+; Playlist-Argument PRERUNSCRIPT 
 dc_check_arg_prerunscript
 	move.l	pra_PRERUNSCRIPT(a5),d0
 	beq.s	dc_fwd_transmitted_entry
-	move.l	d0,a0			; Zeiger auf Dateiname des Scriptfiles
-	move.l	d6,a1			; Zeiger auf Eintrag im Puffer
-	ADDF.W	pqe_prerunscript_path,a1 ; Zeiger auf Prerunscript-Pfad in Puffer
-	moveq	#0,d0			; Zähler für Länge des Dateipfads
+	move.l	d0,a0			; pointer script file name
+	move.l	d6,a1			; pointer entry in playback queue
+	ADDF.W	pqe_prerunscript_path,a1
+	moveq	#0,d0			; counter length of file path
 dc_copy_prerunscript_path_loop
 	addq.b	#1,d0
 	cmp.b	#adl_prerunscript_path_length-1,d0
 	blt.s	dc_copy_prerunscript_skip
-	move.l	d6,a0			; Zeiger auf Eintrag im Puffer
+	move.l	d6,a0			; pointer entry in playback queue
 	bsr	dc_parse_playlist_entry_error
 	bra.s	dc_free_custom_arguments
 	CNOP 0,4
 dc_copy_prerunscript_skip
 	move.b	(a0)+,(a1)+
-	bne.s	dc_copy_prerunscript_path_loop ; Schleife, bis Nullbyte gefunden wurd
+	bne.s	dc_copy_prerunscript_path_loop ; loop until nullbyte found
 dc_fwd_transmitted_entry
 	addq.w	#1,dc_transmitted_entries_number(a3)
 	addq.w	#1,adl_entries_number(a3)
@@ -2879,31 +2688,31 @@ dc_fwd_transmitted_entry
 	bra	dc_print_entries_max_message
 	CNOP 0,4
 dc_fwd_playlist_cmd_line
-	add.l	#playback_queue_entry_size,d6 ; nächster Eintrag
+	add.l	#playback_queue_entry_size,d6 ; next entry
 dc_free_custom_arguments
-	move.l	a4,d1			; Zeiger auf RDArgs-Struktur
+	move.l	a4,d1			; pointer RDArgs structure
 	CALLDOS FreeArgs
 dc_free_DosObject
 	moveq	#DOS_RDARGS,d1
-	move.l	a4,d2			; Zeiger auf ReadArgs-Struktur
+	move.l	a4,d2			; pointer ReadArgs structure
 	CALLLIBS FreeDosObject
 	bra	dc_parse_playlist_file_loop1
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 dc_parse_playlist_file_result
 	moveq	#0,d1
-	move.w	dc_transmitted_entries_number(a3),d1 ; Dezimalzahl
-	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
-	lea	dc_transmitted_entries(pc),a0 ; Zeiger auf String
+	move.w	dc_transmitted_entries_number(a3),d1 ; decimal number
+	moveq	#2,d7			; number of digits to convert
+	lea	dc_transmitted_entries(pc),a0 ; pointer string
 	bsr	rp_dec_to_ascii
 	moveq	#0,d1
-	move.w	dc_playlist_entries_number(a3),d1 ; Dezimalzahl
-	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
-	lea	dc_playlist_entries(pc),a0 ; Zeiger auf String
+	move.w	dc_playlist_entries_number(a3),d1 ; decimal number
+	moveq	#2,d7			; number of digits to convert
+	lea	dc_playlist_entries(pc),a0 ; pointer string
 	bsr	rp_dec_to_ascii
 	lea	dc_parsing_result_text(pc),a0
 	move.l	#dc_parsing_result_text_end-dc_parsing_result_text,d0
@@ -2911,40 +2720,40 @@ dc_parse_playlist_file_result
 	bra	qh_show_queue
 
 
-; Input
-; a0	... Zeiger auf Eintrag im Puffer
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; a0	... pointer entry in playback queue
+; result
+; d0.l	... no return value
 	CNOP 0,4
 dc_parse_playlist_entry_error
 	bsr.s	dc_clear_playlist_entry
 	bra.s 	dc_parse_entry_syntax_error
 
 
-; Input
-; a0	... Zeiger auf den Eintrag zum Löschen
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; a0	... pointer entry to delete
+; result
+; d0.l	... no return value
 	CNOP 0,4
 dc_clear_playlist_entry
 	moveq	#0,d0
-	MOVEF.W	playback_queue_entry_size-1,d3 ; Länge des Eintrags
+	MOVEF.W	playback_queue_entry_size-1,d3
 dc_clear_playlist_entry_loop
 	move.b	d0,(a0)+
 	dbf	d3,dc_clear_playlist_entry_loop
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 dc_parse_entry_syntax_error
 	moveq	#0,d1
-	move.w	dc_playlist_entries_number(a3),d1 ; Dezimalzahl
-	lea	dc_entries_string(pc),a0 ; Zeiger auf String
+	move.w	dc_playlist_entries_number(a3),d1 ; decimal number
+	lea	dc_entries_string(pc),a0 ; pointer string
 	move.w	d7,-(a7)
-	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
+	moveq	#2,d7			; number of digits to convert
 	bsr	rp_dec_to_ascii
 	move.w	(a7)+,d7
 	lea	dc_error_text9(pc),a0
@@ -2952,9 +2761,9 @@ dc_parse_entry_syntax_error
 	bra	adl_print_text
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 dc_check_entries_number_min
 	tst.w	adl_entries_number(a3)
@@ -2967,18 +2776,18 @@ dc_check_entries_number_min_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 dc_close_playlist_file
 	move.l	dc_playlist_file_handle(a3),d1
 	CALLDOSQ Close
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 dc_free_playlist_file_buffer
 	move.l	dc_playlist_file_buffer(a3),a1
@@ -2986,9 +2795,9 @@ dc_free_playlist_file_buffer
 	CALLEXECQ FreeMem
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 dc_free_playlist_file_fib
 	move.l	dc_playlist_file_fib(a3),a1
@@ -2996,18 +2805,18 @@ dc_free_playlist_file_fib
 	CALLEXECQ FreeMem
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 dc_unlock_playlist_file
 	move.l dc_playlist_file_lock(a3),d1
 	CALLDOSQ UnLock
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 dc_free_entries_buffer
 	tst.w	adl_reset_program_active(a3)
@@ -3018,15 +2827,15 @@ dc_free_entries_buffer_quit
 dc_do_free_entries_buffer
 	move.l	adl_entries_buffer(a3),a1
 	move.w	adl_entries_number_max(a3),d0
-	mulu.w	#playback_queue_entry_size,d0 ; Größe des Puffers
+	mulu.w	#playback_queue_entry_size,d0 ; total playback queue size
 	CALLEXEC FreeMem
 	bra.s	dc_free_entries_buffer_quit
 
 
-; **** Queue-Handler ****
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; Queue-Handler 
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 qh_show_queue
 	move.l	adl_entries_buffer(a3),a2
@@ -3037,72 +2846,72 @@ qh_show_queue
 	bra	adl_print_text
 	CNOP 0,4
 qh_show_queue_ok
-	moveq	#1,d5			; Laufende Nummer für Einträge
+	moveq	#1,d5			; first order number
 	move.w	adl_entries_number(a3),d7
-	subq.w	#1,d7			; Loopend at false
+	subq.w	#1,d7			; loopend at false
 qh_show_queue_loop
 	lea	qh_show_entry_header(pc),a0
 	moveq	#qh_show_entry_current_number-qh_show_entry_header,d0
 	bsr	adl_print_text
-	move.l	d5,d1			; Wert zum Umwandeln
-	lea	qh_show_entry_current_number(pc),a0 ; Zeiger auf ASCII-Wert
+	move.l	d5,d1			; decimal number
+	lea	qh_show_entry_current_number(pc),a0 ; pointer string
 	move.w	d7,-(a7)
-	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
+	moveq	#2,d7			; number of digits to convert
 	bsr	rp_dec_to_ascii
 	move.w	(a7)+,d7
 	lea	qh_show_entry_current_number(pc),a0
 	moveq	#qh_show_entry_current_number_end-qh_show_entry_current_number,d0
 	bsr	adl_print_text
 	bsr.s   qh_get_entry_filename
-	ADDF.W	playback_queue_entry_size,a2 ; nächster Eintrag in Playback Queue
-	addq.w	#1,d5			; laufende Nummer erhöhen
+	ADDF.W	playback_queue_entry_size,a2 ; next entry
+	addq.w	#1,d5			; increase order number
 	dbf	d7,qh_show_queue_loop
 	lea	qh_not_used_entries_string(pc),a0
 	moveq	#0,d1
 	move.w	adl_entries_number_max(a3),d1
-	sub.w	adl_entries_number(a3),d1 ; Verbleibende Anzahl der zu ladenden Dateien berechnen
-	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
+	sub.w	adl_entries_number(a3),d1 ; remaining number of entries to load
+	moveq	#2,d7			; number of digits to convert
 	bsr	rp_dec_to_ascii
 	lea	qh_message_text2(pc),a0
 	moveq	#qh_message_text2_end-qh_message_text2,d0
 	bra	adl_print_text
 
 
-; Input
+; input
 ; a2	... Zeiger auf Eintrag in Playback-Queue
-; Result
-; d0.l	... Kein Rückgabewert
+; result
+; d0.l	... no return value
 	CNOP 0,4
 qh_get_entry_filename
-	moveq	#0,d0			; Zähler für Demo-Dateinamen-Länge
+	moveq	#0,d0			; counter length of file name
 	moveq	#"/",d2
 	moveq	#":",d3
 	moveq	#adl_demofile_path_length-1,d6
 	move.l	a2,a0
-	add.l	d6,a0			; Zeiger auf letztes Zeichen (Nullbyte)
+	add.l	d6,a0			; pointer last character (nullbyte)
 qh_get_entry_filename_loop
 	tst.b	(a0)
 	beq.s	qh_get_entry_filename_skip1
 	addq.w	#1,d0
 qh_get_entry_filename_skip1
-	cmp.b	(a0),d2			; "/" gefunden ?
-	beq.s	qh_get_entry_filename_skip2 ; Ja -> verzweige
-	cmp.b	(a0),d3			; ":" gefunden ?
-	beq.s	qh_get_entry_filename_skip2 ; Ja -> verzweige
-	subq.w	#1,a0			; vorgeriges Zeichen in Dateipfad
+	cmp.b	(a0),d2			; "/" found ?
+	beq.s	qh_get_entry_filename_skip2
+	cmp.b	(a0),d3			; ":" found ?
+	beq.s	qh_get_entry_filename_skip2
+	subq.w	#BYTE_SIZE,a0		; previous character in file path
 	dbf	d6,qh_get_entry_filename_loop
 qh_get_entry_filename_skip2
-	subq.w	#1,d0			; "/" oder ":" abziehen
-	addq.w	#1,a0			; "/" oder ":" überspringen
-	cmp.w	#qh_show_entry_space_end-qh_show_entry_space-1,d0 ; Länge des Dateinamens <= Füllzeile ?
-	ble.s	qh_get_entry_filename_skip3 ; Ja -> verzweige
-	moveq	#qh_show_entry_space_end-qh_show_entry_space-1,d0 ; Textlänge = Länge Füllzeile
+	subq.w	#1,d0			; substract "/" or ":"
+	addq.w	#1,a0			; skip "/" or ":"
+	cmp.w	#qh_show_entry_space_end-qh_show_entry_space-1,d0 ; file name length <= output line length ?
+	ble.s	qh_get_entry_filename_skip3
+	moveq	#qh_show_entry_space_end-qh_show_entry_space-1,d0 ; text length = output line length
 qh_get_entry_filename_skip3
-	move.w	d0,d4			; Länge des Dateinamens
+	move.w	d0,d4			; file name length
 	bsr	adl_print_text
-	lea	qh_show_entry_space(pc),a0 ; Zeiger auf "...."-String
-	moveq	#qh_show_entry_space_end-qh_show_entry_space-1,d0 ; Textlänge der Füllzeile
-	sub.w	d4,d0			; Abzüglich Länge des Dateinamens
+	lea	qh_show_entry_space(pc),a0 ; pointer output string
+	moveq	#qh_show_entry_space_end-qh_show_entry_space-1,d0 ; text length output line
+	sub.w	d4,d0			; substract file name length
 	bsr	adl_print_text
 	tst.b	pqe_entry_active(a2)
 	bne.s	qh_print_entry_active_text2
@@ -3116,9 +2925,9 @@ qh_print_entry_active_text2
 	bra	adl_print_text
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 qh_edit_single_entry
 	bsr	qh_lock_workbench
@@ -3149,9 +2958,9 @@ qh_edit_entry_quit
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 qh_edit_queue
 	move.l	adl_entries_buffer(a3),a0
@@ -3193,8 +3002,8 @@ qh_edit_queue_quit
 	rts
 
 
-; Input
-; Result
+; input
+; result
 ; d0.l	... Return-Code
 	CNOP 0,4
 qh_lock_workbench
@@ -3213,8 +3022,8 @@ qh_lock_workbench_ok
 	rts
 
 
-; Input
-; Result
+; input
+; result
 ; d0.l	... Return-Code
 	CNOP 0,4
 qh_get_screen_visual_info
@@ -3234,8 +3043,8 @@ qh_get_screen_visual_info_ok
 	rts
 
 
-; Input
-; Result
+; input
+; result
 ; d0.l	... Return-Code
 	CNOP 0,4
 qh_create_context_gadget
@@ -3254,8 +3063,8 @@ qh_create_context_gadget_ok
 	rts
 
 
-; Input
-; Result
+; input
+; result
 ; d0.l	... Return-Code
 	CNOP 0,4
 qh_create_gadgets
@@ -3263,9 +3072,8 @@ qh_create_gadgets
 	add.b	sc_WBorTop(a0),d2
 	move.l	sc_Font(a0),a0
 	move.w	ta_YSize(a0),d2
-	addq.w	#1,d2			; Höhe der Titelleiste des Fensters
-
-; ** Text Gadget **
+	addq.w	#1,d2			; window title bar height
+; text gadget
 	lea	qh_new_gadget(pc),a1
 	move.w	#qh_text_gadget_x_position,gng_LeftEdge(a1)
 	moveq	#qh_text_gadget_y_position,d0
@@ -3279,24 +3087,24 @@ qh_create_gadgets
 	move.l	d0,gng_Flags(a1)
 	move.l	qh_screen_visual_info(a3),gng_VisualInfo(a1)
 	move.w	qh_edit_entry_offset(a3),d0
-	subq.w	#1,d0			; Zählung ab 0
+	subq.w	#1,d0			; count starts at 0
 	mulu.w	#playback_queue_entry_size,d0
 	move.l	adl_entries_buffer(a3),a0
-  	add.l	d0,a0			; Zeiger auf Eintrag in Puffer
+  	add.l	d0,a0			; pointer entry in playback queue
 	move.l	a0,qh_edit_entry(a3)
 	bsr	qh_get_demofile_title
 	move.l	d0,qh_edit_entry_demofile_name(a3)
-	move.l	qh_context_gadget(a3),a0 ; vorheriges Gadget
+	move.l	qh_context_gadget(a3),a0 ; previous gadget
 	lea	qh_text_gadget_tags(pc),a2
-	move.l	d0,ti_data(a2)		; Name des Demos
+	move.l	d0,ti_data(a2)		; pointer file name
 	move.l	#TEXT_KIND,d0
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,a4
-	move.l	d0,qh_text_gadget_gadget(a3)
+	move.l	d0,qh_text_gadget(a3)
 
 	tst.w	qh_arg_editentry_enabled(a3)
 	beq	qh_create_cycle_gadget
-; ** Backwards-Button Gadget **
+; backwards button gadget
 	lea	qh_new_gadget(pc),a1
 	move.w	#qh_bwd_button_x_position,gng_LeftEdge(a1)
 	moveq	#qh_bwd_button_y_position,d0
@@ -3309,19 +3117,19 @@ qh_create_gadgets
         move.w	#qh_bwd_button_id,gng_GadgetID(a1)
 	moveq	#0,d0
 	move.l	d0,gng_Flags(a1)
-	moveq	#BOOL_FALSE,d0		; Gadget aktiv
+	moveq	#BOOL_FALSE,d0		; gadget state active
 	cmp.w	#adl_entries_number_min,qh_edit_entry_offset(a3)
         bne.s	qh_create_bwd_button_skip
-	moveq	#BOOL_TRUE,d0		; Gadget inaktiv
+	moveq	#BOOL_TRUE,d0		; gadget state inactive
 qh_create_bwd_button_skip
-	move.l	a4,a0			; vorheriges Gadget
+	move.l	a4,a0			; previous gadget
 	lea	qh_button_tags(pc),a2
-  	move.l	d0,ti_data(a2)		; Gadget-Status
+  	move.l	d0,ti_data(a2)		; gadget state
 	move.l	#BUTTON_KIND,d0
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,a4
 	move.l	d0,qh_bwd_button_gadget(a3)
-; ** Integer Gadget **
+; integer gadget
 	lea	qh_new_gadget(pc),a1
 	move.w	#qh_integer_gadget_x_position,gng_LeftEdge(a1)
 	moveq	#qh_integer_gadget_y_position,d0
@@ -3333,13 +3141,13 @@ qh_create_bwd_button_skip
 	move.l  d0,gng_GadgetText(a1)
         move.w	#qh_integer_gadget_id,gng_GadgetID(a1)
 	move.l	d0,gng_Flags(a1)
-	move.l	a4,a0			; vorheriges Gadget
+	move.l	a4,a0			; previous gadget
 	lea	qh_integer_gadget_tags(pc),a2
 	move.l	#INTEGER_KIND,d0
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,a4
-	move.l	d0,qh_integer_gadget_gadget(a3)
-; ** Forward-Button Gadget **
+	move.l	d0,qh_integer_gadget(a3)
+; forward button gadget
 	lea	qh_new_gadget(pc),a1
 	move.w	#qh_fwd_button_x_position,gng_LeftEdge(a1)
 	moveq	#qh_fwd_button_y_position,d0
@@ -3352,20 +3160,20 @@ qh_create_bwd_button_skip
         move.w	#qh_fwd_button_id,gng_GadgetID(a1)
 	moveq	#0,d0
 	move.l	d0,gng_Flags(a1)
-	moveq	#BOOL_FALSE,d0		; Gadget aktiv
+	moveq	#BOOL_FALSE,d0		; gadget state active
 	move.w	qh_edit_entry_offset(a3),d1
 	cmp.w	adl_entries_number(a3),d1
         blt.s	qh_create_fwd_button_skip
-	moveq	#BOOL_TRUE,d0		; Gadget inaktiv
+	moveq	#BOOL_TRUE,d0		; gadget state inactive
 qh_create_fwd_button_skip
-	move.l	a4,a0			; vorheriges Gadget
+	move.l	a4,a0			; previous gadget
 	lea	qh_button_tags(pc),a2
-  	move.l	d0,ti_data(a2)		; Gadget-Status
+  	move.l	d0,ti_data(a2)		; gadget state
 	move.l	#BUTTON_KIND,d0
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,a4
 	move.l	d0,qh_fwd_button_gadget(a3)
-; ** Cycle Gadget **
+; cycle gadget
 qh_create_cycle_gadget
 	lea	qh_new_gadget(pc),a1
 	move.w	#qh_cycle_gadget_x_position,gng_LeftEdge(a1)
@@ -3384,21 +3192,21 @@ qh_create_cycle_gadget_skip
 	moveq	#0,d0
 	move.l	d0,gng_Flags(a1)
 	move.w	qh_edit_entry_offset(a3),d0
-	subq.w	#1,d0			; Zählung ab 0
+	subq.w	#1,d0			; count starts at 0
 	mulu.w	#playback_queue_entry_size,d0
 	move.l	adl_entries_buffer(a3),a0
-	add.l	d0,a0			; Zeiger auf Eintrag in Liste
+	add.l	d0,a0			; pointer entry in playback queue
 	moveq	#0,d0
 	move.b	pqe_runmode(a0),d0
-	subq.b	#1,d0			; Ordnungsnummer Auswahltext
-	move.l	a4,a0			; vorheriges Gadget
+	subq.b	#1,d0			; order number selection text
+	move.l	a4,a0			; previous gadget
 	lea	qh_cycle_gadget_tags(pc),a2
-	move.l	d0,(1*ti_SIZEOF)+ti_Data(a2) ; Ordnungsnummer Auswahltext
+	move.l	d0,(1*ti_SIZEOF)+ti_Data(a2) ; order number selection text
 	move.l	#CYCLE_KIND,d0
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,a4
-	move.l	d0,qh_cycle_gadget_gadget(a3)
-; ** Mutually-Exclusive Gadget **
+	move.l	d0,qh_cycle_gadget(a3)
+; mutually exclusive gadget
 	lea	qh_new_gadget(pc),a1
 	move.w	#qh_mx_gadget_x_position,gng_LeftEdge(a1)
 	moveq	#qh_mx_gadget_y_position1,d0
@@ -3414,21 +3222,21 @@ qh_create_mx_gadget_skip
 	moveq	#PLACETEXT_RIGHT,d0
 	move.l	d0,gng_Flags(a1)
 	move.w	qh_edit_entry_offset(a3),d0
-	subq.w	#1,d0			; Zählung von 0
+	subq.w	#1,d0			; count starts at 0
 	mulu.w	#playback_queue_entry_size,d0
 	move.l	adl_entries_buffer(a3),a0
-	add.l	d0,a0			; Zeiger auf Entry in Puffer
+	add.l	d0,a0			; pointer entry in playback queue
 	moveq	#0,d0
 	move.b	pqe_entry_active(a0),d0
-        neg.b	d0			; Ordnungsnummer Auswahltext
-	move.l	a4,a0			; vorheriges Gadget
+        neg.b	d0			; order number selection text
+	move.l	a4,a0			; previous gadget
 	lea	qh_mx_gadget_tags(pc),a2
-	move.l	d0,(1*ti_SIZEOF)+ti_Data(a2) ; Ordnungsnummer Auswahltext
+	move.l	d0,(1*ti_SIZEOF)+ti_Data(a2) ; order number selection text
 	move.l	#MX_KIND,d0
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,a4
-	move.l	d0,qh_mx_gadget_gadget(a3)
-; ** Positive-Button Gadget **
+	move.l	d0,qh_mx_gadget(a3)
+; positive button gadget
 	lea	qh_new_gadget(pc),a1
 	move.w	#qh_positive_button_x_position,gng_LeftEdge(a1)
 	moveq	#qh_positive_button_y_position,d0
@@ -3441,14 +3249,14 @@ qh_create_mx_gadget_skip
         move.w	#qh_positive_button_id,gng_GadgetID(a1)
 	moveq	#0,d0
 	move.l	d0,gng_Flags(a1)
-	move.l	a4,a0			; vorheriges Gadget
+	move.l	a4,a0			; previous gadget
 	lea	qh_button_tags(pc),a2
-	moveq	#BOOL_FALSE,d0		; Gadget aktiv
-  	move.l	d0,ti_data(a2)		; Gadget-Status
+	moveq	#BOOL_FALSE,d0		; gadget state active
+  	move.l	d0,ti_data(a2)		; gadget state
 	move.l	#BUTTON_KIND,d0
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,a4
-; ** Negative-Button-Gadget **
+; negative button gadget
 	lea	qh_new_gadget(pc),a1
 	move.w	#qh_negative_button_x_position,gng_LeftEdge(a1)
 	move.w	#qh_negative_button_x_size,gng_Width(a1)
@@ -3458,7 +3266,7 @@ qh_create_mx_gadget_skip
         move.w	#qh_negative_button_id,gng_GadgetID(a1)
 	moveq	#0,d0
 	move.l	d0,gng_Flags(a1)
-	move.l	a4,a0			; vorheriges Gadget
+	move.l	a4,a0			; previous gadget
 	lea	qh_button_tags(pc),a2
 	move.l	#BUTTON_KIND,d0
 	CALLGADTOOLS CreateGadgetA
@@ -3476,34 +3284,34 @@ qh_create_gadgets_ok
 	rts
 
 
-; Input
-; a0	... Zeiger auf Eintrag in Playback-Queue
-; Result
-; d0.l	... Zeiger auf Dateinamen
+; input
+; a0	... pointer entry in playback queue
+; result
+; d0.l	... pointer file name
 	CNOP 0,4
 qh_get_demofile_title
 	moveq	#adl_demofile_path_length-1,d6
-	add.l	d6,a0			; Zeiger auf letztes Zeichen (Nullbyte)
+	add.l	d6,a0			; pointer last character (nullbyte)
 qh_get_demofile_title_loop
 	tst.b	(a0)
 	cmp.b	#"/",(a0)
 	beq.s	qh_get_demofile_title_skip
 	cmp.b	#":",(a0)
 	beq.s	qh_get_demofile_title_skip
-	subq.w	#1,a0			; vorgeriges Zeichen in Dateipfad
+	subq.w	#BYTE_SIZE,a0		; previous character in file path
 	dbf	d6,qh_get_demofile_title_loop
 qh_get_demofile_title_skip
-	addq.w	#1,a0			; "/" oder ":" überspringen
+	addq.w	#BYTE_SIZE,a0		; skip "/" or ":"
 	move.l	a0,d0
 	rts
 
 
-; Input
-; Result
+; input
+; result
 ; d0.l	... Return-Code
 	CNOP 0,4
 qh_open_edit_window
-	sub.l	a0,a0			; Keine NewWindow-Struktur
+	sub.l	a0,a0			; no NewWindow structure
 	lea	qh_edit_window_tags(pc),a1
 	move.l	qh_gadget_list(pc),ewtl_WA_Gadgets+ti_Data(a1)
 	CALLINT OpenWindowTagList
@@ -3517,49 +3325,49 @@ qh_open_edit_window
 	CNOP 0,4
 qh_do_open_edit_window
 	move.l	d0,a2
-	move.l	d0,a0			; Window
-	sub.l	a1,a1			; Kein Requester
+	move.l	d0,a0			; pointer window
+	sub.l	a1,a1			; no requester
 	CALLGADTOOLS GT_RefreshWindow
-        move.l	a2,a0			; Window
-	lea	qh_edit_window_name1(pc),a1 ; Neuer Window-Titel
+        move.l	a2,a0			; pointer window
+	lea	qh_edit_window_name1(pc),a1 ; new window title
 	tst.w	qh_arg_editentry_enabled(a3)
 	beq.s	qh_open_edit_window_skip
-	lea	qh_edit_window_name2(pc),a1 ; Neuer Window-Titel
+	lea	qh_edit_window_name2(pc),a1 ; new window title
 qh_open_edit_window_skip
-	move.w	#-1,a2			; Screen-Titel beibehalten
+	move.w	#-1,a2			; screen title remains the same
 	CALLINT SetWindowTitles
 	moveq	#RETURN_OK,d0
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 qh_process_window_events
 	move.l	qh_edit_window(a3),a0
 	move.l	wd_UserPort(a0),a2
 	moveq	#0,d0
         move.b	MP_SigBit(a2),d1
-	bset	d1,d0			; Signal-Nummer
-	move.l	a2,a0			; Port
+	bset	d1,d0			; signal number
+	move.l	a2,a0			; port
 	CALLEXEC Wait
 	move.l	a2,a0
 	CALLGADTOOLS GT_GetIMsg
-	move.l	d0,a4			; Intuition-Message
+	move.l	d0,a4			; intuition message
 	move.l 	im_Class(a4),d0		; IDCMP
-; ** Event Gadget-Up **
+; event "gadget up"
 	cmp.l	#IDCMP_GADGETUP,d0
 	bne	qh_check_event_gadget_down
 	move.l	im_IAddress(a4),a0
-; * Backwards Button Gadget *
+; backwards button gadget
 	cmp.w	#qh_bwd_button_id,gg_GadgetID(a0)
 	bne.s	qh_check_integer_gadget_event
 	moveq	#0,d0
 	move.w	qh_edit_entry_offset(a3),d0
 	cmp.w	#adl_entries_number_min,d0
 	beq.s   qh_bwd_button_event_skip
-        subq.w	#1,d0			; vorheriger Eintrag
+        subq.w	#1,d0			; previous entry
 qh_bwd_button_event_skip
 	move.w	d0,qh_edit_entry_offset(a3)
 	moveq	#0,d0
@@ -3571,15 +3379,15 @@ qh_bwd_button_event_skip
 	move.l	qh_edit_entry(a3),a5
 	bsr	qh_update_gadgets
 	bra	qh_process_window_events_ok
-; * Integer Gadget *
+; integer gadget
 	CNOP 0,4
 qh_check_integer_gadget_event
 	cmp.w	#qh_integer_gadget_id,gg_GadgetID(a0)
 	bne	qh_check_fwd_button_event
 	move.l	gg_SpecialInfo(a0),a0
-	move.l	si_Buffer(a0),a0	; Zeiger auf String
-	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
-	bsr	qh_ascii_to_dec		; Rückgabewert d0 = Dezimalzahl
+	move.l	si_Buffer(a0),a0	; pointer string
+	moveq	#2,d7			; number of digits to convert
+	bsr	qh_ascii_to_dec		; return value decimal number
 	cmp.w	#adl_entries_number_min,d0
 	bge.s	qh_check_integer_gadget_max
 	move.l	qh_workbench_screen(a3),a0
@@ -3604,7 +3412,7 @@ qh_check_integer_gadget_ok
 	move.l	qh_edit_entry(a3),a5
 	bsr	qh_update_gadgets
 	bra	qh_process_window_events_ok
-; * Fowrward-Button Gadget *
+; forward button gadget
 	CNOP 0,4
 qh_check_fwd_button_event
 	cmp.w	#qh_fwd_button_id,gg_GadgetID(a0)
@@ -3612,7 +3420,7 @@ qh_check_fwd_button_event
 	move.w	qh_edit_entry_offset(a3),d0
 	cmp.w	adl_entries_number(a3),d0
 	beq.s   qh_fwd_button_event_skip
-        addq.w	#1,d0			; nächster Eintrag
+        addq.w	#1,d0			; next entry
 qh_fwd_button_event_skip
 	move.w	d0,qh_edit_entry_offset(a3)
 	moveq	#0,d0
@@ -3624,7 +3432,7 @@ qh_fwd_button_event_skip
 	move.l	qh_edit_entry(a3),a5
 	bsr	qh_update_gadgets
 	bra	qh_process_window_events_ok
-; * Cycle Gadget *
+; cycle gadget
 	CNOP 0,4
 qh_check_cycle_gadget_event
 	cmp.w	#qh_cycle_gadget_id,gg_GadgetID(a0)
@@ -3633,7 +3441,7 @@ qh_check_cycle_gadget_event
 	addq.b	#1,d0
 	move.b	d0,qh_edit_runmode(a3)
 	bra	qh_process_window_events_ok
-; * Positive-Button Gadget *
+; positive button gadget
 	CNOP 0,4
 qh_check_positive_button_event
 	cmp.w	#qh_positive_button_id,gg_GadgetID(a0)
@@ -3643,14 +3451,14 @@ qh_check_positive_button_event
 	move.b	qh_edit_entry_active(a3),pqe_entry_active(a0)
 	move.w	#FALSE,qh_check_window_events_active(a3)
 	bra.s	qh_process_window_events_ok
-; * Negative-Button Gadget *
+; negative button gadget
 	CNOP 0,4
 qh_check_negative_button_event
 	cmp.w	#qh_negative_button_id,gg_GadgetID(a0)
 	bne.s	qh_process_window_events_ok
 	move.w	#FALSE,qh_check_window_events_active(a3)
 	bra.s	qh_process_window_events_ok
-; ** Gadget-Down **
+; gadget down
 	CNOP 0,4
 qh_check_event_gadget_down
 	cmp.l	#IDCMP_GADGETDOWN,d0
@@ -3662,14 +3470,14 @@ qh_check_event_gadget_down
 	neg.b	d0
 	move.b	d0,qh_edit_entry_active(a3)
 	bra.s	qh_process_window_events_ok
-; ** Close_window **
+; close window
 	CNOP 0,4
 qh_check_event_close_window
 	cmp.l	#IDCMP_CLOSEWINDOW,d0
 	bne.s	qh_check_event_refresh_window
 	move.w	#FALSE,qh_check_window_events_active(a3)
        	bra.s	qh_process_window_events_ok
-; ** Refresh-Window **
+; refresh window
 	CNOP 0,4
 qh_check_event_refresh_window
 	cmp.l	#IDCMP_REFRESHWINDOW,d0
@@ -3677,12 +3485,11 @@ qh_check_event_refresh_window
 	move.l	qh_edit_window(a3),a5
 	move.l	a5,a0
 	CALLGADTOOLS GT_BeginRefresh
-	move.l	a5,a0			; Window
-	moveq	#0,d0
+	move.l	a5,a0			; pointer window
+	moveq	#BOOL_TRUE,d0		; completed
 	CALLLIBS GT_EndRefresh
-
 qh_process_window_events_ok
-	move.l	a4,a1			; Intuition-Message
+	move.l	a4,a1			; intuition message
 	move.l	qh_edit_window(a3),a0
 	move.l	wd_UserPort(a0),a2
 	CALLGADTOOLS GT_ReplyIMsg
@@ -3691,169 +3498,169 @@ qh_process_window_events_ok
 	rts
 
 
-; Input
-; a0	... Zeiger auf String
-; d7.l	... Anzahl der Stellen zum Umwandeln
-; Result
-; d0.l	... Rückgabewert: Dezimalzahl
+; input
+; a0	... pointer string
+; d7.l	... number of digits to convert
+; result
+; d0.l	... return value: decimal number
 	CNOP 0,4
 qh_ascii_to_dec
 	tst.b	1(a0)
 	bne.s	qh_ascii_to_dec_skip
-	subq.w	#1,d7		        ; Nur eine Stelle umwandeln
+	subq.w	#1,d7			; adjust number of digits
 qh_ascii_to_dec_skip
-	add.l	d7,a0			; Zeiger auf Ende des Strings
+	add.l	d7,a0			; pointer end of string
 	lea	rp_dec_table(pc),a1
-	moveq	#0,d0			; Dezimalzahl
-	subq.w	#1,d7			; Loopend at false
+	moveq	#0,d0			; result decimal number
+	subq.w	#1,d7			; loopend at false
 qh_ascii_to_dec_loop
-	move.l	(a1)+,d2                ; Dezimal-Stellenwert (1,10,..)
+	move.l	(a1)+,d2                ; decimal digits value (1,10,..)
 	moveq	#0,d3
-	move.b	-(a0),d3		; ASCII-Wert lesen
-	sub.b	#"0",d3			; ASCII-Wert "0" abziehen = 0..9
-	mulu.w	d2,d3			; Dezimal-Basis
-	add.l	d3,d0			; Stelle zum Ergebnis addieren
+	move.b	-(a0),d3		; ascii value
+	sub.b	#"0",d3			; substract ascii value "0" = 0..9
+	mulu.w	d2,d3			; decimale base
+	add.l	d3,d0			; add digit to result
 	dbf	d7,qh_ascii_to_dec_loop
 	rts
 
 
-; Input
-; d0.l	... Nummer des Eintrags (1..n)
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; d0.l	... entry index number (1..n)
+; result
+; d0.l	... no return value
 	CNOP 0,4
 qh_edit_fetch_entry
-	subq.w	#1,d0			; Zählung ab 0
-	mulu.w	#playback_queue_entry_size,d0 ; Offset in Puffer
+	subq.w	#1,d0			; count starts at 0
+	mulu.w	#playback_queue_entry_size,d0
 	move.l	adl_entries_buffer(a3),a0
-	add.l	d0,a0                   ; Zeiger auf Eintrag
+	add.l	d0,a0                   ; pointer entry in playback queue
 	move.l	a0,qh_edit_entry(a3)
 	bsr	qh_get_demofile_title
 	move.l	d0,qh_edit_entry_demofile_name(a3)
 	rts
 
 
-; Input
-; d2.l	... Nummer des Eintrags
-; a2	... Zeiger auf Dateinamen des Demos
-; a5	... Zeiger auf Eintrag
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; d2.l	... entry index number (1..n)
+; a2	... pointer file name
+; a5	... pointer entry in playback queue
+; result
+; d0.l	... no return value
 	CNOP 0,4
 qh_update_gadgets
-	move.l	qh_text_gadget_gadget(a3),a0
+	move.l	qh_text_gadget(a3),a0
 	move.l	qh_edit_window(a3),a1
 	move.l	a3,-(a7)
 	lea	qh_set_text_gadget_tags(pc),a3
-	move.l	a2,ti_data(a3)		; Zeiger auf Dateinamen des Demos
-	sub.l	a2,a2			; Kein Requester
+	move.l	a2,ti_data(a3)		; pointer file name
+	sub.l	a2,a2			; no requester
   	CALLGADTOOLS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
-
+; backwards button gadget
 	move.l	qh_bwd_button_gadget(a3),a0
 	move.l	qh_edit_window(a3),a1
-	sub.l	a2,a2			; Kein Requester
-	moveq	#BOOL_FALSE,d0		; Gadget aktiv
+	sub.l	a2,a2			; no requester
+	moveq	#BOOL_FALSE,d0		; gadget state active
 	cmp.w	#adl_entries_number_min,qh_edit_entry_offset(a3)
         bne.s	qh_update_gadgets_skip1
-	moveq	#BOOL_TRUE,d0		; Gadget inaktiv
+	moveq	#BOOL_TRUE,d0		; gadget state inactive
 qh_update_gadgets_skip1
 	move.l	a3,-(a7)
 	lea	qh_set_button_tags(pc),a3
-	move.l	d0,ti_data(a3)		; Gadget-Status
+	move.l	d0,ti_data(a3)		; gadget state
   	CALLLIBS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
-
-	move.l	qh_integer_gadget_gadget(a3),a0
+; integer gadget
+	move.l	qh_integer_gadget(a3),a0
 	move.l	qh_edit_window(a3),a1
-	sub.l	a2,a2			; Kein Requester
+	sub.l	a2,a2			; no requester
 	move.l	a3,-(a7)
 	lea	qh_set_integer_gadget_tags(pc),a3
 	move.l	d2,ti_data(a3)
   	CALLLIBS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
-
+; forward button gadget
 	move.l	qh_fwd_button_gadget(a3),a0
 	move.l	qh_edit_window(a3),a1
-	sub.l	a2,a2			; Kein Requester
-	moveq	#BOOL_FALSE,d0		; Gadget aktiv
+	sub.l	a2,a2			; no requester
+	moveq	#BOOL_FALSE,d0		; gadget state active
 	move.w	qh_edit_entry_offset(a3),d1
 	cmp.w	adl_entries_number(a3),d1
         blt.s	qh_update_gadgets_skip2
-	moveq	#BOOL_TRUE,d0		; Gadget inaktiv
+	moveq	#BOOL_TRUE,d0		; gadget state inactive
 qh_update_gadgets_skip2
 	move.l	a3,-(a7)
 	lea	qh_set_button_tags(pc),a3
-	move.l	d0,ti_data(a3)		; Gadget-Status
+	move.l	d0,ti_data(a3)		; gadget state
   	CALLLIBS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
-
-	move.l	qh_cycle_gadget_gadget(a3),a0
+; cycle gadget
+	move.l	qh_cycle_gadget(a3),a0
 	move.l	qh_edit_window(a3),a1
-	sub.l	a2,a2			; Kein Requester
+	sub.l	a2,a2			; no requester
 	move.l	a3,-(a7)
 	lea	qh_set_cycle_gadget_tags(pc),a3
 	moveq	#0,d0
 	move.b	pqe_runmode(a5),d0
 	subq.b	#1,d0
-	move.l	d0,ti_data(a3)		; Ordnungsnummer Auswahltext
+	move.l	d0,ti_data(a3)		; index number selection text
   	CALLLIBS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
-
-	move.l	qh_mx_gadget_gadget(a3),a0
+; multiselect gadget
+	move.l	qh_mx_gadget(a3),a0
 	move.l	qh_edit_window(a3),a1
-	sub.l	a2,a2			; Kein Requester
+	sub.l	a2,a2			; no requester
 	move.l	a3,-(a7)
 	lea	qh_set_mx_gadget_tags(pc),a3
 	moveq	#0,d0
 	move.b	pqe_entry_active(a5),d0
 	neg.b	d0
-	move.l	d0,ti_data(a3)		; Ordnungsnummer Auswahltext
+	move.l	d0,ti_data(a3)		; index number selection text
   	CALLLIBS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 qh_close_edit_window
 	move.l	qh_edit_window(a3),a0
 	CALLINTQ CloseWindow
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 qh_free_gadgets
 	move.l	qh_gadget_list(pc),a0
 	CALLGADTOOLSQ FreeGadgets
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 qh_free_screen_visual_info
 	move.l	qh_screen_visual_info(a3),a0
 	CALLGADTOOLSQ FreeVisualInfo
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 qh_unlock_workbench
-	sub.l	a0,a0			; Kein Name
+	sub.l	a0,a0			; no name
 	move.l	qh_workbench_screen(a3),a1
 	CALLINTQ UnLockPubScreen
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 qh_clear_queue
 	move.l	adl_entries_buffer(a3),a0
@@ -3865,7 +3672,7 @@ qh_clear_queue
 	CNOP 0,4
 qh_clear_queue_ok
 	move.w	adl_entries_number(a3),d7
-	subq.w	#1,d7			; Loopend at false
+	subq.w	#1,d7			; loopend at false
 qh_clear_queue_loop
 	bsr	dc_clear_playlist_entry
 	dbf	d7,qh_clear_queue_loop
@@ -3885,18 +3692,18 @@ qh_clear_queue_skip
 	bra	adl_print_text
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 qh_free_visual_info
 	move.l	qh_screen_visual_info(a3),a0
 	CALLGADTOOLSQ FreeVisualInfo
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 qh_reset_queue
 	cmp.w	#adl_entries_number_min,rd_entry_offset(a3)
@@ -3913,9 +3720,9 @@ qh_reset_queue_ok
 	bra	adl_print_text
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 qh_check_queue_empty
 	move.l	adl_entries_buffer(a3),a2
@@ -3929,11 +3736,11 @@ qh_check_queue_empty_ok
 	rts
 
 
+; Amiga-Demo-Launcher 
 
-; **** Amiga-Demo-Launcher ****
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 adl_free_read_arguments
 	move.l	adl_read_arguments(a3),d1
@@ -3946,9 +3753,9 @@ adl_free_read_arguments_skip
 	bra.s	adl_free_read_arguments_quit
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 adl_print_io_error
 	move.l	adl_dos_return_code(a3),d1
@@ -3959,15 +3766,18 @@ adl_print_io_error_quit
 	rts
 	CNOP 0,4
 adl_print_io_error_skip1
-	lea	adl_error_header(pc),a0
-	move.l	a0,d2                   ; Header für Fehlermeldung
+	lea	adl_error_text_header(pc),a0
+	move.l	a0,d2                   ; header error message
 	CALLDOS PrintFault
+	lea	adl_error_text_tail(pc),a0 ; pointer error text
+	moveq	#adl_error_text_tail_end-adl_error_text_tail,d0 ; length of text
+	bsr	adl_print_text
 	bra.s	adl_print_io_error_quit
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 adl_remove_reset_program
 	tst.w	adl_arg_remove_enabled(a3)
@@ -3985,7 +3795,7 @@ adl_free_reset_programm_memory
 	REMOVE_RESET_PROGRAM
 	move.l	d0,a0
 	move.l	(a0)+,a1
-	clr.l	LONGWORD_SIZE(a1)	; ID löschen
+	clr.l	LONGWORD_SIZE(a1)	; clear ADL id
 	move.l	(a0),d0
 	CALLEXEC FreeMem
 	lea	adl_message_text1(pc),a0
@@ -3993,56 +3803,58 @@ adl_free_reset_programm_memory
 	bra	adl_print_text
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 adl_close_gadtools_library
 	move.l	_GadToolsBase(pc),a1
 	CALLEXECQ CloseLibrary
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 adl_close_intuition_library
 	move.l	_IntuitionBase(pc),a1
 	CALLEXECQ CloseLibrary
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 adl_close_graphics_library
 	move.l	_GfxBase(pc),a1
 	CALLEXECQ CloseLibrary
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 adl_close_dos_library
 	move.l	_DOSBase(pc),a1
 	CALLEXECQ CloseLibrary
 
 
-; Input
+; input
 ; a0	... Zeiger auf Text
 ; d0.l	... Länge des Textes
-; Result
-; d0.l	... Kein Rückgabewert
+; result
+; d0.l	... no return value
 	CNOP 0,4
 adl_print_text
+
+ääääää
 	move.l	adl_output_handle(a3),d1
-	move.l	a0,d2			; Zeiger auf Text
-	move.l	d0,d3			; Anzahl der Zeichen zum Schreiben
+	move.l	a0,d2			; pointer text
+	move.l	d0,d3			; number of characters to write
 	CALLDOSQ Write
 
 
-; **** Run-Demo ****
+; Run-Demo 
 	CNOP 0,4
 rd_start
 	bsr	rd_init_timer_io
@@ -4225,28 +4037,28 @@ rd_quit
 	bra	adl_cleanup_read_arguments
 
 
-; Input
-; a0	... Zeiger auf Fehlerext
-; d0.l	... Länge des Textes
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; a0	... pointer error text
+; d0.l	... text length
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_print_error_text
 	movem.l	d0/a0,-(a7)
 	lea	rd_error_text_header_index(pc),a0
 	move.w	rd_entry_offset(a3),d1
-	subq.w	#1,d1			; Previous entry index
+	subq.w	#1,d1			; previous entry index
         moveq	#2,d7
 	bsr	rp_dec_to_ascii
 	move.l	adl_output_handle(a3),d1
 	lea	rd_error_text_header(pc),a0
-	move.l	a0,d2			; Zeiger auf Text
+	move.l	a0,d2
 	moveq	#rd_error_text_header_end-rd_error_text_header,d3			; Anzahl der Zeichen zum Schreiben
 	CALLDOS Write
 	movem.l	(a7)+,d0/a0
 	move.l	adl_output_handle(a3),d1
-	move.l	a0,d2			; Zeiger auf Text
-	move.l	d0,d3			; Anzahl der Zeichen zum Schreiben
+	move.l	a0,d2			; pointer text
+	move.l	d0,d3			; number of characters to write
 	CALLLIBS Write
 	tst.w	rd_arg_resetonerror_enabled(a3)
 	bne.s	rd_print_error_text_quit
@@ -4258,23 +4070,23 @@ rd_print_error_text_quit
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert	
+; input
+; result
+; d0.l	... no return value	
 		CNOP 0,4
 rd_init_timer_io
 	lea	rd_timer_io(pc),a0
 	moveq	#0,d0
-	move.b	d0,LN_Type(a0)		; Eintragstyp = Null
-	move.b	d0,LN_Pri(a0)		; Priorität der Struktur = Null
-	move.l	d0,LN_Name(a0)		; Keine Name der Struktur
-	move.l	d0,MN_ReplyPort(a0) 	; Kein Reply-Port
+	move.b	d0,LN_Type(a0)
+	move.b	d0,LN_Pri(a0)
+	move.l	d0,LN_Name(a0)
+	move.l	d0,MN_ReplyPort(a0)
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 rd_open_ciaa_resource
 	lea	CIAA_resource_name(pc),a1
@@ -4289,7 +4101,7 @@ rd_open_ciaa_resource
 	rts
 	CNOP 0,4
 rd_open_ciaa_resource_skip
-	moveq	#0,d0			; Keine Maske
+	moveq	#0,d0			; no mask
 	CALLCIA AbleICR
 	lea	rd_old_chips_registers+ocr_ciaa_icr(pc),a0
 	move.b	d0,(a0)
@@ -4297,9 +4109,9 @@ rd_open_ciaa_resource_skip
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 rd_open_ciab_resource
 	lea	CIAB_resource_name(pc),a1
@@ -4314,7 +4126,7 @@ rd_open_ciab_resource
 	rts
 	CNOP 0,4
 rd_open_ciab_resource_skip
-	moveq	#0,d0			; keine Maske
+	moveq	#0,d0			; no mask
 	CALLCIA AbleICR
 	lea	rd_old_chips_registers+ocr_ciab_icr(pc),a0
 	move.b	d0,(a0)
@@ -4322,15 +4134,15 @@ rd_open_ciab_resource_skip
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code	
+; input
+; result
+; d0.l	... return value: return code	
 	CNOP 0,4
 rd_open_timer_device
 	lea	timer_device_name(pc),a0
 	lea	rd_timer_io(pc),a1
 	moveq	#UNIT_MICROHZ,d0
-	moveq	#0,d1			; Keine Flags
+	moveq	#0,d1			; no flags
 	CALLEXEC OpenDevice
 	tst.l	d0
 	beq.s	rd_open_timer_device_ok
@@ -4345,9 +4157,9 @@ rd_open_timer_device_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 rd_open_icon_library
 	lea	icon_library_name(pc),a1
@@ -4367,9 +4179,9 @@ rd_open_icon_library_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 rd_create_serial_message_port
 	CALLEXEC CreateMsgPort
@@ -4386,9 +4198,9 @@ rd_create_serial_message_port_ok
 	rts
 
 
-; Input
-; Result
-; d0.l ... Kein Rückgabewert
+; input
+; result
+; d0.l ... no return value
 	CNOP 0,4
 rd_init_serial_io
 	lea	rd_serial_io(pc),a0
@@ -4400,15 +4212,15 @@ rd_init_serial_io
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 rd_open_serial_device
 	lea	serial_device_name(pc),a0
 	lea	rd_serial_io(pc),a1
-	moveq	#0,d0			; Unit 0
-	moveq	#0,d1			; Keine Flags
+	moveq	#0,d0			; unit 0
+	moveq	#0,d1			; no flags
 	CALLEXEC OpenDevice
 	tst.l	d0
 	beq.s	rd_open_serial_device_ok
@@ -4423,9 +4235,9 @@ rd_open_serial_device_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code/Error-Code
+; input
+; result
+; d0.l	... return value: return code/error code
 	CNOP 0,4
 rd_alloc_cleared_sprite_data
 	moveq	#sprite_pointer_data_size,d0
@@ -4444,12 +4256,12 @@ rd_alloc_cleared_sprite_data_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Screenstruktur des aktiven Screens
+; input
+; result
+; d0.l	... return value: screen structure active screen
 	CNOP 0,4
 rd_get_active_screen
-	moveq	#0,d0			; Alle Locks
+	moveq	#0,d0			; all locks
 	CALLINT LockIBase
 	move.l	d0,a0
 	move.l	ib_ActiveScreen(a6),a2
@@ -4458,9 +4270,9 @@ rd_get_active_screen
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_get_sprite_resolution
 	move.l	rd_active_screen(a3),d0
@@ -4477,9 +4289,9 @@ rd_get_sprite_resolution_quit
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 rd_get_active_screen_mode
 	move.l	rd_active_screen(a3),d0
@@ -4496,27 +4308,27 @@ rd_get_active_screen_mode
 	rts
 	CNOP 0,4
 rd_get_active_screen_mode_skip
-	and.l	#MONITOR_ID_MASK,d0	; Ohne Auflösung
+	and.l	#MONITOR_ID_MASK,d0	; without resolution
 	move.l	d0,rd_active_screen_mode(a3)
 rd_get_active_screen_mode_ok
 	moveq	#RETURN_OK,d0
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 rd_check_queue
 	move.l	adl_entries_buffer(a3),a0
 	ADDF.W	pqe_entry_active,a0
 	MOVEF.L	playback_queue_entry_size,d0
 	move.w	adl_entries_number(a3),d7
-	subq.w 	#1,d7			; Loopend at false
+	subq.w 	#1,d7			; loopend at false
 rd_check_queue_loop
 	tst.b	(a0)
 	beq.s	rd_check_queue_ok
-	add.l	d0,a0			; nächster Eintrag
+	add.l	d0,a0			; next entry
 	dbf	d7,rd_check_queue_loop
 	tst.w 	rd_arg_endless_enabled(a3)
 	bne.s   rd_check_queue_fail
@@ -4533,20 +4345,19 @@ rd_check_queue_fail
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_deactivate_queue
-	moveq 	#0,d0
 	MOVEF.L	playback_queue_entry_size,d1
 	move.l	adl_entries_buffer(a3),a0
 	ADDF.W	pqe_entry_active,a0
 	move.w	adl_entries_number(a3),d7
-	subq.w  #1,d7			; Loopend at false
+	subq.w  #1,d7			; loopend at false
 rd_deactivate_queue_loop
-	move.b	d0,(a0)			; Status löschen
-	add.l	d1,a0			; nächster Eintrag
+	clr.b	(a0)			; entry state played
+	add.l	d1,a0			; next entry
 	dbf	d7,rd_deactivate_queue_loop
 	move.w	#adl_entries_number_min,rd_entry_offset(a3)
 	GET_RESIDENT_ENTRY_OFFSET
@@ -4555,9 +4366,9 @@ rd_deactivate_queue_loop
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_get_new_entry_offset
 	tst.w	rd_arg_random_enabled(a3)
@@ -4568,26 +4379,26 @@ rd_get_random_entry_loop
 	bsr.s	rd_get_random_entry
 	mulu.w	#playback_queue_entry_size,d0
 	move.l	adl_entries_buffer(a3),a0
-	add.l	d0,a0			; Zeiger auf Eintrag in Puffer
-	tst.b	pqe_entry_active(a0)	; Demo bereits ausgeführt ?
+	add.l	d0,a0			; pointer entry in playback queue
+	tst.b	pqe_entry_active(a0)	; entry already played ?
 	bne.s	rd_get_random_entry_loop
 	bra.s	rd_get_new_entry_offset_skip
 	CNOP 0,4
 rd_get_fixed_entry
 	move.w	rd_entry_offset(a3),d0
-	subq.w	#1,d0			; Zählung ab 0
+	subq.w	#1,d0			; count starts at 0
 	mulu.w	#playback_queue_entry_size,d0
 	move.l	adl_entries_buffer(a3),a0
-	add.l	d0,a0			; Zeiger auf Eintrag in Puffer
+	add.l	d0,a0			; pointer entry in playback queue
 rd_get_new_entry_offset_skip
 	move.l	a0,rd_demofile_path(a3)
 	rts
 
 
-; Input
+; input
 ; d2.l	... Anzahl der Einträge
-; Result
-; d0.l	... Rückgabewert: Zufallswert für Offset
+; result
+; d0.l	... return value: random offset
 	CNOP 0,4
 rd_get_random_entry
 	move.w	_CUSTOM+VHPOSR,d0	; f(x)
@@ -4598,20 +4409,20 @@ rd_get_random_entry
 	lsl.w	#8,d1
 	move.b	_CIAB+CIATODLOW,d1	; b
 	add.l	d1,d0			; (f(x)*a)+b
-	and.l	#$0000ffff,d0		; Nur Low-Word
+	and.l	#$0000ffff,d0		; only low word
 	divu.w	d2,d0			; f(x+1) = [(f(x)*a)+b]/mod rp_entries_number
-	swap	d0			; Rest der Division = Zufallsoffset
+	swap	d0			; remainder of division = random offset
 	ext.l	d0
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 rd_get_demofile_name
 	move.l	rd_demofile_path(a3),a0
-	tst.b	(a0)			; Name vorhanden ?
+	tst.b	(a0)			; file name exists ?
 	bne.s	rd_get_demofile_name_skip1
 	lea	rd_message_text2(pc),a0
 	moveq	#rd_message_text2_end-rd_message_text2,d0
@@ -4620,26 +4431,26 @@ rd_get_demofile_name
 	rts
 	CNOP 0,4
 rd_get_demofile_name_skip1
-	moveq	#0,d0			; Zähler für Länge des Dateinamens
+	moveq	#0,d0			; counter length of file name
 	moveq	#"/",d2
 	moveq	#":",d3
 	moveq	#adl_demofile_path_length-1,d7
-	add.l	d7,a0			; Zeiger auf letztes Zeichen (Nullbyte)
+	add.l	d7,a0			; pointer last character (nullbyte)
 rd_get_demofile_name_loop
 	tst.b	(a0)
 	beq.s	rd_get_demofile_name_skip2
 	addq.w	#1,d0
 rd_get_demofile_name_skip2
-	cmp.b	(a0),d2			; "/" gefunden ?
+	cmp.b	(a0),d2			; "/" found ?
 	beq.s	rd_get_demofile_name_skip3
-	cmp.b	(a0),d3			; ":" gefunden ?
+	cmp.b	(a0),d3			; ":" found ?
 	beq.s	rd_get_demofile_name_skip3
-	subq.w	#1,a0			; vorgeriges Zeichen in Dateipfad
+	subq.w	#BYTE_SIZE,a0		; previous character
 	dbf	d7,rd_get_demofile_name_loop
 rd_get_demofile_name_skip3
-	addq.w	#1,a0			; "/" oder ":" überspringen
-	move.l	a0,rd_demofile_name(a3) ; Zeiger auf Dateinamen retten
-	subq.w	#1,d0			; "/" oder ":" abziehen
+	addq.w	#BYTE_SIZE,a0		; skip "/" or ":"
+	move.l	a0,rd_demofile_name(a3)
+	subq.w	#1,d0			; substract length for "/" or ":"
 	move.l	d0,rd_demofile_name_length(a3)
 	addq.w	#1,rd_entry_offset(a3)
 	GET_RESIDENT_ENTRY_OFFSET
@@ -4649,9 +4460,9 @@ rd_get_demofile_name_skip3
 	rts
 
 
-; Input
-; Result
-; d0.l ... Kein Rückgabewert
+; input
+; result
+; d0.l ... no return value
 	CNOP 0,4
 rd_print_demofile_start_message
 	lea	rd_demofile_name_header(pc),a0
@@ -4665,9 +4476,9 @@ rd_print_demofile_start_message
 	bra	adl_print_text
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 rd_check_runmode
 	btst	#AFB_68020,adl_cpu_flags+BYTE_SIZE(a3)
@@ -4684,7 +4495,7 @@ rd_check_runmode_skip
 	moveq	#rd_message_text1_end-rd_message_text1,d0
 	bsr	adl_print_text
 	move.l	rd_demofile_path(a3),a0
-	move.b	#FALSE,pqe_entry_active(a0) ; Demo wurde abgespielt
+	move.b	#FALSE,pqe_entry_active(a0) ; entry state played
 	MOVEF.L	rd_error_message_delay,d1
 	CALLDOS Delay
 	tst.w	rd_arg_loop_enabled(a3)
@@ -4696,9 +4507,9 @@ rd_check_runmode_fail
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 rd_check_demofile_play_state
 	move.l	rd_demofile_path(a3),a0
@@ -4715,13 +4526,13 @@ rd_check_demofile_play_state_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 rd_open_demofile
 	move.l	rd_demofile_path(a3),a0
-	move.b	#FALSE,pqe_entry_active(a0) ; Demo wurde abgespielt
+	move.b	#FALSE,pqe_entry_active(a0) ; entry state played
 	move.l	a0,d1
 	MOVEF.L	MODE_OLDFILE,d2
 	CALLDOS Open
@@ -4738,30 +4549,30 @@ rd_open_demofile_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_read_demofile_header
 	move.l	rd_demofile_handle(a3),d1
 	lea	rd_demofile_MAGIC_COOKIE(a3),a0
-	move.l	a0,d2			; Zeiger auf Puffer
-	moveq	#LONGWORD_SIZE,d3	; Anzahl der Zeichen zum Lesen
+	move.l	a0,d2
+	moveq	#magic_cookie_length,d3	; number of characters to read
 	CALLDOSQ Read
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_close_demofile
 	move.l	rd_demofile_handle(a3),d1
 	CALLDOSQ Close
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code/Error-Code
+; input
+; result
+; d0.l	... return value: return code/error code
 	CNOP 0,4
 rd_check_demofile_header
 	cmp.l	#MAGIC_COOKIE,rd_demofile_MAGIC_COOKIE(a3)
@@ -4777,42 +4588,42 @@ rd_check_demofile_header_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... keine Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_get_demofile_dir_path
 	moveq	#adl_demofile_path_length-1,d7
-	move.l	rd_demofile_path(a3),a0 ; Zeiger auf Eintrag in Playback-Queue
-	add.l	d7,a0			; Ende des Quellpuffers
-	lea	rd_demo_dir_path(pc),a1 ; Zeiger auf Puffer für Demo-Directory-Pfad
-	add.l	d7,a1			; Ende des Zielpuffers
+	move.l	rd_demofile_path(a3),a0 ; source
+	add.l	d7,a0			; end of source
+	lea	rd_demo_dir_path(pc),a1 ; target
+	add.l	d7,a1			; end of target
 rd_get_dir_loop
-	move.b	-(a0),d0		; Quell-Pfadename rückwärts byteweise auslesen
+	move.b	-(a0),d0
 	subq.w	#1,d7
-	clr.b	-(a1)			; Quell-Pfadename rückwärts byteweise löschen
-	cmp.b	#"/",d0			; Ende des Verzeichnisnamens gefunden ?
-	beq.s	rd_dir_name_found2	; Ja -> verzweige
-	cmp.b	#":",d0			; Ende des Gerätenamens gefunden ?
-	beq.s	rd_dir_name_found1	; Ja -> verzweige
+	clr.b	-(a1)
+	cmp.b	#"/",d0			; beginning of file name found ?
+	beq.s	rd_get_dir_skip2
+	cmp.b	#":",d0			; end of device name found ?
+	beq.s	rd_get_dir_skip1
 	bra.s	rd_get_dir_loop
 	CNOP 0,4
-rd_dir_name_found1
-	move.b	d0,(a1)			; ":" eintragen
-rd_dir_name_found2
-	subq.w	#1,d7			; Loopend at false
+rd_get_dir_skip1
+	move.b	d0,(a1)			; set ":"
+rd_get_dir_skip2
+	subq.w	#1,d7			; loopend at false
 rd_copy_characters_loop
 	move.b	-(a0),-(a1)
 	dbf	d7,rd_copy_characters_loop
         rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 rd_set_new_current_dir
 	lea	rd_demo_dir_path(pc),a0
-	move.l	a0,d1			; Zeiger auf Puffer für Pfadnamen
+	move.l	a0,d1
 	MOVEF.L	ACCESS_READ,d2
 	CALLDOS Lock
 	move.l	d0,rd_demofile_dir_lock(a3)
@@ -4824,19 +4635,19 @@ rd_set_new_current_dir
 	rts
 	CNOP 0,4
 rd_set_new_current_dir_skip
-	move.l	d0,d1			; Lock für Programm-Directory
-	move.l	d0,d3			; Lock für Current-Directory
-	CALLLIBS SetProgramDir		; PRGDIR: = Demo-Directory
-	move.l	d3,d1			; Current-Directory-Lock
-	CALLLIBS CurrentDir		; Current Directory = Demo-Directory
-	move.l	d0,rd_old_current_dir_lock(a3) ; Lock von altem Current Directory
+	move.l	d0,d1			; lock program directory
+	move.l	d0,d3			; lock current directory
+	CALLLIBS SetProgramDir		; program directory = entry directory
+	move.l	d3,d1			; lock current directory
+	CALLLIBS CurrentDir		; current directory = entry directory
+	move.l	d0,rd_old_current_dir_lock(a3)
 	moveq	#RETURN_OK,d0
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_get_prerunscript_path
 	tst.w	rd_arg_prerunscript_enabled(a3)
@@ -4846,7 +4657,7 @@ rd_get_prerunscript_path
 rd_get_prerunscript_path_skip
 	move.l	rd_demofile_path(a3),a0
 	ADDF.W	pqe_prerunscript_path,a0
-	tst.b	(a0)			; Wurde Pfad angegeben ?
+	tst.b	(a0)			; file path exists ?
 	bne.s	rd_get_prerunscript_path_save
 	rts
 	CNOP 0,4
@@ -4855,9 +4666,9 @@ rd_get_prerunscript_path_save
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code/Error-Code
+; input
+; result
+; d0.l	... return value: return code/error code
 	CNOP 0,4
 rd_check_prerunscript_path
 	move.l	rd_prerunscript_path(a3),d0
@@ -4866,7 +4677,7 @@ rd_check_prerunscript_path
 	CNOP 0,4
 rd_do_check_prerunscript_path
 	move.l	d0,a0
-	moveq	#0,d0			; Zähler für Anzahl Zeichen
+	moveq	#0,d0			; counter length of prerun script path
 rd_check_prerunscript_path_loop
 	addq.b	#1,d0
 	cmp.b	#adl_prerunscript_path_length-1,d0
@@ -4884,9 +4695,9 @@ rd_check_prerunscript_path_skip
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 rd_execute_prerunscript
 	move.l	rd_prerunscript_path(a3),d0
@@ -4894,15 +4705,15 @@ rd_execute_prerunscript
 	rts
 	CNOP 0,4
 rd_copy_prerunscript_path
-	move.l	d0,a0			; Quelle: Prerunscript-Pfad
-	lea	rd_prerunscript_cmd_line_path(pc),a1 ; Ziel: Befehlszeile
+	move.l	d0,a0			; source: prerun script path
+	lea	rd_prerunscript_cmd_line_path(pc),a1 ; target: command line
 	moveq	#adl_prerunscript_path_length-1,d7
 rd_copy_prerunscript_path_loop
 	move.b	(a0)+,(a1)+
-	dbeq	d7,rd_copy_prerunscript_path_loop ;Schleife solange, bis Nullbxte gefunden wurde
+	dbeq	d7,rd_copy_prerunscript_path_loop ; loop until nullbyte found
 	lea	rd_prerunscript_cmd_line(pc),a0
-	move.l	a0,d1			; Zeiger auf Kommandozeile
-	moveq	#0,d2			; Keine Tags
+	move.l	a0,d1			; pointer command line
+	moveq	#0,d2			; no tags
 	CALLDOS	SystemTagList
 	tst.l	d0
 	beq.s	rd_execute_prerunscript_ok
@@ -4917,12 +4728,12 @@ rd_execute_prerunscript_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 rd_open_pal_screen
-	sub.l	a0,a0			; Keine NewScreen-Struktur
+	sub.l	a0,a0			; no NewScreen structure
 	lea	rd_pal_screen_tags(pc),a1
 	CALLINT OpenScreenTagList
 	move.l	d0,rd_pal_screen(a3)
@@ -4938,9 +4749,9 @@ rd_open_pal_screen_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 rd_load_pal_screen_colors
 	cmp.w	#OS3_VERSION,adl_os_version(a3)
@@ -4957,9 +4768,9 @@ rd_load_pal_screen_colors_skip
 	bra.s	rd_load_pal_screen_colors_quit
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 rd_check_pal_screen_mode
 	move.l	rd_pal_screen(a3),d0
@@ -4980,12 +4791,12 @@ rd_check_pal_screen_mode_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 rd_open_invisible_window
-	sub.l	a0,a0			; Keine NewWindow-Struktur
+	sub.l	a0,a0			; no NewWindow structure
 	lea	rd_invisible_window_tags(pc),a1
 	move.l	rd_pal_screen(a3),wtl_WA_CustomScreen+ti_data(a1)
 	CALLINT OpenWindowTagList
@@ -5002,9 +4813,9 @@ rd_open_invisible_window_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_clear_mousepointer
 	move.l	rd_invisible_window(a3),a0
@@ -5016,29 +4827,29 @@ rd_clear_mousepointer
 	CALLINTQ SetPointer
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_blank_display_loop
-	sub.l	a1,a1			; View auf ECS-Werte zurücksetzen
+	sub.l	a1,a1			; no wiew
 	CALLGRAF LoadView
-	CALLLIBS WaitTOF		; Warten bis Änderung sichtbar ist
-	CALLLIBS WaitTOF		; Warten bis Interlace-Screens mit 2 Copperlisten auch voll geändert sind
-	tst.l	gb_ActiView(a6)		; Erschien zwischenzeitlich ein anderer View ?
-	bne.s	rd_blank_display_loop	; Ja -> neuer Versuch
+	CALLLIBS WaitTOF
+	CALLLIBS WaitTOF		; wait for interlace screens with two copperlists
+	tst.l	gb_ActiView(a6)		; did another view appear in the meantime ?
+	bne.s	rd_blank_display_loop
 	move.l	rd_demofile_path(a3),a0
 	cmp.b	#RUNMODE_OCS_VANILLA,pqe_runmode(a0)
 	bne.s	rd_blank_display_skip
 	moveq	#0,d0			
-	move.l	d0,_CUSTOM+BPL1MOD	; OCS Standart Screen-Moduli OS 1.2/1.3
+	move.l	d0,_CUSTOM+BPL1MOD	; standard screen moduli OS1.2/1.3
 rd_blank_display_skip
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_wait_monitor_switch
 	move.l	rd_active_screen_mode(a3),d0
@@ -5056,9 +4867,9 @@ rd_wait_monitor_switch_skip
 	bra.s	rd_wait_monitor_switch_quit
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_alloc_fast_memory
 	move.l	rd_demofile_path(a3),a0
@@ -5067,7 +4878,7 @@ rd_alloc_fast_memory
 	rts
 	CNOP 0,4
 rd_alloc_fast_memory_skip1
-	move.l	#MEMF_FAST|MEMF_LARGEST,d1
+	move.l	#MEMF_FAST|MEMF_LARGEST,d1 ; attributes
 	move.l	d1,d2
 	CALLEXEC AvailMem
 	move.l	d0,rd_fast_memory_block_size(a3)
@@ -5075,27 +4886,27 @@ rd_alloc_fast_memory_skip1
 	rts
 	CNOP 0,4
 rd_alloc_fast_memory_skip2
-	move.l	d2,d1			; Größter Fast-Memory Block
+	move.l	d2,d1			; attributes fast memory block
 	CALLLIBS AllocMem		
 	move.l	d0,rd_fast_memory_block(a3)
 	move.l	d0,a2
 rd_alloc_fast_memory_loop
-	move.l	d2,d1			; Größter Fast-Memory Block
+	move.l	d2,d1			; attributes fast memory block
 	CALLLIBS AvailMem
-	move.l	d0,(a2)+
+	move.l	d0,(a2)+		; pointer fast memory block
 	bne.s	rd_alloc_fast_memory_skip3
 	rts
 	CNOP 0,4
 rd_alloc_fast_memory_skip3
-	move.l	d2,d1			; Größter Fast-Memory Block
+	move.l	d2,d1			; attributes fast memory block
 	CALLLIBS AllocMem
-	move.l	d0,(a2)+		; Zeiger auf Speichernlock
+	move.l	d0,(a2)+		; pointer fast memory block
 	bra.s	rd_alloc_fast_memory_loop
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 rd_load_demofile
 	move.l	rd_demofile_path(a3),d1
@@ -5114,13 +4925,13 @@ rd_load_demofile_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 rd_check_whdloadfile
 	move.l	rd_demofile_seglist(a3),a0
-	add.l	a0,a0			; BCPL-Zeiger
+	add.l	a0,a0			; BCPL pointer
 	add.l	a0,a0
 	cmp.l	#"WHDL",8(a0)
 	beq.s	rd_check_id_second_part
@@ -5136,20 +4947,20 @@ rd_check_id_second_part
 rd_create_whdload_cmd_string
 	clr.w	whdl_slave_enabled(a3)
 	move.l	rd_demofile_name(a3),a0
-	lea	whdl_slave_cmd_line_path(pc),a1 ; Zeiger auf Dateinamen in Kommand-String
-	move.l	rd_demofile_name_length(a3),d7 ; Länge inklusive Nullbyte
+	lea	whdl_slave_cmd_line_path(pc),a1
+	move.l	rd_demofile_name_length(a3),d7 ; length including nullbyte
 rd_copy_slave_filename_loop
 	move.b	(a0)+,(a1)+
 	dbf	d7,rd_copy_slave_filename_loop
-	move.l	a1,a2			; Zeiger auf Dateipfadende in Kommando-String retten
-	move.l	rd_demofile_path(a3),a0 ; Zeiger auf Slave-Dateipfad
-	lea	whdl_icon_path(pc),a1	; Zeiger auf Icon-Dateipfad
+	move.l	a1,a2			; file path end in command string
+	move.l	rd_demofile_path(a3),a0
+	lea	whdl_icon_path(pc),a1
 	moveq	#adl_demofile_path_length-1,d7
 rd_copy_slave_filepath_loop
 	move.b	(a0)+,(a1)+
-	dbeq	d7,rd_copy_slave_filepath_loop ; Schleife bis Nullbyte gefunden
-	subq.w	#7,a1			; Endung ".slave",0 in Icon-Dateipfad überspringen
-	clr.b	(a1)			; Nullbyte einfügen
+	dbeq	d7,rd_copy_slave_filepath_loop ; loop until nullbyte found
+	subq.w	#7,a1			; skip suffix ".slave",0
+	clr.b	(a1)			; add nullbyte
 rd_check_icon_tooltypes
 	lea	whdl_icon_path(pc),a0
 	CALLICON GetDiskObject
@@ -5161,7 +4972,7 @@ rd_check_icon_tooltypes
 	moveq	#RETURN_FAIL,d0
 	rts
 
-; ** WHD-Load Tooltype PRELOAD **
+; WHD-Load Tooltype PRELOAD 
 	CNOP 0,4
 rd_check_tooltype_preload
 	move.l	d0,a0
@@ -5169,29 +4980,29 @@ rd_check_tooltype_preload
 	move.l	a0,a4		
 	lea	whdl_tooltype_PRELOAD(pc),a1
 	CALLLIBS FindToolType
-	tst.l	d0			; Tooltype "PRELOAD" gefunden ?
+	tst.l	d0			; Tooltype "PRELOAD" found ?
 	beq.s	rd_check_tooltype_preloadsize
-	subq.w	#1,a2			; Zeiger auf Nullbyte
-	move.b	#" ",(a2)+		; und durch Space-Zeichen ersetzen
-	move.b	#"P",(a2)+		; Argument "Preload" in String einfügen
+	subq.w	#BYTE_SIZE,a2		; pointer nullbyte
+	move.b	#" ",(a2)+		; exchange nullbyte by space character
+	move.b	#"P",(a2)+		; add argument "Preload" in string
 	move.b	#"r",(a2)+
 	move.b	#"e",(a2)+
 	move.b	#"l",(a2)+
 	move.b	#"o",(a2)+
 	move.b	#"a",(a2)+
 	move.b	#"d",(a2)+
-	clr.b	(a2)+			; Nullbyte einfügen
+	clr.b	(a2)+			; add nullbyte
 
-; ** WHD-Load Tooltype PRELOADSIZE **
+; WHD-Load Tooltype PRELOADSIZE 
 rd_check_tooltype_preloadsize
-	move.l	a4,a0			; Zeiger auf Tooltypes-Feld
+	move.l	a4,a0			; pointer tooltypes field
 	lea	whdl_tooltype_PRELOADSIZE(pc),a1
 	CALLLIBS FindToolType
-	tst.l	d0			; Tooltype "PRELOADSIZE" gefunden ?
+	tst.l	d0			; Tooltype "PRELOADSIZE" found ?
 	beq.s	rd_check_tooltype_quitkey
-	subq.w	#1,a2			; Zeiger auf Nullbyte
-	move.b	#" ",(a2)+		; und durch Space-Zeichen ersetzen
-	move.b	#"P",(a2)+		; Argument "Preloadsize" in String einfügen
+	subq.w	#1,a2			; pointer nullbyte
+	move.b	#" ",(a2)+		; exchange nullbyte by space character
+	move.b	#"P",(a2)+		; add argument "Preloadsize" in string
 	move.b	#"r",(a2)+
 	move.b	#"e",(a2)+
 	move.b	#"l",(a2)+
@@ -5202,102 +5013,102 @@ rd_check_tooltype_preloadsize
 	move.b	#"i",(a2)+
 	move.b	#"z",(a2)+
 	move.b	#"e",(a2)+
-	move.b	#" ",(a2)+		; Space
-	move.l	d0,a0			; Zeiger auf Wert von Argument "PRELOADSIZE"
+	move.b	#" ",(a2)+		; add space character
+	move.l	d0,a0			; pointer argument "PRELOADSIZE" value
 rd_copy_preloadsize_value_loop
 	move.b	(a0)+,(a2)+
 	bne.s	rd_copy_preloadsize_value_loop
 
-; ** WHD-Load Tooltype QUITKEY **
+; WHD-Load Tooltype QUITKEY 
 rd_check_tooltype_quitkey
-	move.l	a4,a0			; Zeiger auf Tooltypes-Feld
-	lea	whdl_tooltype_QUITKEY(pc),a1 ; Zeiger auf String "QUITKEY"
+	move.l	a4,a0			; pointer tooltypes field
+	lea	whdl_tooltype_QUITKEY(pc),a1
 	CALLLIBS FindToolType
-	tst.l	d0			; Tooltype "QUITKEY" gefunden ?
+	tst.l	d0			; Tooltype "QUITKEY" found ?
 	beq.s	rd_free_whdload_disk_object
-	subq.w	#1,a2			; Zeiger auf Nullbyte
-	move.b	#" ",(a2)+		; und durch Space-Zeichen ersetzen
-	move.b	#"Q",(a2)+		; Argument "Quitkey" in String einfügen
+	subq.w	#1,a2			; pointer nullbyte
+	move.b	#" ",(a2)+		; exchange nullbyte by space character
+	move.b	#"Q",(a2)+		; add argument "Quitkey" in string
 	move.b	#"u",(a2)+
 	move.b	#"i",(a2)+
 	move.b	#"t",(a2)+
 	move.b	#"k",(a2)+
 	move.b	#"e",(a2)+
 	move.b	#"y",(a2)+
-	move.b	#" ",(a2)+		; Space
-	move.l	d0,a0			; Zeiger auf Wert von Argument "QUITKEY"
-	cmp.b	#"$",(a0)		; Hexadezimal-Zahl ?
+	move.b	#" ",(a2)+		; add space character
+	move.l	d0,a0			; pointer argument "QUITKEY" value
+	cmp.b	#"$",(a0)		; hexadecimal number ?
 	beq.s	rd_convert_quitkey_hexvalue
 rd_copy_quitkey_value_loop
-	move.b	(a0)+,(a2)+		; QUITKEY-Wert nach Kommando-String kopieren
+	move.b	(a0)+,(a2)+		; copy QUITKEY value to command string
 	bne.s	rd_copy_quitkey_value_loop
 	bsr.s	rd_convert_quitkey_hexvalue
 rd_free_whdload_disk_object
-	move.l	whdl_disk_object(a3),a0 ; Zeiger auf Disk-Objekt-Struktur
+	move.l	whdl_disk_object(a3),a0
 	CALLLIBS FreeDiskObject
 	moveq	#RETURN_OK,d0
 	rts
 
 
-; Input
-; a0	... Zeiger auf String
-; a2	... Zeiger auf Kommando-String
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; a0	... pointer string
+; a2	... pointer command string
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_convert_quitkey_hexvalue
-	addq.w	#1,a0			; "$"-Zeichen in String überspringen
-	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
+	addq.w	#BYTE_SIZE,a0		; skip "$"
+	moveq	#2,d7			; number of digits to convert
 	bsr.s	rd_ascii_to_hex
-	move.l	d0,d1			; Dezimalzahl
-	move.l	a2,a0			; Zeiger auf Kommando-String
-	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
+	move.l	d0,d1			; return value decimal number
+	move.l	a2,a0			; pointer command string
+	moveq	#2,d7			; number of digits to convert
 	bsr	rp_dec_to_ascii
-	clr.b	(a0)			; Nullbyte in Kommando-String setzen
+	clr.b	(a0)			; add nullbyte
 	rts
 
 
-; Input
-; a0	... Zeiger auf String
-; d7.l	... Anzahl der Stellen zum Umwandeln
-; Result
-; d0.l	... Rückgabewert: Hexadezimalzahl
+; input
+; a0	... pointer string
+; d7.l	... number of digits to convert
+; result
+; d0.l	... return value: hexadecimal number
 	CNOP 0,4
 rd_ascii_to_hex
-	add.l	d7,a0			; Zeiger auf Ende des Strings
-	moveq	#0,d0			; Hexadezimalzahl
-	moveq	#0,d2			; Erster Hexadezimal-Stellenwert 16^0 als Shiftwert 0
-	subq.w	#1,d7			; Loopend at false
+	add.l	d7,a0			; pointer end of string
+	moveq	#0,d0			; hexadecimal number
+	moveq	#0,d2			; first hexadecimal digit 16^0 as shift value 0
+	subq.w	#1,d7			; loopend at false
 rd_ascii_to_hex_loop
 	moveq	#0,d1
-	move.b	-(a0),d1		; ASCII-Wert
-	sub.b	#"0",d1			; ASCII-Wert "0" abziehen = 0..9
-	cmp.b	#9,d1			; Hexadezimal-Ziffern 0..9 ?
+	move.b	-(a0),d1		; ascii value
+	sub.b	#"0",d1			; substract "0" ascii value = 0..9
+	cmp.b	#9,d1			; hexadecimal digits 0..9 ?
 	ble.s	rd_ascii_to_hex_skip	;
-	subq.b	#7,d1			; ASCII-Wert "A" abziehen
-	cmp.b	#15,d1			; Hexadezimal-Ziffern A..F ?
+	subq.b	#7,d1			; substract difference "A" ascii value
+	cmp.b	#15,d1			; hexadecimal digits A..F ?
 	ble.s	rd_ascii_to_hex_skip
-	sub.b	#32,d1			; Ansonsten ASCII-Wert "a" abziehen für Hex-Ziffern a..f
+	sub.b	#32,d1			; substract difference "a" ascii value for digits a..f
 rd_ascii_to_hex_skip
-	lsl.l	d2,d1			; Hexadezimal-Stellenwert (16^0,16^1,16^2,...)
-	addq.w	#4,d2			; Shiftwert um 16^n erhöhen
-	add.l	d1,d0			; Stellenwert zum Ergebnis addieren
+	lsl.l	d2,d1			; hexadecimal digit value (16^0,16^1,16^2,..)
+	addq.w	#4,d2			; increase shift value by 16^n
+	add.l	d1,d0			; add digit to result
 	dbf	d7,rd_ascii_to_hex_loop
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 adl_wait_drives_motor
 	MOVEF.L	drives_motor_delay,d1
 	CALLDOSQ Delay
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_init_playtimer_start
 	moveq	#0,d1
@@ -5317,9 +5128,9 @@ rd_init_playtimer_start_quit
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 rd_start_playtimer
 	tst.w	rd_playtimer_delay(a3)
@@ -5334,10 +5145,9 @@ rd_set_playtimer_duration
 	rts
 
 
-; ** Parameter für serielle Schnittstelle initialisieren **
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 rd_set_playtimer
 	lea	rd_serial_io(pc),a1
@@ -5350,7 +5160,7 @@ rd_set_playtimer
 	CALLEXEC DoIO
 	move.b	io_Error(a2),d0
 	beq.s	rd_set_playtimer_ok
-	cmp.b	#SerErr_DevBusy,d0	; Serial-Device bereits in Benutzung ?
+	cmp.b	#SerErr_DevBusy,d0
 	bne.s	rd_check_baud_mismatch
 	lea	rd_error_text19a(pc),a0
 	moveq	#rd_error_text19a_end-rd_error_text19a,d0
@@ -5359,7 +5169,7 @@ rd_set_playtimer
 	rts
 	CNOP 0,4
 rd_check_baud_mismatch
-	cmp.b	#SerErr_BaudMismatch,d0	; Baudrate nicht von der Hardware unterstützt ?
+	cmp.b	#SerErr_BaudMismatch,d0
 	bne.s	rd_check_invalid_parameters
 	lea	rd_error_text19b(pc),a0
 	moveq	#rd_error_text19b_end-rd_error_text19b,d0
@@ -5368,7 +5178,7 @@ rd_check_baud_mismatch
 	rts
 	CNOP 0,4
 rd_check_invalid_parameters
-	cmp.b	#SerErr_InvParam,d0	; Falsche Parameter ?
+	cmp.b	#SerErr_InvParam,d0
 	bne.s	rd_check_line_error
 	lea	rd_error_text19c(pc),a0
 	moveq	#rd_error_text19c_end-rd_error_text19c,d0
@@ -5377,7 +5187,7 @@ rd_check_invalid_parameters
 	rts
 	CNOP 0,4
 rd_check_line_error
-	cmp.b	#SerErr_LineErr,d0 	; Überlauf der Daten ?
+	cmp.b	#SerErr_LineErr,d0
 	bne.s	rd_check_no_data_set_ready
 	lea	rd_error_text19d(pc),a0
 	moveq	#rd_error_text19d_end-rd_error_text19d,d0
@@ -5386,7 +5196,7 @@ rd_check_line_error
 	rts
 	CNOP 0,4
 rd_check_no_data_set_ready
-	cmp.b	#SerErr_NoDSR,d0	; Data-Set nicht bereit ?
+	cmp.b	#SerErr_NoDSR,d0
 	bne.s	rd_set_playtimer_ok
 	lea	rd_error_text19e(pc),a0
 	moveq	#rd_error_text19e_end-rd_error_text19e,d0
@@ -5399,9 +5209,9 @@ rd_set_playtimer_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 rd_write_playtimer
 	lea	rd_serial_io(pc),a1
@@ -5425,9 +5235,9 @@ rd_write_playtimer_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 		CNOP 0,4
 rd_get_system_time
 	lea	rd_timer_io(pc),a1
@@ -5435,9 +5245,9 @@ rd_get_system_time
 	CALLEXECQ DoIO
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_save_custom_traps
 	GET_CUSTOM_TRAP_VECTORS
@@ -5445,9 +5255,9 @@ rd_save_custom_traps
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_downgrade_cpu
 	tst.b	adl_cpu_flags+BYTE_SIZE(a3)
@@ -5464,18 +5274,18 @@ rd_downgrade_cpu_skip1
 	beq.s	rd_downgrade_cpu_quit
 	tst.l	rd_old_vbr(a3)
 	beq.s	rd_downgrade_cpu_skip2
-	moveq	#0,d0
+	moveq	#0,d0			; VBR = $000000
 	lea	rd_write_vbr(pc),a5
-	CALLLIBS Supervisor		; VBR auf $000000 zurücksetzen
+	CALLLIBS Supervisor
 rd_downgrade_cpu_skip2
 	tst.b	adl_cpu_flags+BYTE_SIZE(a3)
 	bpl.s	rd_disable_caches_mmu
-; ** 68060 **
-	moveq	#0,d1			; Alle Bits in CACR löschen
+; 68060 
+	moveq	#0,d1			; clear all bits in CACR
 	move.l	rd_demofile_path(a3),a0
 	cmp.b	#RUNMODE_AGA_VANILLA,pqe_runmode(a0)
 	bne.s	rd_disable_060_caches
-	or.w	#CACR060F_FIC|CACR060F_EIC,d1 ; 1/2 Instruction-Cache an
+	or.w	#CACR060F_FIC|CACR060F_EIC,d1 ; enable 1/2 instruction cache
 rd_disable_060_caches
 	lea	rd_060_set_cacr(pc),a5
 	CALLLIBS Supervisor
@@ -5483,22 +5293,22 @@ rd_disable_060_caches
 	lea     rd_old_mmu_registers(pc),a1
 	lea	rd_040_060_mmu_off(pc),a5
 	CALLLIBS Supervisor
-	moveq	#0,d1			; Alle Bits in PCR-Register löschen
+	moveq	#0,d1			; PCR = 0
 	lea	rd_060_set_pcr(pc),a5
 	CALLLIBS Supervisor
 	move.l	d0,rd_old_060_pcr(a3)
 	rts
-; ** 68020-68040 **
+; 68020-68040 
 	CNOP 0,4
 rd_disable_caches_mmu
-	moveq	#0,d0			; Alle Bits löschen
-	move.l	#CACRF_EnableI|CACRF_IBE|CACRF_EnableD|CACRF_DBE|CACRF_WriteAllocate|CACRF_EnableE|CACRF_CopyBack,d1 ; Caches ausschalten
+	moveq	#0,d0			; clear all bits
+	move.l	#CACRF_EnableI|CACRF_IBE|CACRF_EnableD|CACRF_DBE|CACRF_WriteAllocate|CACRF_EnableE|CACRF_CopyBack,d1 ; disable caches
 	move.l	rd_demofile_path(a3),a0
 	cmp.b	#RUNMODE_AGA_VANILLA,pqe_runmode(a0)
 	bne.s	rd_disable_caches
-	and.b	#~(CACRF_EnableI),d1	; Instruction-Cache nicht ausschalten
+	and.b	#~(CACRF_EnableI),d1	; exclude instruction cache
 rd_disable_caches
-	CALLEXEC CacheControl		; CPU neu konfigurieren und Caches flushen
+	CALLEXEC CacheControl
 	move.l	d0,rd_old_cacr(a3)
 	btst	#AFB_68040,adl_cpu_flags+BYTE_SIZE(a3)
 	beq.s   rd_disable_030_mmu
@@ -5519,9 +5329,9 @@ rd_disable_030_mmu_skip
 
 
 	IFEQ rd_yulquen74_code_enabled
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 		CNOP 0,4
 rd_downgrade_cpu_clock
 		btst	#AFB_68020,adl_cpu_flags+BYTE_SIZE(a3)
@@ -5536,109 +5346,109 @@ rd_downgrade_cpu_clock_skip
 		lea	CFG0,a0
 		move.w	(a0),d0
 		move.w	d0,rd_old_cfg0(a3)
-		and.w	#~(CFG0F_CLKSEL0|CFG0F_CLKSEL1),d0 ; SELx-Bits löschen
-		or.w	#CFG0F_CLKSEL1,d0	; Stock speed mode (7 MHz)
+		and.w	#~(CFG0F_CLKSEL0|CFG0F_CLKSEL1),d0 ; clear SELx bits
+		or.w	#CFG0F_CLKSEL1,d0	; stock speed mode (7 MHz)
 		move.w	d0,(a0)
 		bra.s	rd_downgrade_cpu_clock_quit
 	ENDC
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_get_tod_time
 	CALLEXEC Disable
 	move.l	#_CIAA,a4
 	moveq	#0,d0
-	move.b	CIATODHI(a4),d0		; TOD-clock Bits 23-16
-	swap	d0			; Bits in richtige Position bringen
-	move.b	CIATODMID(a4),d0	; TOD-clock Bits 15-8
-	lsl.w	#8,d0			; Bits in richtige Position bringen
-	move.b	CIATODLOW(a4),d0	; TOD-clock Bits 7-0
+	move.b	CIATODHI(a4),d0		; TOD clock bits 23-16
+	swap	d0			; adjust bits
+	move.b	CIATODMID(a4),d0	; TOD clock bits 15-8
+	lsl.w	#8,d0			; adjust bits
+	move.b	CIATODLOW(a4),d0	; TOD clock Bits 7-0
 	move.l	d0,rd_tod_time(a3)
 	CALLLIBQ Enable
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_save_chips_registers
 	CALLEXEC Disable
 	lea	rd_old_chips_registers(pc),a0
-	move.l	#_CUSTOM,a6
-	move.w	DMACONR(a6),ocr_dmacon(a0)
-	move.w	INTENAR(a6),ocr_intena(a0)
-	move.w	ADKCONR(a6),ocr_adkcon(a0)
-
+	move.l	#_CUSTOM,a1
+	move.w	DMACONR(a1),ocr_dmacon(a0)
+	move.w	INTENAR(a1),ocr_intena(a0)
+	move.w	ADKCONR(a1),ocr_adkcon(a0)
 	move.l	#_CIAB,a5
-	lea	_CIAA-_CIAB(a5),a4	; CIA-A-Base
+	lea	_CIAA-_CIAB(a5),a4	; CIA-A base
+; CIA-A
 	move.b	CIAPRA(a4),ocr_ciaa_pra(a0)
 	move.b	CIACRA(a4),d0
 	move.b	d0,d1		
 	move.b	d0,ocr_ciaa_cra(a0)
-	and.b	#~(CIACRAF_START),d0	; Timer stoppen
-	or.b	#CIACRAF_LOAD,d0	; Zählwert laden
+	and.b	#~(CIACRAF_START),d0	; stop timer a
+	or.b	#CIACRAF_LOAD,d0
 	move.b	d0,CIACRA(a4)
 	nop
 	move.b	CIATALO(a4),ocr_ciaa_talo(a0)
 	move.b	CIATAHI(a4),ocr_ciaa_tahi(a0)
-	btst	#CIACRAB_RUNMODE,d1	; Continuous-Modus ?
+	btst	#CIACRAB_RUNMODE,d1	; continuous mode ?
 	bne.s	rd_save_chips_registers_skip1
-	or.b	#CIACRAF_START,d1	; Timer wieder starten
+	or.b	#CIACRAF_START,d1	; restart timer a
 rd_save_chips_registers_skip1
 	move.b	d1,CIACRA(a4)
 	move.b	CIACRB(a4),d0
 	move.b	d0,d1		
 	move.b	d0,ocr_ciaa_crb(a0)
-	and.b	#~(CIACRBF_ALARM-CIACRBF_START),d0 ; Timer stoppen
-	or.b	#CIACRBF_LOAD,d0	; Zählwert laden
+	and.b	#~(CIACRBF_ALARM-CIACRBF_START),d0 ; stop timer b
+	or.b	#CIACRBF_LOAD,d0
 	move.b	d0,CIACRB(a4)
 	nop
 	move.b	CIATBLO(a4),ocr_ciaa_tblo(a0)
 	move.b	CIATBHI(a4),ocr_ciaa_tbhi(a0)
-	btst	#CIACRBB_RUNMODE,d1	; Continuous-Modus ?
+	btst	#CIACRBB_RUNMODE,d1	; continuous mode ?
 	bne.s	rd_save_chips_registers_skip2
-	or.b	#CIACRBF_START,d1	; Timer wieder starten
+	or.b	#CIACRBF_START,d1	; restart timer b
 rd_save_chips_registers_skip2
 	move.b	d1,CIACRB(a4)
-
+; CIA-B
 	move.b	CIAPRB(a5),ocr_ciab_prb(a0)
 	move.b	CIACRA(a5),d0
 	move.b	d0,d1		
 	move.b	d0,ocr_ciaa_cra(a0)
-	and.b	#~(CIACRAF_START),d0	; Timer stoppen
-	or.b	#CIACRAF_LOAD,d0	; Zählwert laden
+	and.b	#~(CIACRAF_START),d0	; stop timer a
+	or.b	#CIACRAF_LOAD,d0
 	move.b	d0,CIACRA(a5)
 	nop
 	move.b	CIATALO(a5),ocr_ciab_talo(a0)
 	move.b	CIATAHI(a5),ocr_ciab_tahi(a0)
-	btst	#CIACRAB_RUNMODE,d1	; Continuous-Modus ?
+	btst	#CIACRAB_RUNMODE,d1	; continuous mode ?
 	bne.s	rd_save_chips_registers_skip3
-	or.b	#CIACRAF_START,d1	; Timer wieder starten
+	or.b	#CIACRAF_START,d1	; restart timer a
 rd_save_chips_registers_skip3
 	move.b	d1,CIACRA(a5)
 	move.b	CIACRB(a5),d0
 	move.b	d0,d1		
 	move.b	d0,ocr_ciab_crb(a0)
-	and.b	#~(CIACRBF_ALARM-CIACRBF_START),d0 ;Timer stoppen
-	or.b	#CIACRBF_LOAD,d0	; Zählwert laden
+	and.b	#~(CIACRBF_ALARM-CIACRBF_START),d0 ; stop timer b
+	or.b	#CIACRBF_LOAD,d0
 	move.b	d0,CIACRB(a5)
 	nop
 	move.b	CIATBLO(a5),ocr_ciab_tblo(a0)
 	move.b	CIATBHI(a5),ocr_ciab_tbhi(a0)
-	btst	#CIACRBB_RUNMODE,d1	; Continuous-Modus ?
+	btst	#CIACRBB_RUNMODE,d1	; continuous mode ?
 	bne.s	rd_save_chips_registers_skip4
-	or.b	#CIACRBF_START,d1	; Timer wieder starten
+	or.b	#CIACRBF_START,d1	; restart timer b
 rd_save_chips_registers_skip4
 	move.b	d1,CIACRB(a5)
-	CALLEXECQ Enable
+	CALLLIBQ Enable
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_run_dos_file
 	tst.w	whdl_slave_enabled(a3)
@@ -5650,23 +5460,23 @@ rd_run_dos_file_skip
 	lea	rd_shell_no_op_cmd_line(pc),a0
 	move.l	a3,-(a7)
 	move.l	rd_demofile_seglist(a3),a3
-	add.l	a3,a3			; BCPL-Zeiger
+	add.l	a3,a3			; BCPL pointer
 	add.l	a3,a3
-	jsr	FirstCode(a3)		; Executable-File ausführen
+	jsr	FirstCode(a3)		; execute entry
 	move.l	(a7)+,a3
 	CALLGRAFQ WaitBlit
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 rd_execute_whdload_slave
 	tst.w	whdl_slave_enabled(a3)
 	bne.s	rd_execute_whdload_slave_ok
 	lea	whdl_slave_cmd_line(pc),a0
-	move.l	a0,d1			; Zeiger auf Kommandozeile
-	moveq	#0,d2			; Keine Tags
+	move.l	a0,d1
+	moveq	#0,d2			; no tags
 	CALLDOS SystemTagList
 	tst.l	d0
 	beq.s	rd_execute_whdload_slave_skip
@@ -5683,9 +5493,9 @@ rd_execute_whdload_slave_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_check_softreset
 	tst.w	rd_arg_softreset_enabled(a3)
@@ -5696,100 +5506,42 @@ rd_check_softreset_skip
 	CALLEXECQ ColdReboot
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_clear_chips_registers
 	CALLEXEC Disable
 	move.l	#_CUSTOM,a0
 	move.w	#$7fff,d0
-	move.w	d0,DMACON(a0)		; DMA aus
-
-	move.w	d0,INTENA(a0)		; Interrupts aus
-	move.w	d0,INTREQ(a0)		; Interrupts löschen
+	move.w	d0,DMACON(a0)		; disable DMA
+	move.w	d0,INTENA(a0)		; disable interrupts
+	move.w	d0,INTREQ(a0)		; clear interrupts
 	move.w	d0,ADKCON(a0)
-
 	moveq	#0,d0
-	move.w	d0,COPCON(a0)		; Copper kann nicht auf Blitterregister zugreifen
-	move.w	d0,AUD0VOL(a0)		; Lautstärke aus
+	move.w	d0,COPCON(a0)		; copper can't access blitter registers
+	move.w	d0,AUD0VOL(a0)		; channels volume off
 	move.w	d0,AUD1VOL(a0)
 	move.w	d0,AUD2VOL(a0)
 	move.w	d0,AUD3VOL(a0)
-
+; CIA
 	move.l	#_CIAB,a5
-	lea	_CIAA-_CIAB(a5),a4 	; CIA-A-Base
+	lea	_CIAA-_CIAB(a5),a4 	; CIA-A base
 	moveq	#$7f,d0
-	move.b	d0,CIAICR(a4)		; CIA-Interrupts aus
+	move.b	d0,CIAICR(a4)		; disable CIA interrupts
 	move.b	d0,CIAICR(a5)
-	move.b	CIAICR(a4),d0		; CIA-Interrupts löschen
+	move.b	CIAICR(a4),d0		; clear CIA interrupts
 	move.b	CIAICR(a5),d0
 	CALLLIBQ Enable
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_restore_chips_registers
 	CALLEXEC Disable
 	lea	rd_old_chips_registers(pc),a0
-	move.b	ocr_ciaa_pra(a0),CIAPRA(a4)
-
-	move.b	ocr_ciaa_talo(a0),CIATALO(a4)
-	nop
-	move.b	ocr_ciaa_tahi(a0),CIATAHI(a4)
-
-	move.b	ocr_ciaa_tblo(a0),CIATBLO(a4)
-	nop
-	move.b	ocr_ciaa_tbhi(a0),CIATBHI(a4)
-
-	move.b	ocr_ciaa_icr(a0),d0
-	or.b	#CIAICRF_SETCLR,d0
-	move.b	d0,CIAICR(a4)
-
-	move.b	ocr_ciaa_cra(a0),d0
-	btst	#CIACRAB_RUNMODE,d0	; Continuous-Modus ?
-	bne.s	rd_restore_chips_registers1
-	or.b	#CIACRAF_START,d0	; Timer wieder starten
-rd_restore_chips_registers1
-	move.b	d0,CIACRA(a4)
-
-	move.b	ocr_ciaa_crb(a0),d0
-	btst	#CIACRBB_RUNMODE,d0 	; Continuous-Modus ?
-	bne.s	rd_restore_chips_registers2
-	or.b	#CIACRBF_START,d0	; Timer wieder starten
-rd_restore_chips_registers2
-	move.b	d0,CIACRB(a4)
-
-	move.b	ocr_ciab_prb(a0),CIAPRB(a5)
-
-	move.b	ocr_ciab_talo(a0),CIATALO(a5)
-	nop
-	move.b	ocr_ciab_tahi(a0),CIATAHI(a5)
-
-	move.b	ocr_ciab_tblo(a0),CIATBLO(a5)
-	nop
-	move.b	ocr_ciab_tbhi(a0),CIATBHI(a5)
-
-	move.b	ocr_ciab_icr(a0),d0
-	or.b	#CIAICRF_SETCLR,d0
-	move.b	d0,CIAICR(a5)
-
-	move.b	ocr_ciab_cra(a0),d0
-	btst	#CIACRAB_RUNMODE,d0 	; Continuous-Modus ?
-	bne.s	rd_restore_chips_registers3
-	or.b	#CIACRAF_START,d0	; Timer wieder starten
-rd_restore_chips_registers3
-	move.b	d0,CIACRA(a5)
-
-	move.b	ocr_ciab_crb(a0),d0
-	btst	#CIACRBB_RUNMODE,d0	; Continuous-Modus ?
-	bne.s	rd_restore_chips_registers4
-	or.b	#CIACRBF_START,d0	; Timer wieder starten
-rd_restore_chips_registers4
-	move.b	d0,CIACRB(a5)
-
 	move.l	#_CUSTOM,a1
 	move.w	ocr_dmacon(a0),d0
 	or.w	#DMAF_SETCLR,d0
@@ -5800,41 +5552,87 @@ rd_restore_chips_registers4
 	move.w	ocr_adkcon(a0),d0
 	or.w	#ADKF_SETCLR,d0
 	move.w	d0,ADKCON(a1)
+; CIA-A
+	move.b	ocr_ciaa_pra(a0),CIAPRA(a4)
+	move.b	ocr_ciaa_talo(a0),CIATALO(a4)
+	nop
+	move.b	ocr_ciaa_tahi(a0),CIATAHI(a4)
+	move.b	ocr_ciaa_tblo(a0),CIATBLO(a4)
+	nop
+	move.b	ocr_ciaa_tbhi(a0),CIATBHI(a4)
+	move.b	ocr_ciaa_icr(a0),d0
+	or.b	#CIAICRF_SETCLR,d0
+	move.b	d0,CIAICR(a4)
+	move.b	ocr_ciaa_cra(a0),d0
+	btst	#CIACRAB_RUNMODE,d0	; continuous mode ?
+	bne.s	rd_restore_chips_registers1
+	or.b	#CIACRAF_START,d0	; restart timer a
+rd_restore_chips_registers1
+	move.b	d0,CIACRA(a4)
+	move.b	ocr_ciaa_crb(a0),d0
+	btst	#CIACRBB_RUNMODE,d0 	; continuous mode ?
+	bne.s	rd_restore_chips_registers2
+	or.b	#CIACRBF_START,d0	; restart timer b
+rd_restore_chips_registers2
+	move.b	d0,CIACRB(a4)
+; CIA-B
+	move.b	ocr_ciab_prb(a0),CIAPRB(a5)
+	move.b	ocr_ciab_talo(a0),CIATALO(a5)
+	nop
+	move.b	ocr_ciab_tahi(a0),CIATAHI(a5)
+	move.b	ocr_ciab_tblo(a0),CIATBLO(a5)
+	nop
+	move.b	ocr_ciab_tbhi(a0),CIATBHI(a5)
+	move.b	ocr_ciab_icr(a0),d0
+	or.b	#CIAICRF_SETCLR,d0
+	move.b	d0,CIAICR(a5)
+	move.b	ocr_ciab_cra(a0),d0
+	btst	#CIACRAB_RUNMODE,d0 	; continuous mode ?
+	bne.s	rd_restore_chips_registers3
+	or.b	#CIACRAF_START,d0	; restart timer a
+rd_restore_chips_registers3
+	move.b	d0,CIACRA(a5)
+	move.b	ocr_ciab_crb(a0),d0
+	btst	#CIACRBB_RUNMODE,d0	; continuous mode ?
+	bne.s	rd_restore_chips_registers4
+	or.b	#CIACRBF_START,d0	; restart timer b
+rd_restore_chips_registers4
+	move.b	d0,CIACRB(a5)
 	CALLLIBQ Enable
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 		CNOP 0,4
 rd_get_tod_duration
 	CALLEXEC Disable
 	move.l	#_CIAA,a4
-	move.l	rd_tod_time(a3),d0 	; Zeit vor Start des Eintrags
+	move.l	rd_tod_time(a3),d0 	; timer before start of entry
 	moveq	#0,d1
-	move.b	CIATODHI(a4),d1		; Bits 23-16
-	swap	d1			; Bits in richtige Position bringen
-	move.b	CIATODMID(a4),d1 	; Bits 15-8
-	lsl.w	#8,d1			; Bits in richtige Position bringen
-	move.b	CIATODLOW(a4),d1 	; Bits 7-0
-	cmp.l	d0,d1			; TOD Überlauf ?
+	move.b	CIATODHI(a4),d1		; bits 23-16
+	swap	d1			; adjust bits
+	move.b	CIATODMID(a4),d1 	; bits 15-8
+	lsl.w	#8,d1			; adjust bits
+	move.b	CIATODLOW(a4),d1 	; bits 7-0
+	cmp.l	d0,d1			; TOD overflow ?
 	bge.s	rd_get_tod_duration_skip
-	move.l	#$ffffff,d2		; Maximalwert
-	sub.l	d0,d2			; Differenz bis zum Überlauf
-	add.l	d2,d1			; zuzüglich Wert nach dem Überlauf
+	move.l	#$ffffff,d2		; timer max
+	sub.l	d0,d2			; difference until overflow
+	add.l	d2,d1			; add timer value
 	bra.s	rd_get_tod_duration_save
 	CNOP 0,4
 rd_get_tod_duration_skip
-	sub.l	d0,d1			; Normale Differenz
+	sub.l	d0,d1			; normal difference
 rd_get_tod_duration_save
 	move.l	d1,rd_tod_time(a3)
 	CALLLIBQ Enable
 
 
 	IFEQ rd_yulquen74_code_enabled
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 		CNOP 0,4
 rd_upgrade_cpu_clock
 		btst	#AFB_68020,adl_cpu_flags+BYTE_SIZE(a3)
@@ -5851,9 +5649,9 @@ rd_upgrade_cpu_clock_skip
 	ENDC
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_upgrade_cpu
 	move.l	rd_demofile_path(a3),a0
@@ -5873,7 +5671,7 @@ rd_upgrade_cpu_skip1
 rd_upgrade_cpu_skip2
 	tst.b	adl_cpu_flags+BYTE_SIZE(a3)
 	bpl.s	rd_upgrade_cpu_skip3
-; ** 68060 **
+; 68060 
 	move.l	rd_old_060_pcr(a3),d1
 	lea	rd_060_set_pcr(pc),a5
 	CALLLIBS Supervisor
@@ -5884,12 +5682,12 @@ rd_upgrade_cpu_skip2
 	lea	rd_040_060_mmu_on(pc),a5
 	CALLLIBS Supervisor
 	bra.s	rd_upgrade_cpu_quit
-; ** 68030-68040 **
+; 68030-68040 
 	CNOP 0,4
 rd_upgrade_cpu_skip3
-	moveq	#FALSE,d0		; Alle Bits setzen
+	moveq	#-1,d0			; set all bits
 	move.l	rd_old_cacr(a3),d1
-	CALLEXEC CacheControl		; CPU neu konfigurieren und Caches flushen
+	CALLEXEC CacheControl
 	btst	#AFB_68040,adl_cpu_flags+BYTE_SIZE(a3)
 	beq.s	rd_upgrade_cpu_skip4
 	lea	rd_old_mmu_registers(pc),a1
@@ -5909,38 +5707,38 @@ rd_upgrade_cpu_skip5
 	bra	rd_upgrade_cpu_quit
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_restore_custom_traps
 	move.l	rd_old_vbr(a3),d0
 	beq.s	rd_restore_custom_traps_skip
-	move.l	d0,a1			; Ziel: Fast-Memory
-	add.w	#TRAP_0_VECTOR,a1	; Ab Trap0-Vektor
+	move.l	d0,a1			; target: fast memory
+	ADDF.W	TRAP_0_VECTOR,a1
 	bsr.s	rd_copy_custom_traps
 rd_restore_custom_traps_skip
-	move.w	#TRAP_0_VECTOR,a1	; Ab Trap0-Vektor in Chip-Memory
+	move.w	#TRAP_0_VECTOR,a1	; target: chip memory
 	bsr.s	rd_copy_custom_traps
 	CALLEXECQ CacheClearU
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_copy_custom_traps
 	move.l	rd_custom_traps(a3),a0
-	moveq	#7-1,d7			; Anzahl der Trap-Vektoren
+	moveq	#adl_used_trap_vectors_number-1,d7
 rd_copy_custom_traps_loop
-	move.l	(a0)+,(a1)+	 	; Vektor kopieren
+	move.l	(a0)+,(a1)+		; copy vector
 	dbf	d7,rd_copy_custom_traps_loop
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_init_playtimer_stop
 	tst.w	rd_playtimer_delay(a3)
@@ -5948,13 +5746,13 @@ rd_init_playtimer_stop
 	rts
 	CNOP 0,4
 rd_init_playtimer_stop_skip
-	moveq	#0,d1			; Reset-Device stoppen
+	moveq	#0,d1			; stop reset device
 	bra     rp_create_command_string
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 rd_stop_playtimer
 	tst.w	rd_playtimer_delay(a3)
@@ -5969,9 +5767,9 @@ rd_stop_playtimer_skip
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 		CNOP 0,4
 rd_update_system_time
 	tst.w	rd_arg_restoresystime_enabled(a3)
@@ -5980,24 +5778,24 @@ rd_update_system_time
 	CNOP 0,4
 rd_update_system_time_skip
 	move.l	_SysBase(pc),a6
-	move.l	rd_tod_time(a3),d0	; Vergangene Zeit, als System ausgeschaltet war
+	move.l	rd_tod_time(a3),d0	; period of disabled system
 	moveq	#0,d1
 	move.b	VBlankFrequency(a6),d1
-	divu.w	d1,d0			; / Vertikalfrequenz (50Hz) = Unix-Sekunden, Rest Unix-Microsekunden
+	divu.w	d1,d0			; / vertical frequency (50Hz) = Unix seconds
 	lea	rd_timer_io(pc),a1
 	move.w	#TR_SETSYSTIME,IO_command(a1)
 	move.l	d0,d1
 	ext.l	d0
-	swap	d1			; Rest der Division
-	add.l	d0,IO_size+TV_SECS(a1)	; Unix-Sekunden
+	swap	d1			; remainder of division
+	add.l	d0,IO_size+TV_SECS(a1)
 	mulu.w	#10000,d1
-	add.l	d1,IO_size+TV_MICRO(a1) ; Unix-Mikrosekunden
+	add.l	d1,IO_size+TV_MICRO(a1)
 	CALLLIBQ DoIO
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_unload_demofile
 	move.l	rd_demofile_seglist(a3),d1
@@ -6010,9 +5808,9 @@ rd_unload_demofile_skip
 	bra.s	rd_unload_demofile_quit
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_free_fast_memory
 	move.l	rd_demofile_path(a3),a0
@@ -6027,22 +5825,22 @@ rd_free_fast_memory_skip1
 	move.l	d2,a2
 	move.l	_SysBase(pc),a6
 rd_free_fast_memory_loop
-	move.l	(a2)+,d0		; Größe des Speicherbereichs
+	move.l	(a2)+,d0		; memory block size
 	beq.s	rd_free_fast_memory_skip2
-	move.l	(a2)+,a1		; Zeiger auf Speicherbereich
+	move.l	(a2)+,a1		; pointer memory block
 	CALLLIBS FreeMem
 	bra.s	rd_free_fast_memory_loop
 	CNOP 0,4
 rd_free_fast_memory_skip2
-	move.l	d2,a1			; Zeiger auf ersten größten Block
-	move.l	rd_fast_memory_block_size(a3),d0 ; Größe des ersten größten Blocks
+	move.l	d2,a1			; pointer memory block
+	move.l	rd_fast_memory_block_size(a3),d0 ; memory block size
 	CALLLIBS FreeMem
 	bra.s	rd_free_fast_memory_quit
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 rd_restore_sprite_resolution
 	move.l	rd_pal_screen(a3),a2
@@ -6051,32 +5849,32 @@ rd_restore_sprite_resolution
 	move.l	#VTAG_SPRITERESN_SET,vctl_VTAG_SPRITERESN+ti_tag(a1)
 	move.l	rd_old_sprite_resolution(a3),vctl_VTAG_SPRITERESN+ti_data(a1)
 	CALLGRAF VideoControl
-	move.l	a2,a0			; Zeiger auf Screen
+	move.l	a2,a0			; pointer screen
 	CALLINT MakeScreen
 	CALLLIBQ RethinkDisplay
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_close_invisible_window
 	move.l	rd_invisible_window(a3),a0
 	CALLINTQ CloseWindow
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_close_pal_screen
 	move.l	rd_pal_screen(a3),a0
 	CALLINTQ CloseScreen
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_active_screen_to_front
 	tst.l	rd_active_screen(a3)
@@ -6090,9 +5888,9 @@ rd_active_screen_to_front_quit
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_restore_current_dir
 	move.l	rd_old_current_dir_lock(a3),d1
@@ -6101,13 +5899,13 @@ rd_restore_current_dir
 	CALLLIBQ Unlock
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 rd_check_user_break
-	moveq	#0,d0			; Keine neuen Signale
-	moveq	#0,d1			; Signal-Maske
+	moveq	#0,d0			; no new signals
+	moveq	#0,d1			; signal mask
 	CALLEXEC SetSignal
 	btst	#SIGBREAKB_CTRL_C,d0
 	beq.s	rd_check_user_break_ok
@@ -6122,9 +5920,9 @@ rd_check_user_break_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_reset_demo_variables
 	tst.w	rd_arg_loop_enabled(a3)
@@ -6143,9 +5941,9 @@ rd_reset_demo_variables_skip2
 	bra.s	rd_reset_demo_variables_quit
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Return-Code
+; input
+; result
+; d0.l	... return value: return code
 	CNOP 0,4
 rd_check_arg_loop_enabled
 	tst.w	rd_arg_loop_enabled(a3)
@@ -6158,9 +5956,9 @@ rd_check_loop_mode_ok
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_free_cleared_sprite_data
 	move.l	rd_cleared_sprite_pointer_data(a3),a1
@@ -6168,94 +5966,94 @@ rd_free_cleared_sprite_data
 	CALLEXECQ FreeMem
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 		CNOP 0,4
 rd_close_timer_device
 	lea	rd_timer_io(pc),a1
 	CALLEXECQ CloseDevice
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_close_serial_device
 	lea	rd_serial_io(pc),a1
 	CALLEXECQ CloseDevice
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_delete_serial_message_port
 	move.l	rd_serial_message_port(a3),a0
 	CALLEXECQ DeleteMsgPort
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_close_icon_library
 	move.l	_IconBase(pc),a1
 	CALLEXECQ CloseLibrary
 
 
-; **** Exception-Routinen ****
+; Exception-Routinen 
 
 	MC68020
-; Input
+; input
 ; d0.l	... neuer Inhalt von VBR
-; Result
-; d0.l	... Kein Rückgabewert
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rd_write_vbr
-	or.w	#SRF_I0|SRF_I1|SRF_I2,SR ; Level-7-Interruptebene
+	or.w	#SRF_I0|SRF_I1|SRF_I2,SR ; highest interrupt priority
 	nop
 	movec.l d0,VBR
 	nop
 	rte
 
 
-; Input
+; input
 ; d1.l	... neuer Inhalt von CACR
-; Result
-; d0.l	... Rückgabewert: alter Inhalt von CACR
+; result
+; d0.l	... return value: old content of CACR
 	MC68040
 	CNOP 0,4
 rd_060_set_cacr
-	or.w	#SRF_I0|SRF_I1|SRF_I2,SR ; Level-7-Interruptebene
+	or.w	#SRF_I0|SRF_I1|SRF_I2,SR ; highest interrupt priority
 	nop
 	movec.l CACR,d0
 	nop
-	CPUSHA	BC			; Instruction/Data/Branch-Caches flushen
+	CPUSHA	BC			; flush instruction/data/branch caches
 	nop
 	movec.l d1,CACR
 	nop
 	rte
 
 
-; Input
-; a1	... Zeiger auf Speicherbereich für alte Werte
-; a3	... Zeiger auf Variablen-Base
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; a1	... pointer buffer for old values
+; a3	... pointer variables_base
+; result
+; d0.l	... no return value
 	MC68040
 	CNOP 0,4
 rd_040_060_mmu_off
-	move.l	#$0000c040,d1		; DTT0 Cache inhibited, precise für Speicherbereich $00000000-$00ffffff (Zorro II)
-	move.l	#$00ffc000,d2		; DTT1/ITT1 Cachable, writethrough für Speicherbereich $00000000-$ffffffff (Zorro II/III)
-	move.l	d2,d3			; ITT0=DTT1 Cachable für Speicherbereich $00000000-$ffffffff (Zorro II/III)
-	moveq	#0,d4			; TC MMU aus
+	move.l	#$0000c040,d1		; DTT0 cache inhibited, precise for $00000000-$00ffffff (Zorro II)
+	move.l	#$00ffc000,d2		; DTT1/ITT1 cachable, writethrough for $00000000-$ffffffff (Zorro II/III)
+	move.l	d2,d3			; ITT0=DTT1 cachable for $00000000-$ffffffff (Zorro II/III)
+	moveq	#0,d4			; TC MMU off
 	move.l	rd_demofile_path(a3),a0
 	cmp.b	#RUNMODE_OCS_VANILLA,pqe_runmode(a0)
 	bne.s	rd_040_060_mmu_off_skip
-	move.l	d1,d3			; ITT0=DTT0 Cache inhibited, precise für Speicherbereich $00000000-$00ffffff (Zorro II)
+	move.l	d1,d3			; ITT0=DTT0 cache inhibited, precise for $00000000-$00ffffff (Zorro II)
 rd_040_060_mmu_off_skip
-	or.w	#SRF_I0|SRF_I1|SRF_I2,SR ; Level-7-Interruptebene
+	or.w	#SRF_I0|SRF_I1|SRF_I2,SR ; highest interrupt priority
 	nop
 	movec.l DTT0,d0
 	nop
@@ -6292,15 +6090,15 @@ rd_040_060_mmu_off_skip
 	rte
 
 
-; Input
-; a1	... Zeiger auf Speicherbereich für alte Werte
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; a1	... pointer buffer for old values
+; result
+; d0.l	... no return value
 	MC68030
 	CNOP 0,4
 rd_030_mmu_off
 	lea	rd_clear_030_mmu_register(a3),a0
-	or.w	#SRF_I0|SRF_I1|SRF_I2,SR ; Level-7-Interruptebene
+	or.w	#SRF_I0|SRF_I1|SRF_I2,SR ; highest interrupt priority
 	nop
 	PMOVE	TT0,omr_tt0(a1)
 	nop
@@ -6319,30 +6117,30 @@ rd_030_mmu_off
 	rte
 
 
-; Input
-; d1.l	... neuer Inhalt von PCR
-; Result
-; d0.l	... alter Inhalt von PCR
+; input
+; d1.l	... PCR new content
+; result
+; d0.l	... PCR old content
 	MC68040
 	CNOP 0,4
 rd_060_set_pcr
-	or.w	#SRF_I0|SRF_I1|SRF_I2,SR ;Level-7-Interruptebene
+	or.w	#SRF_I0|SRF_I1|SRF_I2,SR ;highest interrupt priority
 	nop
-	DC.L	$4e7a0808		; movec.l PCR,d0: Alter Inhalt
+	DC.L	$4e7a0808		; movec.l PCR,d0
 	nop
-	DC.L	$4e7b1808		; movec.l d1,PCR: Neuer Inhalt
+	DC.L	$4e7b1808		; movec.l d1,PCR
 	nop
 	rte
 
 
-; Input
-; a1	... Zeiger auf Speicherbereich für alte Werte
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; a1	... pointer buffer for old values
+; result
+; d0.l	... no return value
 	MC68040
 	CNOP 0,4
 rd_040_060_mmu_on
-	or.w	#SRF_I0|SRF_I1|SRF_I2,SR ; Level-7-Interruptebene
+	or.w	#SRF_I0|SRF_I1|SRF_I2,SR ; highest interrupt priority
 	nop
 	move.l	omr_dtt0(a1),d0
 	nop
@@ -6369,14 +6167,14 @@ rd_040_060_mmu_on
 	rte
 
 
-; Input
-; a1	... Zeiger auf Speicherbereich für alte Werte
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; a1	... pointer buffer for old values
+; result
+; d0.l	... no return value
 	MC68030
 	CNOP 0,4
 rd_030_mmu_on
-	or.w	#SRF_I0|SRF_I1|SRF_I2,SR ; Level-7-Interruptebene
+	or.w	#SRF_I0|SRF_I1|SRF_I2,SR ; highest interrupt priority
 	nop
 	PMOVE	omr_tt0(a1),TT0
 	nop
@@ -6389,11 +6187,11 @@ rd_030_mmu_on
 	rte
 
 
-; **** Reset-Programm ****
+; Reset-Programm 
 	MC68000
 	CNOP 0,4
 rp_start
-	bra.s	rp_skip1		; Kennung überspringen
+	bra.s	rp_skip1		; skip ADL id
 	CNOP 0,4
 rp_id	DC.B "-DL-"
 rp_skip1
@@ -6401,7 +6199,7 @@ rp_skip1
 	move.l	#_CUSTOM,a5
 	move.l	exec_base.w,a6
 	move.w	#POTGOF_OUTLY|POTGOF_DATLY|POTGOF_OUTLX|POTGOF_DATLX,POTGO(a5)
-	moveq	#rp_rasterlines_delay,d7 ; ~320 µs mach Beschreiben des Registers warten
+	moveq	#rp_rasterlines_delay,d7 ; delay of ~320 µs
 	bsr	rp_wait_rasterline
 	btst	#POTINPB_DATLY-8,POTINP(a5) ; RMB ?
 	bne.s	rp_proceed
@@ -6415,9 +6213,9 @@ rp_proceed
 	move.l	#rp_entries_buffer-rp_start,d0
 	move.l	rp_reset_program_memory(pc),a1
 	move.w	rp_entries_number_max(pc),d1
-	mulu.w	#playback_queue_entry_size,d1 ; Größe des Puffers für Einträge berechnen
-	add.l	d1,d0			; Programmlänge + Puffer für Einträge
-	CALLLIBS AllocAbs		; Speicher nochmals reservieren
+	mulu.w	#playback_queue_entry_size,d1 ; total playback queue size
+	add.l	d1,d0			; reset program section size
+	CALLLIBS AllocAbs
 	tst.l	d0
 	bne.s	rp_skip2
 	move.l	#rp_color_error,d3
@@ -6436,34 +6234,34 @@ rp_quit
 	rts
 
 
-; Input
+; input
 ; d7.l	... Anzahl der Rasterzeilen
-; Result
-; d0.l	... Kein Rückgabewert
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rp_wait_rasterline
-	move.l	#$0001ff00,d2		; Maske für vertikale Position V0-V8 des Rasterstrahls
-	subq.w	#1,d7			; Loopend at false
+	move.l	#$0001ff00,d2		; mask for V0-V8
+	subq.w	#1,d7			; loopend at false
 rp_wait_rasterline_loop1
-	move.w	VPOSR(a5),d0		; VPOSR/VHPOSR getrennt auslesen wegen Übertrag-Bit V8
+	move.w	VPOSR(a5),d0		; VPOSR/VHPOSR separate reads because of overflow bit V8
 	swap	d0
 	move.w	VHPOSR(a5),d0
-	and.l	d2,d0			; Nur vertikale Position
+	and.l	d2,d0			; only bits V0-V8
 rp_wait_rasterline_loop2
-	move.w	VPOSR(a5),d1		; VPOSR/VHPOSR getrennt auslesen wegen Übertrag-Bit V8
+	move.w	VPOSR(a5),d1		; VPOSR/VHPOSR separate reads because of overflow bit V8
 	swap	d1
 	move.w	VHPOSR(a5),d1
-	and.l	d2,d1			; Nur vertikale Position V0-V8
-	cmp.l	d1,d0			; Immer noch gleiche Zeile ?
+	and.l	d2,d1			; only bits V0-V8
+	cmp.l	d1,d0			; still same raster line ?
 	beq.s	rp_wait_rasterline_loop2
 	dbf	d7,rp_wait_rasterline_loop1
 	rts
 
 
-; Input
-; a6	... Exec-Base
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; a6	... exec base
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rp_clear_cool_capture
 	moveq	#0,d0
@@ -6472,9 +6270,9 @@ rp_clear_cool_capture
 	CALLLIBQ CacheClearU
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rp_clear_id
 	lea	rp_id(pc),a0
@@ -6482,175 +6280,175 @@ rp_clear_id
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rp_init_playtimer_stop
-	moveq	#0,d1			; Reset Device stoppen
+	moveq	#0,d1			; stop reset device
 	bra.s	rp_create_command_string
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rp_stop_playtimer
 	bsr	rp_set_playtimer
   	bra	rp_write_playtimer
 
 
-; Input
-; d1.l	... Timer-Wert
-; d0.l	... Kein Rückgabewert
+; input
+; d1.l	... timer value
+; d0.l	... no return value
 	CNOP 0,4
 rp_create_command_string
 	lea	rp_command_string(pc),a2
 	move.l	d1,-(a7)
-	lsr.w	#4,d1			; Korrektur der Dezimalzahl
-	moveq	#rd_nnnn_size,d7	; Anzahl der Stellen zum Umwandeln
-	lea	cs_delay_counter(a2),a0	; Zeiger auf String
+	lsr.w	#4,d1			; correction decimal numbder
+	moveq	#rd_nnnn_size,d7	; number of digits to convert
+	lea	cs_delay_counter(a2),a0	; pointer string
 	bsr.s	rp_dec_to_ascii
 
 	moveq	#NIBBLE_MASK_LOW,d1
-	and.l	(a7)+,d1		; Anzahl der Teile 1..15
+	and.l	(a7)+,d1		; number of demo parts (1..15)
 	bsr.s	rp_dec_to_hex
-	move.l	d0,d1			; Hexadezimalzahl
-	moveq	#rd_r_size,d7		; Anzahl der Stellen zum Umwandeln
-	lea	cs_parts(a2),a0         ; Zeiger auf String
+	move.l	d0,d1			; return value hexadecimal number
+	moveq	#rd_r_size,d7		; number of digits to convert
+	lea	cs_parts(a2),a0         ; pointer string
 	bsr.s	rp_hex_to_ascii
 
-	moveq	#cs_checksum-cs_hash,d7 ; Anzahl der ASCII-Zeichen über die die Checksumme gebildet werden soll
-	lea	cs_hash(a2),a0		; Ab "#"
+	moveq	#cs_checksum-cs_hash,d7 ; number of characters for checksum
+	lea	cs_hash(a2),a0		; start with "#"
 	bsr	rp_update_command_checksum
-	move.l	d0,d1			; Dezimalzahl
+	move.l	d0,d1			; decimal number
 	bsr.s	rp_dec_to_hex
-	move.l	d0,d1			; Hexadezimalzahl
-	moveq	#2,d7			; Anzahl der Stellen zum Umwandeln
-	lea	cs_checksum(a2),a0      ; Zeiger auf String
+	move.l	d0,d1			; return value hexadecimal number
+	moveq	#2,d7			; number of digits to convert
+	lea	cs_checksum(a2),a0      ; pointer string
 	bra.s	rp_hex_to_ascii
 
 
-; Input
-; d1.l	... Dezimalzahl
-; Result
-; d0.l	... Rückgabewert: Hexadezimalzahl & $ff
+; input
+; d1.l	... decimal number
+; result
+; d0.l	... return value: hexadecimal number & $ff
 	CNOP 0,4
 rp_dec_to_hex
-	moveq	#0,d0			; Ergebnis = Hexadezialzahl
-	moveq	#16,d3			; Hexadezimalzahl-Basis
-	moveq	#0,d4			; 1. Nibble-Shiftwert
+	moveq	#0,d0			; result
+	moveq	#16,d3			; hexadecimal base
+	moveq	#0,d4			; first nibble shift value
 rp_dec_to_hex_loop
-	divu.w	d3,d1			; / Hexadezimalzahl-Basis
-	move.l	d1,d2			; Ergebnis retten
-	swap	d2			; Rest der Division
-	lsl.w	d4,d2			; Nibble in richtige Position bringen
-	addq.b	#4,d4			; nächstes Nibble
-	add.w	d2,d0			; Nibble eintragen
-	ext.l	d1			; Quotient auf 32 Bit erweitern
-	bne.s	rp_dec_to_hex_loop	; Solange Quotient nicht Null -> Schleife
-	and.l	#$000000ff,d0		; Nur Bits 0-7 (lower Byte)
+	divu.w	d3,d1			; / hexadecimal base
+	move.l	d1,d2			; result
+	swap	d2			; remainder of division
+	lsl.w	d4,d2			; adjust nibble
+	addq.b	#4,d4			; next nibble shift value
+	add.w	d2,d0			; set nibble
+	ext.l	d1
+	bne.s	rp_dec_to_hex_loop
+	and.l	#$000000ff,d0		; lower byte
 	rts
 
 
-; Input
-; a0	... Stringadresse
-; d1.l	... Dezimalzahl
-; d7.l	... Anzahl der Stellen zum Umwandeln
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; a0	... pointer string
+; d1.l	... decimal number
+; d7.l	... number of didits to convert
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rp_dec_to_ascii
-	lea	rp_dec_table(pc),a1	; Stellentabelle
+	lea	rp_dec_table(pc),a1
 	move.l	d7,d0
 	MULUF.L	4,d0,d2
-	lea	(a1,d0.l),a1		; Erste Zehnerpotenz in Stellentabelle ermitteln
-	subq.w	#1,d7			; Loopend at false
+	lea	(a1,d0.l),a1		; get digit value
+	subq.w	#1,d7			; loopend at false
 rp_dec_to_ascii_loop1
-	moveq	#-1,d3			; Ziffer
-	move.l	-(a1),d2		; Zehnerpotenz 10^n
+	moveq	#-1,d3			; number
+	move.l	-(a1),d2		; digit value 10^n
 rp_dec_to_ascii_loop2
-	addq.b	#1,d3			; Ziffer erhöhen
-	sub.l	d2,d1			; Zehnerpotenz abziehen
-	bcc.s	rp_dec_to_ascii_loop2	; Wenn kein Übertrag -> Schleife
-	add.b	#"0",d3			; Ziffer -> ASCII-Zeichen
-	add.l	d2,d1			; Rest berichtigen
-	move.b	d3,(a0)+		; Zeichen in String schreiben
+	addq.b	#1,d3			; increase number
+	sub.l	d2,d1			; substzract digit value
+	bcc.s	rp_dec_to_ascii_loop2
+	add.b	#"0",d3			; number -> ascii character
+	add.l	d2,d1			; adjust remainder
+	move.b	d3,(a0)+
 	dbf	d7,rp_dec_to_ascii_loop1
 	rts
 
 
-; Input
-; a0	... Zeiger auf String
-; d1.l	... Hexadezimalzahl
-; d7.l	... Anzahl der Stellen zum Umwandeln
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; a0	... pointer string
+; d1.l	... hexadecimal number
+; d7.l	... number of digits to convert
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rp_hex_to_ascii
-	add.l	d7,a0			; Zeiger auf Ende des Strings
-	subq.w	#1,d7			; Loopend at false
+	add.l	d7,a0			; pointer end of string
+	subq.w	#1,d7			; loopend at false
 rp_hex_to_ascii_loop
 	moveq	#NIBBLE_MASK_LOW,d0
-	and.b	d1,d0			; Nur Low-Nibble
-	add.b	#"0",d0			; Ziffer -> ASCII-Zeichen
-	cmp.b	#"9",d0			; Zeichen <= "9" ?
+	and.b	d1,d0			; only low nibble
+	add.b	#"0",d0			; number -> ascii character
+	cmp.b	#"9",d0			; character <= "9" ?
 	ble.s	rp_hex_to_ascii_skip
-	add.b	#39,d0			; 10="a",11="b",..
+	add.b	#39,d0			; a..f 10="a",11="b",..
 rp_hex_to_ascii_skip
-	lsr.l	#4,d1			; nächstes Nibble
-	move.b	d0,-(a0)		; Zeichen in String schreiben
+	lsr.l	#4,d1			; next nibble
+	move.b	d0,-(a0)
 	dbf	d7,rp_hex_to_ascii_loop
 	rts
 
 
-; Input
-; a0	... Zeiger auf String
-; d7.l	... Anzahl der ASCII-Zeichen über die die Checksumme gebildet werden soll
-; Result
+; input
+; a0	... pointer string
+; d7.l	... number of ascii characters
+; result
 ; d0.l	... Rückgabewert: Checksumme
 	CNOP 0,4
 rp_update_command_checksum
-	moveq	#0,d0			; Checksumme
+	moveq	#0,d0			; checksumme
 	moveq	#0,d1
-	subq.w	#1,d7			; Loopend at false
+	subq.w	#1,d7			; loopend at false
 rp_update_command_checksum_loop
-	move.b	(a0)+,d1		; ASCII-Wert
+	move.b	(a0)+,d1		; ascii value
 	add.w	d1,d0
 	dbf	d7,rp_update_command_checksum_loop
 	ext.l	d0
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rp_set_playtimer
 	CALLLIBS Disable
-	move.w	#$0100,d1		; 8 Bits pro Zeichen beim Schreiben, 1 Stoppbit
 	lea	rp_old_adkcon(pc),a0
-	move.w	ADKCONR(a5),(a0)	; Alten Inhalt von ADKCON retten
-	move.w	#ADKF_UARTBRK,ADKCON(a5) ; TXD löschen
+	move.w	ADKCONR(a5),(a0)
+	move.w	#ADKF_UARTBRK,ADKCON(a5) ; clear TXD
 	move.w	#(PAL_CLOCK_CONSTANT/adl_baud)-1,SERPER(a5)
 	CALLLIBQ Enable
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rp_write_playtimer
 	CALLLIBS Disable
+	move.w	#$0100,d1		; 8 data bits, 1 stop bit
 	MOVEF.W	SERDATRF_TBE,d2
 	lea	rp_command_string(pc),a0
-	moveq	#command_string_size-1,d7 ; Anzahl der Bytes zum Schreiben
+	moveq	#command_string_size-1,d7 ; number of bytes to write
 rp_write_playtimer_loop
 	move.w	SERDATR(a5),d0
-	and.w	d2,d0			; TBE-Bit gesetzt ?
-	beq.s	rp_write_playtimer_loop	; Nein -> Schleife
-	move.b	(a0)+,d1		; Datenbyte D0-D7 kopieren
-	move.w	d1,SERDAT(a5)		; und Datenwort übertragen
+	and.w	d2,d0			; TBE bit set ?
+	beq.s	rp_write_playtimer_loop
+	move.b	(a0)+,d1		; data byte d0-d7
+	move.w	d1,SERDAT(a5)
 	dbf	d7,rp_write_playtimer_loop
 	move.w	#$7fff,ADKCON(a5)
 	move.w	rp_old_adkcon(pc),d0
@@ -6659,30 +6457,30 @@ rp_write_playtimer_loop
 	CALLLIBQ Enable
 
 
-; Input
-; d3.w	... RBG4-Farbwert
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; d3.w	... RBG4 value
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rp_screen_colour_flash
-	moveq	#$0001,d2		; Maske für vertikale Position Bit 8
-	moveq	#rp_frames_delay-1,d7	; Anzahl der Frames auf die gewartet wird
+	moveq	#$0001,d2		; mask for V8 bit
+	moveq	#rp_frames_delay-1,d7
 rp_delay_loop
 	move.w	VPOSR(a5),d0
-	and.w	d2,d0			; Nur vertikale Position >=$100
+	and.w	d2,d0			; only vertical position >=$100
 rp_wait_tick
 	move.w	d3,COLOR00(a5)
 	move.w	VPOSR(a5),d1
-	and.w	d2,d1			; Nur vertikale Position >=$100
-	cmp.w	d1,d0			; Immer noch der gleiche Frame ?
-	beq.s	rp_wait_tick		; Ja -> Schleife
+	and.w	d2,d1			; only vertical position >=$100
+	cmp.w	d1,d0			; still the same frame ?
+	beq.s	rp_wait_tick
 	dbf	d7,rp_delay_loop
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rp_restore_custom_cool_capture
 	move.l	rp_reset_program_memory(pc),CoolCapture(a6)
@@ -6690,27 +6488,27 @@ rp_restore_custom_cool_capture
 	CALLLIBQ CacheClearU
 
 
-; Input
-; a6	... Exec-Base
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; a6	... exec base
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rp_update_exec_checksum
 	moveq	#0,d0
-	move.w	d0,LowMemChkSum(a6)	; Checksumme in Execbase löschen
-	lea	SoftVer(a6),a0		; Start-Abschnitt in Execbase
-	moveq	#((ChkSum-SoftVer)/WORD_SIZE)-1,d1 ; Anzahl Worte, über die Checksumme gebildet wird
+	move.w	d0,LowMemChkSum(a6)
+	lea	SoftVer(a6),a0
+	moveq	#((ChkSum-SoftVer)/WORD_SIZE)-1,d1
 rp_update_exec_checksum_loop
 	add.w	(a0)+,d0
 	dbf	d1,rp_update_exec_checksum_loop
 	not.w	d0
-	move.w	d0,(a0)			; Neue Checksumme
+	move.w	d0,(a0)			; new checksum
 	rts
 
 
-; Input
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rp_init_custom_traps
 	sub.l	a0,a0
@@ -6761,10 +6559,10 @@ rp_init_custom_traps_skip
 	CALLLIBQ CacheClearU
 
 
-; Input
-; a6	... Exec-Base
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; a6	... exec base
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rp_restore_old_traps
 	sub.l	a1,a1
@@ -6776,34 +6574,34 @@ rp_restore_old_traps
 	beq.s	rp_restore_old_traps_skip2
 	move.l	d0,a1
 rp_restore_old_traps_skip1
-	add.w	#TRAP_0_VECTOR,a1	; Ab Trap0-Vektor in Fast-Memory
+	add.w	#TRAP_0_VECTOR,a1	; trap0-vektor fast memory
 	bsr.s	rp_copy_old_trap_vectors
 rp_restore_old_traps_skip2
-	move.w	#TRAP_0_VECTOR,a1	; Ab Trap0-Vektor in Chip-Memory
+	move.w	#TRAP_0_VECTOR,a1	; trap0-Vektor chip memory
 	bsr.s	rp_copy_old_trap_vectors
 	CALLLIBQ CacheClearU
 
 
-; Input
-; a1	... Ziel: Trap#0-Vektor
-; Result
-; d0.l	... Kein Rückgabewert
+; input
+; a1	... target: trap#0 vector
+; result
+; d0.l	... no return value
 	CNOP 0,4
 rp_copy_old_trap_vectors
 	lea	rp_old_trap_0_vector(pc),a0
-	moveq	#7-1,d7			; Anzahl der Trap-Vektoren
+	moveq	#adl_used_trap_vectors_number-1,d7
 rd_copy_old_trap_vectors_loop
-	move.l	(a0)+,(a1)+		; Vektor kopieren
+	move.l	(a0)+,(a1)+		; copy vector
 	dbf	d7,rd_copy_old_trap_vectors_loop
 	rts
 
 
-; **** Exception-Routinen ****
+; exception routines
 
 ; GET_RESIDENT_ENTRIES_NUMBER
-; Input
-; Result
-; d0.l	... Rückgabewert: Zeiger auf Variable
+; input
+; result
+; d0.l	... return value: pointer variable
 	CNOP 0,4
 rp_trap_0_program
 	lea	rp_entries_number(pc),a0
@@ -6813,9 +6611,9 @@ rp_trap_0_program
 
 
 ; GET_RESIDENT_ENTRIES_NUMBER_MAX
-; Input
-; Result
-; d0.l	... Rückgabewert: Zeiger auf Variable
+; input
+; result
+; d0.l	... return value: pointer variable
 	CNOP 0,4
 rp_trap_1_program
 	lea	rp_entries_number_max(pc),a0
@@ -6825,9 +6623,9 @@ rp_trap_1_program
 
 
 ; GET_RESIDENT_ENTRY_OFFSET
-; Input
-; Result
-; d0.l	... Rückgabewert: Zeiger auf Variable
+; input
+; result
+; d0.l	... return value: pointer variable
 	CNOP 0,4
 rp_trap_2_program
 	lea	rp_entry_offset(pc),a0
@@ -6837,9 +6635,9 @@ rp_trap_2_program
 
 
 ; GET_RESIDENT_ENTRIES_BUFFER
-; Input
-; Result
-; d0.l	... Rückgabewert: Zeiger auf Puffer
+; input
+; result
+; d0.l	... return value: pointer variable
 	CNOP 0,4
 rp_trap_3_program
 	lea	rp_entries_buffer(pc),a0
@@ -6849,9 +6647,9 @@ rp_trap_3_program
 
 
 ; GET_RESIDENT_ENDLESS_ENABLED
-; Input
-; Result
-; d0.l	... Rückgabewert: Zeiger auf Variable
+; input
+; result
+; d0.l	... return value: pointer variable
 	CNOP 0,4
 rp_trap_4_program
 	lea	rp_endless_enabled(pc),a0
@@ -6861,9 +6659,9 @@ rp_trap_4_program
 
 
 ; GET_RESIDENT_CUSTOM_VECTORS
-; Input
-; Result
-; d0.l	... Rückgabewert: Zeiger auf eigene Trap-Vektoren
+; input
+; result
+; d0.l	... return value: pointer own trap vectors
 	CNOP 0,4
 rp_trap_5_program
 	lea	rp_custom_trap_0_vector(pc),a0
@@ -6873,9 +6671,9 @@ rp_trap_5_program
 
 
 ; REMOVE_RESET_PROGRAM
-; Input
-; Result
-; d0.l	... Rückgabewert: Größe des Reset-Programms mit Puffer
+; input
+; result
+; d0.l	... return value: pointer reset program
 	CNOP 0,4
 rp_trap_6_program
 	movem.l	a5-a6,-(a7)
@@ -6889,13 +6687,13 @@ rp_trap_6_program
 	rte
 
 
-; Input
-; Result
-; d0.l	... Rückgabewert: Inhalt von VBR
+; input
+; result
+; d0.l	... return value: content of VBR
 	MC68020
 	CNOP 0,4
 rp_read_vbr
-	or.w	#SRF_I0|SRF_I1|SRF_I2,SR ; Level-7-Interruptebene
+	or.w	#SRF_I0|SRF_I1|SRF_I2,SR ; highest interrupt priority
 	nop
 	movec.l VBR,d0
 	nop
@@ -6934,7 +6732,7 @@ rp_command_string		DS.B command_string_size
 rp_dec_table
 	DC.L 1,10,100,1000,10000
 
-rp_entries_buffer			; Größe wird später berechnet
+rp_entries_buffer			; size will be calculated later
 
 
 	CNOP 0,4
@@ -6974,7 +6772,7 @@ topaz_font_name			DC.B "topaz.font",0
 	EVEN
 
 
-; **** Amiga-Demo-Launcher ****
+; Amiga-Demo-Launcher 
 	CNOP 0,4
 adl_variables			DS.B adl_variables_size
 
@@ -7018,21 +6816,21 @@ adl_install_request_text_gadgets
 
 adl_cmd_usage_text
 	DC.B ASCII_LINE_FEED,"Amiga Demo Launcher arguments description:",ASCII_LINE_FEED,ASCII_LINE_FEED
-; ** Amiga-Demo-Launcher **
+; Amiga-Demo-Launcher
 	DC.B "HELP                   This short arguments description",ASCII_LINE_FEED
 	DC.B "REMOVE                 Remove Amiga Demo Launcher from memory",ASCII_LINE_FEED
-; ** Demo-Charger **
+; Demo-Charger
 	DC.B "MAXENTRIES ",155,"3",109,"number 1..n",155,"0",109," Set maximum entries number of playback queue",ASCII_LINE_FEED
 	DC.B "NEWENTRY               Create new entry in playback queue",ASCII_LINE_FEED
 	DC.B "PLAYLIST ",155,"3",109,"file path ",155,"0",109,"    Load and transfer external playlist to playback queue",ASCII_LINE_FEED
 	DC.B "QUIET                  Supress the file requester",ASCII_LINE_FEED
-; ** Queue-Handler **
+; Queue-Handler
 	DC.B "SHOWQUEUE              Show content of playback queue",ASCII_LINE_FEED
 	DC.B "EDITENTRY ",155,"3",109,"number 1..n",155,"0",109,"  Edit entry of playback queue",ASCII_LINE_FEED
 	DC.B "EDITQUEUE              Edit content of playback queue",ASCII_LINE_FEED
 	DC.B "CLEARQUEUE             Clear whole playback queue with all its entries",ASCII_LINE_FEED
 	DC.B "RESETQUEUE             Reset playback queue offset and all entry states",ASCII_LINE_FEED
-; ** Run-Demo **
+; Run-Demo
 	DC.B "PLAYENTRY ",155,"3",109,"number 1..n",155,"0",109,"  Play entry of playback queue",ASCII_LINE_FEED
 	DC.B "PRERUNSCRIPT ",155,"3",109,"file path ",155,"0",109,"Execute prerrun script file before entry is played",ASCII_LINE_FEED
 	DC.B "MIN/MINS ",155,"3",109,"number 0..99",155,"0",109,"  Playtime in minutes /w reset device",ASCII_LINE_FEED
@@ -7049,21 +6847,21 @@ adl_cmd_usage_text_end
 
 
 adl_cmd_template
-; ** Amiga-Demo-Launcher **
+; Amiga-Demo-Launcher
 	DC.B "HELP/S,"
 	DC.B "REMOVE/S,"
-; ** Demo-Charger **
+; Demo-Charger
 	DC.B "MAXENTRIES/K/N,"
 	DC.B "NEWENTRY/S,"
 	DC.B "PLAYLIST/K,"
 	DC.B "QUIET/S,"
-; ** Queue-Handler **
+; Queue-Handler
 	DC.B "SHOWQUEUE/S,"
 	DC.B "EDITENTRY/K/N,"
 	DC.B "EDITQUEUE/S,"
 	DC.B "CLEARQUEUE/S,"
 	DC.B "RESETQUEUE/S,"
-; ** Run-Demo **
+; Run-Demo
 	DC.B "PLAYENTRY/K/N,"
 	DC.B "PRERUNSCRIPT/K,"
 	DC.B "MIN=MINS/K/N,"
@@ -7089,11 +6887,14 @@ adl_message_text2_end
 	EVEN
 
 
-; ** Header für PrintFault() **
-adl_error_header
+; Header für PrintFault() 
+adl_error_text_header
 	DC.B " ",0
 	EVEN
-
+adl_error_text_tail
+	DC.B ASCII_LINE_FEED
+adl_error_text_tail_end
+	EVEN
 adl_error_text1
 	DC.B ASCII_LINE_FEED,"OS 2.0 or better required",ASCII_LINE_FEED,ASCII_LINE_FEED
 adl_error_text1_end
@@ -7116,7 +6917,7 @@ adl_error_text5_end
 	EVEN
 
 
-; **** Demo-Charger ****
+; Demo-Charger
 	CNOP 0,4
 dc_playlist_results_array
 	DS.B playlist_results_array_size
@@ -7150,7 +6951,7 @@ dc_parsing_begin_text_end
 	EVEN
 dc_parsing_result_text
 	DC.B "done",ASCII_LINE_FEED,ASCII_LINE_FEED
-	DC.B "Result: "
+	DC.B "result: "
 dc_transmitted_entries
 	DC.B "   "
 	DC.B "of "
@@ -7252,7 +7053,7 @@ dc_error_text8_end
 dc_error_text9
 	DC.B ASCII_LINE_FEED,"Entry "
 dc_entries_string
-	DC.B "	  "
+	DC.B "	"
 	DC.B "could not be transferred. Playlist arguments syntax error",ASCII_LINE_FEED,ASCII_LINE_FEED,ASCII_LINE_FEED
 dc_error_text9_end
 	EVEN
@@ -7294,7 +7095,7 @@ dc_error_text18_end
 	EVEN
 
 
-; **** Queue-Handler ****
+; Queue-Handler
 	CNOP 0,4
 qh_get_visual_info_tags		DS.L 1
 
@@ -7345,7 +7146,7 @@ qh_cycle_gadget_array		DS.L 4
 qh_mx_gadget_tags		DS.L 5
 
 	CNOP 0,4
-qh_set_mx_gadget_tags	 	DS.L 3
+qh_set_mx_gadget_tags		DS.L 3
 
 	CNOP 0,4
 qh_mx_gadget_array		DS.L 3
@@ -7422,7 +7223,8 @@ qh_message_text1_end
 qh_message_text2
 	DC.B ASCII_LINE_FEED,ASCII_LINE_FEED,"Playback queue has "
 qh_not_used_entries_string
-	DC.B "   "
+	DS.B 2
+	DC.B " "
 	DC.B "unused entries left.",ASCII_LINE_FEED,ASCII_LINE_FEED
 qh_message_text2_end
 	EVEN
@@ -7471,7 +7273,7 @@ qh_error_text5_end
 
 
 
-; **** Run-Demo ****
+; Run-Demo
 	CNOP 0,4
 rd_serial_io
 	DS.B IOEXTSER_size
@@ -7578,108 +7380,108 @@ rd_error_text_header_index
 rd_error_text_header_end
 	EVEN
 rd_error_text1
-	DC.B "Couldn't open ciaa.resource",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't open ciaa.resource",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text1_end
 	EVEN
 rd_error_text2
-	DC.B "Couldn't open ciab.resource",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't open ciab.resource",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text2_end
 	EVEN
 rd_error_text3
-	DC.B "Couldn't open timer.device",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't open timer.device",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text3_end
 	EVEN
 rd_error_text4
-	DC.B "Couldn't open icon.library",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't open icon.library",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text4_end
 	EVEN
 rd_error_text5
-	DC.B "Couldn't create serial message port",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't create serial message port",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text5_end
 	EVEN
 rd_error_text6
-	DC.B "Couldn't open serial.device",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't open serial.device",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text6_end
 	EVEN
 rd_error_text7
-	DC.B "Couldnt allocate sprite data structure"
+	DC.B ASCII_LINE_FEED,"Couldnt allocate sprite data structure"
 rd_error_text7_end
 	EVEN
 rd_error_text8
-	DC.B "Invalid monitor ID",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Invalid monitor ID",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text8_end
 	EVEN
 rd_error_text9
-	DC.B "Couldn't open demo file",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't open demo file",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text9_end
 	EVEN
 rd_error_text10
-	DC.B "No executable demo file"
+	DC.B ASCII_LINE_FEED,"No executable demo file"
 rd_error_text10_end
 	EVEN
 rd_error_text11
-	DC.B "Couldn't find demo directory",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't find demo directory",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text11_end
 	EVEN
 rd_error_text12
-	DC.B "Prerun script filepath is longer than 63 characters"
+	DC.B ASCII_LINE_FEED,"Prerun script filepath is longer than 63 characters"
 rd_error_text12_end
 	EVEN
 rd_error_text13
-	DC.B "Couldn't execute prerun script file",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't execute prerun script file",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text13_end
 	EVEN
 rd_error_text14
-	DC.B "Couldn't open degrade screen",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't open degrade screen",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text14_end
 	EVEN
 rd_error_text15
-	DC.B "Lores PAL screen not supported",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Lores PAL screen not supported",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text15_end
 	EVEN
 rd_error_text16
-	DC.B "Couldn't open invisible window",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't open invisible window",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text16_end
 	EVEN
 rd_error_text17
-	DC.B "Couldn't load demo file",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't load demo file",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text17_end
 	EVEN
 rd_error_text18
-	DC.B "Couldn't open WHDLoad .info file",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't open WHDLoad .info file",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text18_end
 	EVEN
 rd_error_text19a
-	DC.B "Serial device in use",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Serial device in use",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text19a_end
 	EVEN
 rd_error_text19b
-	DC.B "Baud rate not supported by hardware",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Baud rate not supported by hardware",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text19b_end
 	EVEN
 rd_error_text19c
-	DC.B "Bad parameter",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Bad parameter",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text19c_end
 	EVEN
 rd_error_text19d
-	DC.B "Hardware data overrun",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Hardware data overrun",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text19d_end
 	EVEN
 rd_error_text19e
-	DC.B "No data set ready",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"No data set ready",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text19e_end
 	EVEN
 rd_error_text20
-	DC.B "Write to serial port failed",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Write to serial port failed",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text20_end
 	EVEN
 rd_error_text21
-	DC.B "Couldn't execute WHDLoad slave file",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't execute WHDLoad slave file",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text21_end
 	EVEN
 
 
-; **** WHD-Load ****
+; WHD-Load
 whdl_tooltype_PRELOAD		DC.B "PRELOAD",0
 	EVEN
 whdl_tooltype_PRELOADSIZE	DC.B "PRELOADSIZE",0
@@ -7693,7 +7495,6 @@ whdl_icon_path
 	EVEN
 
 
-; ** Befehlszeile für Ausführung der Slave-Datei **
 whdl_slave_cmd_line
 	DC.B "WHDLoad slave "
 whdl_slave_cmd_line_path
@@ -7704,7 +7505,11 @@ whdl_slave_cmd_line_path
 	EVEN
 
 
-	DC.B "$VER: Amiga Demo Launcher 2.06 (17.11.24)",0
+	DC.B "$VER: "
+	DC.B "Amiga Demo Launcher "
+	DC.B "2.06 "
+	DC.B "(17.11.24) "
+	DC.B "© 2024 by Resistance",0
 	EVEN
 
 	END
