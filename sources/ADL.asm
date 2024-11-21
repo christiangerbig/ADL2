@@ -206,6 +206,8 @@ RUNMODE_PLAIN_TURBO		EQU $01
 RUNMODE_OCS_VANILLA		EQU $02
 RUNMODE_AGA_VANILLA		EQU $03
 
+RESET_DEVICE_STOP		EQU 0
+
 ; Amiga-Demo-Launcher
 adl_demofile_path_length	EQU 124
 adl_prerunscript_path_length	EQU 64
@@ -2304,7 +2306,6 @@ dc_copy_reset_program_loop2
 	dbf	d7,dc_copy_reset_program_loop2
 	bsr	rp_update_exec_checksum
 	CALLLIBS CacheClearU
-
 	jsr	rp_init_custom_traps-rp_start(a2)
 	tst.b	adl_cpu_flags+BYTE_SIZE(a3)
 	beq.s	dc_update_entries_number
@@ -5744,7 +5745,7 @@ rd_init_playtimer_stop
 	rts
 	CNOP 0,4
 rd_init_playtimer_stop_skip
-	moveq	#0,d1			; stop reset device
+	moveq	#RESET_DEVICE_STOP,d1
 	bra     rp_create_command_string
 
 
@@ -6283,7 +6284,7 @@ rp_clear_id
 ; d0.l	... no return value
 	CNOP 0,4
 rp_init_playtimer_stop
-	moveq	#0,d1			; stop reset device
+	moveq	#RESET_DEVICE_STOP,d1
 	bra.s	rp_create_command_string
 
 
@@ -6437,7 +6438,7 @@ rp_set_playtimer
 	CNOP 0,4
 rp_write_playtimer
 	CALLLIBS Disable
-	move.w	#$0100,d1		; 8 data bits, 1 stop bit
+	move.w	#%0000000100000000,d1	; 8 data bits, 1 stop bit
 	MOVEF.W	SERDATRF_TBE,d2
 	lea	rp_command_string(pc),a0
 	moveq	#command_string_size-1,d7 ; number of bytes to write
@@ -6461,7 +6462,7 @@ rp_write_playtimer_loop
 ; d0.l	... no return value
 	CNOP 0,4
 rp_screen_colour_flash
-	moveq	#$0001,d2		; mask for V8 bit
+	moveq	#$0001,d2		; mask for V8
 	moveq	#rp_frames_delay-1,d7
 rp_delay_loop
 	move.w	VPOSR(a5),d0
