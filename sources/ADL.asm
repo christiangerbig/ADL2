@@ -130,13 +130,13 @@
 ;   was called twice
 
 ; V.2.07
-; - error text output improved
 ; - all comments translated to English
+; - error text output improved regarding line feeds
 ; - Bugfix: during reset the timer was not stopped with the proper value via SERDAT
 ;   d1 may have random values
 
 
-; OS2.x bugs
+; OS2.x bugs which have an impact on the ADL
 ; - DIWHIGH = $00ff (first copperlist) -> Blank screen with some old OCS intros,
 ;   which use a second custom copperlist called by the first system copperlist.
 ; - Asl file requester: Filter for file extensions does not work properly.
@@ -2878,7 +2878,7 @@ qh_show_queue_loop
 
 
 ; input
-; a2	... Zeiger auf Eintrag in Playback-Queue
+; a2	... pointer entry in playback queue
 ; result
 ; d0.l	... no return value
 	CNOP 0,4
@@ -3840,14 +3840,12 @@ adl_close_dos_library
 
 
 ; input
-; a0	... Zeiger auf Text
-; d0.l	... L‰nge des Textes
+; a0	... pointer text
+; d0.l	... length of text
 ; result
 ; d0.l	... no return value
 	CNOP 0,4
 adl_print_text
-
-‰‰‰‰‰‰
 	move.l	adl_output_handle(a3),d1
 	move.l	a0,d2			; pointer text
 	move.l	d0,d3			; number of characters to write
@@ -6406,7 +6404,7 @@ rp_hex_to_ascii_skip
 ; a0	... pointer string
 ; d7.l	... number of ascii characters
 ; result
-; d0.l	... R¸ckgabewert: Checksumme
+; d0.l	... return value: command checksum
 	CNOP 0,4
 rp_update_command_checksum
 	moveq	#0,d0			; checksumme
