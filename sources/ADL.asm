@@ -6190,23 +6190,23 @@ rd_030_mmu_on
 	MC68000
 	CNOP 0,4
 rp_start
-	bra.s	rp_skip1		; skip ADL id
+	bra.s	rp_start_skip1		; skip ADL id
 	CNOP 0,4
-rp_id	DC.B "-DL-"
-rp_skip1
+rp_start_id			DC.B "-DL-"
+rp_start_skip1
 	movem.l d0-d7/a0-a6,-(a7)
 	move.l	#_CUSTOM,a5
 	move.l	exec_base.w,a6
 	move.w	#POTGOF_OUTLY|POTGOF_DATLY|POTGOF_OUTLX|POTGOF_DATLX,POTGO(a5)
-	moveq	#rp_rasterlines_delay,d7 ; delay of ~320 µs
+	moveq	#rp_rasterlines_delay,d7 ; wait ~320 µs
 	bsr	rp_wait_rasterline
 	btst	#POTINPB_DATLY-8,POTINP(a5) ; RMB ?
-	bne.s	rp_proceed
+	bne.s	rp_start_skip2
 	bsr	rp_clear_cool_capture
 	bsr	rp_clear_id
-	bra.s	rp_quit
+	bra.s	rp_start_quit
 	CNOP 0,4
-rp_proceed
+rp_start_skip2
 	bsr	rp_init_playtimer_stop
 	bsr	rp_stop_playtimer
 	move.l	#rp_entries_buffer-rp_start,d0
@@ -6216,25 +6216,25 @@ rp_proceed
 	add.l	d1,d0			; reset program section size
 	CALLLIBS AllocAbs
 	tst.l	d0
-	bne.s	rp_skip2
+	bne.s	rp_start_skip3
 	move.l	#rp_color_error,d3
 	bsr	rp_screen_colour_flash
 	bsr	rp_clear_cool_capture
 	bsr	rp_clear_id
-	bra.s	rp_quit
+	bra.s	rp_start_quit
 	CNOP 0,4
-rp_skip2
+rp_start_skip3
 	move.l	#rp_color_okay,d3
 	bsr	rp_screen_colour_flash
 	bsr	rp_restore_custom_cool_capture
 	bsr	rp_init_custom_traps
-rp_quit
+rp_start_quit
 	movem.l (a7)+,d0-d7/a0-a6
 	rts
 
 
 ; input
-; d7.l	... Anzahl der Rasterzeilen
+; d7.l	... number of rasterlines to wait
 ; result
 ; d0.l	... no return value
 	CNOP 0,4
@@ -6274,7 +6274,7 @@ rp_clear_cool_capture
 ; d0.l	... no return value
 	CNOP 0,4
 rp_clear_id
-	lea	rp_id(pc),a0
+	lea	rp_start_id(pc),a0
 	clr.l	(a0)
 	rts
 
@@ -6346,7 +6346,7 @@ rp_dec_to_hex_loop
 	add.w	d2,d0			; set nibble
 	ext.l	d1
 	bne.s	rp_dec_to_hex_loop
-	and.l	#$000000ff,d0		; lower byte
+	and.l	#$000000ff,d0		; only lower byte
 	rts
 
 
@@ -6408,7 +6408,7 @@ rp_hex_to_ascii_skip
 ; d0.l	... return value: command checksum
 	CNOP 0,4
 rp_update_command_checksum
-	moveq	#0,d0			; checksumme
+	moveq	#0,d0			; checksum
 	moveq	#0,d1
 	subq.w	#1,d7			; loopend at false
 rp_update_command_checksum_loop
@@ -6438,7 +6438,7 @@ rp_set_playtimer
 	CNOP 0,4
 rp_write_playtimer
 	CALLLIBS Disable
-	move.w	#%0000000100000000,d1	; 8 data bits, 1 stop bit
+	move.w	#%0000000100000000,d1	; SERDAT: 8 data bits, 1 stop bit
 	MOVEF.W	SERDATRF_TBE,d2
 	lea	rp_command_string(pc),a0
 	moveq	#command_string_size-1,d7 ; number of bytes to write
@@ -6457,7 +6457,7 @@ rp_write_playtimer_loop
 
 
 ; input
-; d3.w	... RBG4 value
+; d3.w	... RGB4 value
 ; result
 ; d0.l	... no return value
 	CNOP 0,4
@@ -6573,10 +6573,10 @@ rp_restore_old_traps
 	beq.s	rp_restore_old_traps_skip2
 	move.l	d0,a1
 rp_restore_old_traps_skip1
-	add.w	#TRAP_0_VECTOR,a1	; trap0-vektor fast memory
+	add.w	#TRAP_0_VECTOR,a1	; trap0 vector fast memory
 	bsr.s	rp_copy_old_trap_vectors
 rp_restore_old_traps_skip2
-	move.w	#TRAP_0_VECTOR,a1	; trap0-Vektor chip memory
+	move.w	#TRAP_0_VECTOR,a1	; trap0 vector chip memory
 	bsr.s	rp_copy_old_trap_vectors
 	CALLLIBQ CacheClearU
 
@@ -6590,7 +6590,7 @@ rp_copy_old_trap_vectors
 	lea	rp_old_trap_0_vector(pc),a0
 	moveq	#adl_used_trap_vectors_number-1,d7
 rd_copy_old_trap_vectors_loop
-	move.l	(a0)+,(a1)+		; copy vector
+	move.l	(a0)+,(a1)+
 	dbf	d7,rd_copy_old_trap_vectors_loop
 	rts
 
