@@ -5564,15 +5564,15 @@ rd_restore_chips_registers
 	move.b	d0,CIAICR(a4)
 	move.b	ocr_ciaa_cra(a0),d0
 	btst	#CIACRAB_RUNMODE,d0	; continuous mode ?
-	bne.s	rd_restore_chips_registers1
+	bne.s	rd_restore_chips_registers_skip1
 	or.b	#CIACRAF_START,d0	; restart timer a
-rd_restore_chips_registers1
+rd_restore_chips_registers_skip1
 	move.b	d0,CIACRA(a4)
 	move.b	ocr_ciaa_crb(a0),d0
 	btst	#CIACRBB_RUNMODE,d0 	; continuous mode ?
-	bne.s	rd_restore_chips_registers2
+	bne.s	rd_restore_chips_registers_skip2
 	or.b	#CIACRBF_START,d0	; restart timer b
-rd_restore_chips_registers2
+rd_restore_chips_registers_skip2
 	move.b	d0,CIACRB(a4)
 ; CIA-B
 	move.b	ocr_ciab_prb(a0),CIAPRB(a5)
@@ -5587,15 +5587,15 @@ rd_restore_chips_registers2
 	move.b	d0,CIAICR(a5)
 	move.b	ocr_ciab_cra(a0),d0
 	btst	#CIACRAB_RUNMODE,d0 	; continuous mode ?
-	bne.s	rd_restore_chips_registers3
+	bne.s	rd_restore_chips_registers_skip3
 	or.b	#CIACRAF_START,d0	; restart timer a
-rd_restore_chips_registers3
+rd_restore_chips_registers_skip3
 	move.b	d0,CIACRA(a5)
 	move.b	ocr_ciab_crb(a0),d0
 	btst	#CIACRBB_RUNMODE,d0	; continuous mode ?
-	bne.s	rd_restore_chips_registers4
+	bne.s	rd_restore_chips_registers_skip4
 	or.b	#CIACRBF_START,d0	; restart timer b
-rd_restore_chips_registers4
+rd_restore_chips_registers_skip4
 	move.b	d0,CIACRB(a5)
 	CALLLIBQ Enable
 
