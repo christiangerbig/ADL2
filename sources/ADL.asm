@@ -7506,8 +7506,8 @@ whdl_slave_cmd_line_path
 
 	DC.B "$VER: "
 	DC.B "Amiga Demo Launcher "
-	DC.B "2.06 "
-	DC.B "(17.11.24) "
+	DC.B "2.07 "
+	DC.B "(21.11.24) "
 	DC.B "© 2024 by Resistance",0
 	EVEN
 
