@@ -438,7 +438,7 @@ The argument does an automatic software reset after the running entry was quit m
 @NODE Chapter-1-5-21 "Amiga Demo Launcher Version 2: List of the ADL2 arguments / RESETONERROR"
 @{B}RESETONERROR@{UB}
 
-If an error occurs during the exection of an entry, there will be an automatic software reset after 2 seconds.
+If an error occurs during the exection of an entry and the argument @{"LOOP" LINK Chapter-1-5-18} is not given, there will be an automatic software reset after 4 seconds.
 @ENDNODE
 
 

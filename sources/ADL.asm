@@ -7,126 +7,125 @@
 ; Historie / Changes
 
 ; V.2.0
-; - Code completely revised
-; - DemoSelector = Demo-Charger
-; - Texts changed
-; - Renaming of the run modes for the playlist:
+; - code completely revised
+; - demoSelector = Demo-Charger
+; - all texts changed
+; - renaming of the run modes for the playlist:
 ;   OCS -> OCSVANILLA
 ;   AGA -> AGAVANILLA
 ;   FAST -> TURBO
-; - New values and names for the run modes:
+; - new values and names for the run modes:
 ;   RUNMODE_PLAIN_TURBO = $01
 ;   RUNMODE_OCS_VANILLA = $02
 ;   RUNMODE_AGA_VANILLA = $03
-; - Argument NOFADER -> FADER (reversal of the logic), the active screen is
+; - argument NOFADER -> FADER (reversal of the logic), the active screen is
 ;   now faded out and no longer the custom screen
-; - Change of the minimum config: 68020/OS3.0/AGA chipset
-; - Bugfix argument RESETLOADPOS: The entries_number was set to zero instead
+; - change of the minimum config: 68020/OS3.0/AGA chipset
+; - bugfix argument RESETLOADPOS: The entries_number was set to zero instead
 ;   of 1.
-; - Option: Query of the WB message removed, as it can happen that this is
+; - option: Query of the WB message removed, as it can happen that this is
 ;   done by a demo and the message cannot be requested twice.
-; - Prerunscript check completely revised, in LOOP mode the same prerun script
+; - prerunscript check completely revised, in LOOP mode the same prerun script
 ;   is used for each demo.
 ; - QUIET argument: removed
-; - RANDOM argument: completely revised
-; - ENDLESS argument: completely revised
-; - LMBEXIT argument: code can be optionally activated
-; - File requester: There is no reboot button anymore, the complete logic
+; - argument RANDOM: completely revised
+; - argument ENDLESS: completely revised
+; - argument LMBEXIT: code can be optionally activated
+; - file requester: There is no reboot button anymore, the complete logic
 ;   has been removed
 ; - PLAYLIST argument: The keyword PLAYLIST must now be specified, otherwise
 ;   all argument characters are interpreted as a playlist file name.
-; - Arguments check: Separate error query for keywords without value removed,
+; - arguments check: Separate error query for keywords without value removed,
 ;   as this is already taken over by ReadArgs() and the function function
 ;   returns a zero
-; - New logic argument PRERUNSCRIPT in connection with a transferred playlist:
+; - new logic argument PRERUNSCRIPT in connection with a transferred playlist:
 ;   If no PRERUNSCRIPT argument has been specified, then a prerun script file
 ;   that may have been specified via playlist is executed for the entry.
 ;   In LOOP mode, a separate prerun script file is executed for each demo.
-; - REMOVE argument: query is moved at the top
-; - PLAYLIST argument: After the playlist has been transferred to memory
+; - argument REMOVE: query is moved at the top
+; - argument PLAYLIST: After the playlist has been transferred to memory
 ;   now the playback queue is printed
-; - New argument CLEARQUEUE: Deletes the complete playback list in memory
-; - Argument RESETLOADPOS renamed to RESETQUEUE
-; - When all demos from the list have been played, the ADL is no longer
+; - new argument CLEARQUEUE: Deletes the complete playback list in memory
+; - argument RESETLOADPOS renamed to RESETQUEUE
+; - when all demos from the list have been played, the ADL is no longer
 ;   automatically removed from memory
-; - File requester: The filter now also takes the extension ".data" into
+; - file requester: The filter now also takes the extension ".data" into
 ;   account
-; - New argument EDITQUEUE: All entries can be edited one after the other
-; - New label prefix: Queue handler qh_
-; - Edit window: Gadgets for entry number, run mode and entry state.
+; - n ew argument EDITQUEUE: All entries can be edited one after the other
+; - new label prefix: Queue handler qh_
+; - edit window: Gadgets for entry number, run mode and entry state.
 ;   Changes can be saved in the playback queue
-; - New argument EDITENTRY: - A specific single ebtry can be edited
-; - Renaming of the FADER argument to SCREENFADER
-; - Bugfix: The values from the playlist for the run mode and the playing time
+; - new argument EDITENTRY: - A specific single ebtry can be edited
+; - renaming of the FADER argument to SCREENFADER
+; - bugfix: The values from the playlist for the run mode and the playing time
 ;   were no longer saved in the playback queue.
 
 ; V.2.01
-; - Bugfix: If the last entry in the list is manually set to "not played"
+; - bugfix: If the last entry in the list is manually set to "not played"
 ;   and the ADL is then restarted, the following empty entry is no longer
 ;   played, but a warning message is printed.
-; - Screen degrader routine completely revised.
-; - New argument RESTORESYSTIME: System time is corrected after an entry was
+; - screen degrader routine completely revised.
+; - new argument RESTORESYSTIME: System time is corrected after an entry was
 ;   executed which turns off the system.
 
 ; V.2.02
-; - Minimal configuration changed: 68000/OS2.0/OCS chipset
-; - Bugfix: After checking the PLAYENTRY argument, further checks are carried
+; - minimal configuration changed: 68000/OS2.0/OCS chipset
+; - bugfix: After checking the PLAYENTRY argument, further checks are carried
 ;   out so that it can be combined with the SCREENFADER argument
-; - Color table of the custom screen is created correctly again and assigned
+; - color table of the custom screen is created correctly again and assigned
 ;   to the tag list
-; - Sprite resolution is determined via the active screen
-; - The screen tag SA_VideoControl is used to set the sprite resolution to
-;   Lores
+; - sprite resolution is determined via the active screen
+; - screen tag SA_VideoControl is used to set the sprite resolution to Lores
 ; - Use of register CFG0 to change the CPU clock frequency (Yulquen74 turbo
 ;   board solution)
-; - New argument MULTIPART: For use of WHDLoad demos where parts are
+; - new argument MULTIPART: For use of WHDLoad demos where parts are
 ;   terminated via LMB.
-; - Guide revised
-; - RUNMODE_TURBO renamed to RUNMODE_PLAIN_TURBO
-; - On 68000: Runmode-Check, if Runmode "AGA vanilla" on 68000-Config,
+; - guide revised
+; - argument RUNMODE_TURBO renamed to RUNMODE_PLAIN_TURBO
+; - on 68000: Runmode-Check, if Runmode "AGA vanilla" on 68000-Config,
 ;   then error output with subsequent reset after 2 seconds if no LOOP
 ;   argument was given
 ; - SCREENFADER argument removed
-; - Bugfix: PAL bit is now queried via the Exec-Base->VBlankFrequency
-; - Bugfix: LoadView(NULL) only starting with OS2.0
+; - bugfix: PAL bit is now queried via the Exec-Base->VBlankFrequency
+; - bugfix: LoadView(NULL) only starting with OS2.0
 
 ; V.2.03
-; - Bugfix: If no playing time was specified either by argument or via
+; - bugfix: If no playing time was specified either by argument or via
 ;   playlist, then the command string was not initialized and as a
 ;   consequence sent without a converted 0 playing time:
 ;   "$23 00 00 00 00 00 $2c 00,0a" according to Yulquen74
-; - Change of the format string. A line feed is inserted before the #
+; - change of the format string. A line feed is inserted before the #
 ;   character. The calculation of the checksum does not change. It still
 ;   takes place starting with the # character.
 
 ; V.2.04
-; - Bugfix: Checksum was determined incorrectly. It was calculated from the #
+; - bugfix: Checksum was determined incorrectly. It was calculated from the #
 ;   character, but with one byte too little, i.e. the argument MULTIPART was
 ;   never taken into account.
-; - The memory is now searched at the beginning for the identifier "-DL-"
+; - the memory is now searched at the beginning for the identifier "-DL-"
 ;   to check whether the ADL already exists
-; - If the ADL has become inactive due to an entry, the exceptions and the
+; - if the ADL has become inactive due to an entry, the exceptions and the
 ;   CoolCapture vector are restored.
 ; - REMOVE argument: The ADL identifier is also deleted.
-; - Black screen now also under OS 2.0
+; - black downgrade screen now also under OS 2.0
 
 ; V.2.05
-; - Command string now with two line feeds before the # character so that the
+; - command string now with two line feeds before the # character so that the
 ;   timer also starts after a cold start.
 ; - QUIET argument: added again, suppression of the file requester
-; - Guide adjusted
-; - File requester: All tags via a tag list passed to AllocAslRequest()
-; - Bugfix: After removing the ADL via RMB during the reset, it was reactivated
+; - guide updated
+; - file requester: All tags via a tag list passed to AllocAslRequest()
+; - bugfix: After removing the ADL via RMB during the reset, it was reactivated
 ;   when called again. Now the reset program also deletes the id in memory
-; - Code for Yulquen can now be activated via boolean variable
+; - code for Yulquen can now be activated via boolean variable
 
 ; V.2.06
 ; - QUIET argument: Included again. Now the start message is also suppressed.
-; - New argument RESETONERROR: After every run-demo error a reset is executed
+; - new argument RESETONERROR: After every run-demo error a reset is executed
 ;   after 2 seconds.
-; - For each run-demo error, the index number of the entry that generated
+; - for each run-demo error, the index number of the entry that generated
 ;   the error is now printed.
-; - Bugfix: "No more demos left to play" was printed twice, because the check
+; - bugfix: "No more demos left to play" was printed twice, because the check
 ;   was called twice
 
 ; V.2.07
@@ -134,6 +133,14 @@
 ; - error text output improved regarding line feeds
 ; - Bugfix: during reset the timer was not stopped with the proper value via SERDAT
 ;   d1 may have random values
+
+; V.2.08
+; - argument RESETONERROR: error output with subsequent reset now after 4 seconds
+;                          if no LOOP argument was given
+; - on 68000: Runmode-Check, if Runmode "AGA vanilla" on 68000-Config,
+;   then error output with subsequent reset after 4 seconds if no LOOP
+;   argument was given and argument RESETONERROR was given
+; - guide updated
 
 
 ; OS2.x bugs which have an impact on the ADL
@@ -298,7 +305,7 @@ rd_r_size			EQU 1
 rd_cc_size			EQU 2
 rd_duration_shift		EQU 16
 
-rd_error_message_delay		EQU PAL_FPS*2 ; 2 seconds
+rd_error_message_delay		EQU PAL_FPS*4 ; 4 seconds
 
 ; WHD-Load
 whdl_preload_length		EQU 8
@@ -1891,6 +1898,8 @@ adl_check_arg_loop
 ; Run-Demo argument RESETONERROR
 rd_check_arg_resetonerror
 	move.l	cra_RESETONERROR(a2),d0
+	tst.w	rd_arg_loop_enabled(a3)
+	beq	adl_check_cmd_line_ok
 	not.w	d0
 	move.w	d0,rd_arg_resetonerror_enabled(a3)
 	bra	adl_check_cmd_line_ok
@@ -2842,8 +2851,8 @@ qh_show_queue
 	move.l	adl_entries_buffer(a3),a2
 	tst.b	(a2)
 	bne.s	qh_show_queue_ok
-        lea	qh_message_text1(pc),a0
-	moveq	#qh_message_text1_end-qh_message_text1,d0
+        lea	qh_info_message_text1(pc),a0
+	moveq	#qh_info_message_text1_end-qh_info_message_text1,d0
 	bra	adl_print_text
 	CNOP 0,4
 qh_show_queue_ok
@@ -2873,8 +2882,8 @@ qh_show_queue_loop
 	sub.w	adl_entries_number(a3),d1 ; remaining number of entries to load
 	moveq	#2,d7			; number of digits to convert
 	bsr	rp_dec_to_ascii
-	lea	qh_message_text2(pc),a0
-	moveq	#qh_message_text2_end-qh_message_text2,d0
+	lea	qh_info_message_text2(pc),a0
+	moveq	#qh_info_message_text2_end-qh_info_message_text2,d0
 	bra	adl_print_text
 
 
@@ -2967,8 +2976,8 @@ qh_edit_queue
 	move.l	adl_entries_buffer(a3),a0
 	tst.b	(a0)
 	bne.s	qh_init_gadgets_environment
-        lea	qh_message_text1(pc),a0
-	moveq	#qh_message_text1_end-qh_message_text1,d0
+        lea	qh_info_message_text1(pc),a0
+	moveq	#qh_info_message_text1_end-qh_info_message_text1,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	move.l	d0,adl_dos_return_code(a3)
@@ -3667,8 +3676,8 @@ qh_clear_queue
 	move.l	adl_entries_buffer(a3),a0
 	tst.b	(a0)
 	bne.s   qh_clear_queue_ok
-	lea	qh_message_text4(pc),a0
-	moveq	#qh_message_text4_end-qh_message_text4,d0
+	lea	qh_info_message_text4(pc),a0
+	moveq	#qh_info_message_text4_end-qh_info_message_text4,d0
 	bra	adl_print_text
 	CNOP 0,4
 qh_clear_queue_ok
@@ -3688,8 +3697,8 @@ qh_clear_queue_loop
 	move.l	d0,a0
 	move.w	#adl_entries_number_min,(a0)
 qh_clear_queue_skip
-	lea	qh_message_text5(pc),a0
-	moveq	#qh_message_text5_end-qh_message_text5,d0
+	lea	qh_info_message_text5(pc),a0
+	moveq	#qh_info_message_text5_end-qh_info_message_text5,d0
 	bra	adl_print_text
 
 
@@ -3709,15 +3718,15 @@ qh_free_visual_info
 qh_reset_queue
 	cmp.w	#adl_entries_number_min,rd_entry_offset(a3)
         bne.s	qh_reset_queue_ok
-	lea	qh_message_text6(pc),a0
-	moveq	#qh_message_text6_end-qh_message_text6,d0
+	lea	qh_info_message_text6(pc),a0
+	moveq	#qh_info_message_text6_end-qh_info_message_text6,d0
 	bra	adl_print_text
 	CNOP 0,4
 qh_reset_queue_ok
 	move.w	#adl_entries_number_min,rd_entry_offset(a3)
 	bsr	rd_deactivate_queue
-	lea	qh_message_text7(pc),a0
-	moveq	#qh_message_text7_end-qh_message_text7,d0
+	lea	qh_info_message_text7(pc),a0
+	moveq	#qh_info_message_text7_end-qh_info_message_text7,d0
 	bra	adl_print_text
 
 
@@ -4337,8 +4346,8 @@ rd_check_queue_ok
 	rts
 	CNOP 0,4
 rd_check_queue_fail
-	lea	rd_message_text4(pc),a0
-	moveq	#rd_message_text4_end-rd_message_text4,d0
+	lea	rd_info_message_text1(pc),a0
+	moveq	#rd_info_message_text1_end-rd_info_message_text1,d0
 	bsr	adl_print_text
 	moveq	#RETURN_WARN,d0
 	rts
@@ -4423,8 +4432,8 @@ rd_get_demofile_name
 	move.l	rd_demofile_path(a3),a0
 	tst.b	(a0)			; file name exists ?
 	bne.s	rd_get_demofile_name_skip1
-	lea	rd_message_text2(pc),a0
-	moveq	#rd_message_text2_end-rd_message_text2,d0
+	lea	rd_info_message_text2(pc),a0
+	moveq	#rd_info_message_text2_end-rd_info_message_text2,d0
 	bsr	adl_print_text
 	moveq	#RETURN_WARN,d0
 	rts
@@ -4490,18 +4499,11 @@ rd_check_runmode_skip
 	move.l	rd_demofile_path(a3),a0
 	cmp.b	#RUNMODE_AGA_VANILLA,pqe_runmode(a0)
 	bne.s   rd_check_runmode_ok
-	lea	rd_message_text1(pc),a0
-	moveq	#rd_message_text1_end-rd_message_text1,d0
-	bsr	adl_print_text
 	move.l	rd_demofile_path(a3),a0
 	move.b	#FALSE,pqe_entry_active(a0) ; entry state played
-	MOVEF.L	rd_error_message_delay,d1
-	CALLDOS Delay
-	tst.w	rd_arg_loop_enabled(a3)
-	beq.s	rd_check_runmode_fail
-	CALLEXECQ ColdReboot
-	CNOP 0,4
-rd_check_runmode_fail
+	lea	rd_error_text9(pc),a0
+	moveq	#rd_error_text9_end-rd_error_text9,d0
+	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	rts
 
@@ -4514,8 +4516,8 @@ rd_check_demofile_play_state
 	move.l	rd_demofile_path(a3),a0
 	tst.b	pqe_entry_active(a0)
 	beq.s   rd_check_demofile_play_state_ok
-	lea	rd_message_text3(pc),a0
-	moveq	#rd_message_text3_end-rd_message_text3,d0
+	lea	rd_info_message_text3(pc),a0
+	moveq	#rd_info_message_text3_end-rd_info_message_text3,d0
 	bsr	adl_print_text
 	moveq	#RETURN_WARN,d0
 	rts
@@ -4537,8 +4539,8 @@ rd_open_demofile
 	CALLDOS Open
 	move.l	d0,rd_demofile_handle(a3)
 	bne.s	rd_open_demofile_ok
-	lea	rd_error_text9(pc),a0
-	moveq	#rd_error_text9_end-rd_error_text9,d0
+	lea	rd_error_text10(pc),a0
+	moveq	#rd_error_text10_end-rd_error_text10,d0
 	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -4576,8 +4578,8 @@ rd_close_demofile
 rd_check_demofile_header
 	cmp.l	#MAGIC_COOKIE,rd_demofile_MAGIC_COOKIE(a3)
 	beq.s	rd_check_demofile_header_ok
-	lea	rd_error_text10(pc),a0
-	moveq	#rd_error_text10_end-rd_error_text10,d0
+	lea	rd_error_text11(pc),a0
+	moveq	#rd_error_text11_end-rd_error_text11,d0
 	bsr	rd_print_error_text
 	MOVEF.L ERROR_FILE_NOT_OBJECT,d0
 	rts
@@ -4627,8 +4629,8 @@ rd_set_new_current_dir
 	CALLDOS Lock
 	move.l	d0,rd_demofile_dir_lock(a3)
 	bne.s	rd_set_new_current_dir_skip
-	lea	rd_error_text11(pc),a0
-	moveq	#rd_error_text11_end-rd_error_text11,d0
+	lea	rd_error_text12(pc),a0
+	moveq	#rd_error_text12_end-rd_error_text12,d0
 	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -4681,8 +4683,8 @@ rd_check_prerunscript_path_loop
 	addq.b	#1,d0
 	cmp.b	#adl_prerunscript_path_length-1,d0
 	blt.s	rd_check_prerunscript_path_skip
-	lea	rd_error_text12(pc),a0
-	moveq	#rd_error_text12_end-rd_error_text12,d0
+	lea	rd_error_text13(pc),a0
+	moveq	#rd_error_text13_end-rd_error_text13,d0
 	bsr	rd_print_error_text
 	MOVEF.L	ERROR_INVALID_COMPONENT_NAME,d0
 	rts
@@ -4716,8 +4718,8 @@ rd_copy_prerunscript_path_loop
 	CALLDOS	SystemTagList
 	tst.l	d0
 	beq.s	rd_execute_prerunscript_ok
-	lea	rd_error_text13(pc),a0
-	moveq	#rd_error_text13_end-rd_error_text13,d0
+	lea	rd_error_text14(pc),a0
+	moveq	#rd_error_text14_end-rd_error_text14,d0
 	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -4737,8 +4739,8 @@ rd_open_pal_screen
 	CALLINT OpenScreenTagList
 	move.l	d0,rd_pal_screen(a3)
 	bne.s	rd_open_pal_screen_ok
-	lea	rd_error_text14(pc),a0
-	moveq	#rd_error_text14_end-rd_error_text14,d0
+	lea	rd_error_text15(pc),a0
+	moveq	#rd_error_text15_end-rd_error_text15,d0
 	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -4779,8 +4781,8 @@ rd_check_pal_screen_mode
 	CALLGRAF GetVPModeID
 	cmp.l	#PAL_MONITOR_ID|LORES_KEY,d0
 	beq.s	rd_check_pal_screen_mode_ok
-	lea	rd_error_text15(pc),a0
-	moveq	#rd_error_text15_end-rd_error_text15,d0
+	lea	rd_error_text16(pc),a0
+	moveq	#rd_error_text16_end-rd_error_text16,d0
 	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -4801,8 +4803,8 @@ rd_open_invisible_window
 	CALLINT OpenWindowTagList
 	move.l	d0,rd_invisible_window(a3)
 	bne.s	rd_open_invisible_window_ok
-	lea	rd_error_text16(pc),a0
-	moveq	#rd_error_text16_end-rd_error_text16,d0
+	lea	rd_error_text17(pc),a0
+	moveq	#rd_error_text17_end-rd_error_text17,d0
 	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -4912,8 +4914,8 @@ rd_load_demofile
 	CALLDOS LoadSeg
 	move.l	d0,rd_demofile_seglist(a3)
 	bne.s	rd_load_demofile_ok
-	lea	rd_error_text17(pc),a0
-	moveq	#rd_error_text17_end-rd_error_text17,d0
+	lea	rd_error_text18(pc),a0
+	moveq	#rd_error_text18_end-rd_error_text18,d0
 	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -4965,8 +4967,8 @@ rd_check_icon_tooltypes
 	CALLICON GetDiskObject
 	move.l	d0,whdl_disk_object(a3)
 	bne.s	rd_check_tooltype_preload
-	lea	rd_error_text18(pc),a0
-	moveq	#rd_error_text18_end-rd_error_text18,d0
+	lea	rd_error_text19(pc),a0
+	moveq	#rd_error_text19_end-rd_error_text19,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -5161,8 +5163,8 @@ rd_set_playtimer
 	beq.s	rd_set_playtimer_ok
 	cmp.b	#SerErr_DevBusy,d0
 	bne.s	rd_check_baud_mismatch
-	lea	rd_error_text19a(pc),a0
-	moveq	#rd_error_text19a_end-rd_error_text19a,d0
+	lea	rd_error_text20a(pc),a0
+	moveq	#rd_error_text20a_end-rd_error_text20a,d0
 	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -5170,8 +5172,8 @@ rd_set_playtimer
 rd_check_baud_mismatch
 	cmp.b	#SerErr_BaudMismatch,d0
 	bne.s	rd_check_invalid_parameters
-	lea	rd_error_text19b(pc),a0
-	moveq	#rd_error_text19b_end-rd_error_text19b,d0
+	lea	rd_error_text20b(pc),a0
+	moveq	#rd_error_text20b_end-rd_error_text20b,d0
 	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -5179,8 +5181,8 @@ rd_check_baud_mismatch
 rd_check_invalid_parameters
 	cmp.b	#SerErr_InvParam,d0
 	bne.s	rd_check_line_error
-	lea	rd_error_text19c(pc),a0
-	moveq	#rd_error_text19c_end-rd_error_text19c,d0
+	lea	rd_error_text20c(pc),a0
+	moveq	#rd_error_text20c_end-rd_error_text20c,d0
 	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -5188,8 +5190,8 @@ rd_check_invalid_parameters
 rd_check_line_error
 	cmp.b	#SerErr_LineErr,d0
 	bne.s	rd_check_no_data_set_ready
-	lea	rd_error_text19d(pc),a0
-	moveq	#rd_error_text19d_end-rd_error_text19d,d0
+	lea	rd_error_text20d(pc),a0
+	moveq	#rd_error_text20d_end-rd_error_text20d,d0
 	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -5197,8 +5199,8 @@ rd_check_line_error
 rd_check_no_data_set_ready
 	cmp.b	#SerErr_NoDSR,d0
 	bne.s	rd_set_playtimer_ok
-	lea	rd_error_text19e(pc),a0
-	moveq	#rd_error_text19e_end-rd_error_text19e,d0
+	lea	rd_error_text20e(pc),a0
+	moveq	#rd_error_text20e_end-rd_error_text20e,d0
 	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -5223,8 +5225,8 @@ rd_write_playtimer
 	CALLEXEC DoIO
 	move.b	io_Error(a2),d0
 	beq.s	rd_write_playtimer_ok
-	lea	rd_error_text20(pc),a0
-	moveq	#rd_error_text20_end-rd_error_text20,d0
+	lea	rd_error_text21(pc),a0
+	moveq	#rd_error_text21_end-rd_error_text21,d0
 	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -5479,8 +5481,8 @@ rd_execute_whdload_slave
 	CALLDOS SystemTagList
 	tst.l	d0
 	beq.s	rd_execute_whdload_slave_skip
-	lea	rd_error_text21(pc),a0
-	moveq	#rd_error_text21_end-rd_error_text21,d0
+	lea	rd_error_text22(pc),a0
+	moveq	#rd_error_text22_end-rd_error_text22,d0
 	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -5908,8 +5910,8 @@ rd_check_user_break
 	CALLEXEC SetSignal
 	btst	#SIGBREAKB_CTRL_C,d0
 	beq.s	rd_check_user_break_ok
-	lea	rd_message_text5(pc),a0
-	moveq	#rd_message_text5_end-rd_message_text5,d0
+	lea	rd_info_message_text4(pc),a0
+	moveq	#rd_info_message_text4_end-rd_info_message_text4,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
@@ -7215,37 +7217,37 @@ qh_edit_window_name2		DC.B "Edit queue",0
 	EVEN
 
 
-qh_message_text1
+qh_info_message_text1
 	DC.B ASCII_LINE_FEED,"Playback queue is empty.",ASCII_LINE_FEED,ASCII_LINE_FEED
-qh_message_text1_end
+qh_info_message_text1_end
 	EVEN
-qh_message_text2
+qh_info_message_text2
 	DC.B ASCII_LINE_FEED,ASCII_LINE_FEED,"Playback queue has "
 qh_not_used_entries_string
 	DS.B 2
 	DC.B " "
 	DC.B "unused entries left.",ASCII_LINE_FEED,ASCII_LINE_FEED
-qh_message_text2_end
+qh_info_message_text2_end
 	EVEN
-qh_message_text3
+qh_info_message_text3
 	DC.B ASCII_LINE_FEED,"The playback queue is empty.",ASCII_LINE_FEED,ASCII_LINE_FEED
-qh_message_text3_end
+qh_info_message_text3_end
 	EVEN
-qh_message_text4
+qh_info_message_text4
 	DC.B ASCII_LINE_FEED,"No playback queue entries to clear.",ASCII_LINE_FEED,ASCII_LINE_FEED
-qh_message_text4_end
+qh_info_message_text4_end
 	EVEN
-qh_message_text5
+qh_info_message_text5
 	DC.B ASCII_LINE_FEED,"Playback queue entries cleared.",ASCII_LINE_FEED,ASCII_LINE_FEED
-qh_message_text5_end
+qh_info_message_text5_end
 	EVEN
-qh_message_text6
+qh_info_message_text6
 	DC.B ASCII_LINE_FEED,"Queue already set back.",ASCII_LINE_FEED,ASCII_LINE_FEED
-qh_message_text6_end
+qh_info_message_text6_end
 	EVEN
-qh_message_text7
+qh_info_message_text7
 	DC.B ASCII_LINE_FEED,"Queue position set back to first entry. All demo play states cleared.",ASCII_LINE_FEED,ASCII_LINE_FEED
-qh_message_text7_end
+qh_info_message_text7_end
 	EVEN
 
 
@@ -7349,25 +7351,21 @@ rd_shell_no_op_cmd_line_end
 	EVEN
 
 
-rd_message_text1
-	DC.B "Run mode AGA vanilla not supported on this config",ASCII_LINE_FEED,ASCII_LINE_FEED
-rd_message_text1_end
-	EVEN
-rd_message_text2
+rd_info_message_text1
 	DC.B ASCII_LINE_FEED,"End of playback queue reached",ASCII_LINE_FEED,ASCII_LINE_FEED
-rd_message_text2_end
+rd_info_message_text1_end
 	EVEN
-rd_message_text3
+rd_info_message_text2
 	DC.B ASCII_LINE_FEED,"Entry already played",ASCII_LINE_FEED,ASCII_LINE_FEED
-rd_message_text3_end
+rd_info_message_text2_end
 	EVEN
-rd_message_text4
+rd_info_message_text3
 	DC.B "No more entries left to play",ASCII_LINE_FEED,ASCII_LINE_FEED
-rd_message_text4_end
+rd_info_message_text3_end
 	EVEN
-rd_message_text5
+rd_info_message_text4
 	DC.B "Replay loop stopped",ASCII_LINE_FEED,ASCII_LINE_FEED
-rd_message_text5_end
+rd_info_message_text4_end
 	EVEN
 
 
@@ -7411,72 +7409,76 @@ rd_error_text8
 rd_error_text8_end
 	EVEN
 rd_error_text9
-	DC.B ASCII_LINE_FEED,"Couldn't open demo file",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B "Run mode AGA vanilla not supported on this config",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text9_end
 	EVEN
 rd_error_text10
-	DC.B ASCII_LINE_FEED,"No executable demo file"
+	DC.B ASCII_LINE_FEED,"Couldn't open demo file",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text10_end
 	EVEN
 rd_error_text11
-	DC.B ASCII_LINE_FEED,"Couldn't find demo directory",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"No executable demo file"
 rd_error_text11_end
 	EVEN
 rd_error_text12
-	DC.B ASCII_LINE_FEED,"Prerun script filepath is longer than 63 characters"
+	DC.B ASCII_LINE_FEED,"Couldn't find demo directory",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text12_end
 	EVEN
 rd_error_text13
-	DC.B ASCII_LINE_FEED,"Couldn't execute prerun script file",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Prerun script filepath is longer than 63 characters"
 rd_error_text13_end
 	EVEN
 rd_error_text14
-	DC.B ASCII_LINE_FEED,"Couldn't open degrade screen",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't execute prerun script file",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text14_end
 	EVEN
 rd_error_text15
-	DC.B ASCII_LINE_FEED,"Lores PAL screen not supported",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't open degrade screen",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text15_end
 	EVEN
 rd_error_text16
-	DC.B ASCII_LINE_FEED,"Couldn't open invisible window",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Lores PAL screen not supported",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text16_end
 	EVEN
 rd_error_text17
-	DC.B ASCII_LINE_FEED,"Couldn't load demo file",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't open invisible window",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text17_end
 	EVEN
 rd_error_text18
-	DC.B ASCII_LINE_FEED,"Couldn't open WHDLoad .info file",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Couldn't load demo file",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text18_end
 	EVEN
-rd_error_text19a
+rd_error_text19
+	DC.B ASCII_LINE_FEED,"Couldn't open WHDLoad .info file",ASCII_LINE_FEED,ASCII_LINE_FEED
+rd_error_text19_end
+	EVEN
+rd_error_text20a
 	DC.B ASCII_LINE_FEED,"Serial device in use",ASCII_LINE_FEED,ASCII_LINE_FEED
-rd_error_text19a_end
+rd_error_text20a_end
 	EVEN
-rd_error_text19b
+rd_error_text20b
 	DC.B ASCII_LINE_FEED,"Baud rate not supported by hardware",ASCII_LINE_FEED,ASCII_LINE_FEED
-rd_error_text19b_end
+rd_error_text20b_end
 	EVEN
-rd_error_text19c
+rd_error_text20c
 	DC.B ASCII_LINE_FEED,"Bad parameter",ASCII_LINE_FEED,ASCII_LINE_FEED
-rd_error_text19c_end
+rd_error_text20c_end
 	EVEN
-rd_error_text19d
+rd_error_text20d
 	DC.B ASCII_LINE_FEED,"Hardware data overrun",ASCII_LINE_FEED,ASCII_LINE_FEED
-rd_error_text19d_end
+rd_error_text20d_end
 	EVEN
-rd_error_text19e
+rd_error_text20e
 	DC.B ASCII_LINE_FEED,"No data set ready",ASCII_LINE_FEED,ASCII_LINE_FEED
-rd_error_text19e_end
-	EVEN
-rd_error_text20
-	DC.B ASCII_LINE_FEED,"Write to serial port failed",ASCII_LINE_FEED,ASCII_LINE_FEED
-rd_error_text20_end
+rd_error_text20e_end
 	EVEN
 rd_error_text21
-	DC.B ASCII_LINE_FEED,"Couldn't execute WHDLoad slave file",ASCII_LINE_FEED,ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED,"Write to serial port failed",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text21_end
+	EVEN
+rd_error_text22
+	DC.B ASCII_LINE_FEED,"Couldn't execute WHDLoad slave file",ASCII_LINE_FEED,ASCII_LINE_FEED
+rd_error_text22_end
 	EVEN
 
 
@@ -7506,8 +7508,8 @@ whdl_slave_cmd_line_path
 
 	DC.B "$VER: "
 	DC.B "Amiga Demo Launcher "
-	DC.B "2.07 "
-	DC.B "(21.11.24) "
+	DC.B "2.08 "
+	DC.B "(4.12.24) "
 	DC.B "© 2024 by Resistance",0
 	EVEN
 
