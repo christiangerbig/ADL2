@@ -139,7 +139,7 @@
 ;                          if no LOOP argument was given
 ; - on 68000: Runmode-Check, if Runmode "AGA vanilla" on 68000-Config,
 ;   then error output with subsequent reset after 4 seconds if no LOOP
-;   argument was given and argument RESETONERROR was given
+;   argument and argument RESETONERROR was given
 ; - guide updated
 
 
