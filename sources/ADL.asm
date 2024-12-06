@@ -142,6 +142,10 @@
 ;   argument and argument RESETONERROR was given
 ; - guide updated
 
+; V.2.09
+; - CPUSHA IC is executed before the PCR register is set, because the branch
+;   cache will be disabled and before that, the branch cache should be flushed
+
 
 ; OS2.x bugs which have an impact on the ADL
 ; - DIWHIGH = $00ff (first copperlist) -> Blank screen with some old OCS intros,
@@ -2270,13 +2274,13 @@ dc_print_entries_max_message
 	CNOP 0,4
 dc_init_reset_program
 	tst.w	adl_entries_number(a3)
-	bne.s	dc_check_reset_program_active
+	bne.s	dc_init_reset_program_skip1
 	moveq	#RETURN_OK,d0
 	rts
 	CNOP 0,4
-dc_check_reset_program_active
+dc_init_reset_program_skip1
 	tst.w	adl_reset_program_active(a3)
-	beq	dc_update_entries_number
+	beq	dc_init_reset_program_skip3
 	lea	rp_entry_offset(pc),a0
 	move.w	rd_entry_offset(a3),(a0)
 	move.l	#rp_entries_buffer-rp_start,d0 ; reset program size
@@ -2290,47 +2294,47 @@ dc_check_reset_program_active
 	CALLEXEC AllocMem
 	lea	rp_reset_program_memory(pc),a0
 	move.l	d0,(a0)
-	bne.s	dc_copy_reset_program
+	bne.s	dc_init_reset_program_skip2
 	lea	dc_error_text18(pc),a0
 	moveq	#dc_error_text18_end-dc_error_text18,d0
 	bsr	adl_print_text
 	moveq	#ERROR_NO_FREE_STORE,d0
 	rts
 	CNOP 0,4
-dc_copy_reset_program
+dc_init_reset_program_skip2
 	lea	rp_start(pc),a0		; source
 	move.l	d0,a1			; destination
 	move.l	d0,a2			; pointer reset program
 	move.l	d0,CoolCapture(a6)
 	subq.w	#1,d7			; loopend at false
-dc_copy_reset_program_loop1
+dc_init_reset_program_loop1
 	move.b	(a0)+,(a1)+
-	dbf	d7,dc_copy_reset_program_loop1
+	dbf	d7,dc_init_reset_program_loop1
 	move.l	adl_entries_buffer(a3),a0 ; source
 	move.w	adl_entries_number_max(a3),d7
 	mulu.w	#playback_queue_entry_size,d7 ; total size of reset program section
 	subq.w	#1,d7			; loopend at false
-dc_copy_reset_program_loop2
+dc_init_reset_program_loop2
 	move.b	(a0)+,(a1)+
-	dbf	d7,dc_copy_reset_program_loop2
+	dbf	d7,dc_init_reset_program_loop2
 	bsr	rp_update_exec_checksum
 	CALLLIBS CacheClearU
 	jsr	rp_init_custom_traps-rp_start(a2)
 	tst.b	adl_cpu_flags+BYTE_SIZE(a3)
-	beq.s	dc_update_entries_number
+	beq.s	dc_init_reset_program_skip3
 	lea	rp_read_VBR(pc),a5
 	CALLLIBS Supervisor
 	tst.l	d0			; VBR = $000000 ?
-	beq.s	dc_update_entries_number
+	beq.s	dc_init_reset_program_skip3
 	GET_CUSTOM_TRAP_VECTORS
 	move.l	d0,a0 			; source
 	move.w	#TRAP_0_VECTOR,a1	; target chip memory
 	moveq	#adl_used_trap_vectors_number-1,d7
-dc_copy_custom_traps_loop
+dc_init_reset_program_loop3
 	move.l	(a0)+,(a1)+
-	dbf	d7,dc_copy_custom_traps_loop
+	dbf	d7,dc_init_reset_program_loop3
 	CALLLIBS CacheClearU
-dc_update_entries_number
+dc_init_reset_program_skip3
 	GET_RESIDENT_ENTRIES_NUMBER
 	move.l	d0,a0
 	move.w	adl_entries_number(a3),(a0)
@@ -3791,21 +3795,22 @@ adl_print_io_error_skip1
 	CNOP 0,4
 adl_remove_reset_program
 	tst.w	adl_arg_remove_enabled(a3)
-	beq.s	adl_check_reset_program_active
+	beq.s	adl_remove_reset_program_skip1
 	rts
 	CNOP 0,4
-adl_check_reset_program_active
+adl_remove_reset_program_skip1
 	tst.w	adl_reset_program_active(a3)
-	beq.s	adl_free_reset_programm_memory
+	beq.s	adl_remove_reset_program_skip2
 	lea	adl_message_text2(pc),a0
 	moveq	#adl_message_text2_end-adl_message_text2,d0
 	bra	adl_print_text
 	CNOP 0,4
-adl_free_reset_programm_memory
+adl_remove_reset_program_skip2
 	REMOVE_RESET_PROGRAM
 	move.l	d0,a0
 	move.l	(a0)+,a1
-	clr.l	LONGWORD_SIZE(a1)	; clear ADL id
+	moveq	#0,d0
+	move.l	d0,LONGWORD_SIZE(a1)	; clear ADL id
 	move.l	(a0),d0
 	CALLEXEC FreeMem
 	lea	adl_message_text1(pc),a0
@@ -5294,7 +5299,7 @@ rd_disable_060_caches
 	lea     rd_old_mmu_registers(pc),a1
 	lea	rd_040_060_mmu_off(pc),a5
 	CALLLIBS Supervisor
-	moveq	#0,d1			; PCR = 0
+	moveq	#0,d1			; clear all bits in PCR
 	lea	rd_060_set_pcr(pc),a5
 	CALLLIBS Supervisor
 	move.l	d0,rd_old_060_pcr(a3)
@@ -6128,6 +6133,8 @@ rd_060_set_pcr
 	or.w	#SRF_I0|SRF_I1|SRF_I2,SR ;highest interrupt priority
 	nop
 	DC.L	$4e7a0808		; movec.l PCR,d0
+	nop
+	CPUSHA	IC			; flush instruction and also branch cache
 	nop
 	DC.L	$4e7b1808		; movec.l d1,PCR
 	nop
