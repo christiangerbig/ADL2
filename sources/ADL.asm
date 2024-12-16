@@ -4,7 +4,7 @@
 ; OS:		2.0+
 
 
-; Historie / Changes
+; History/changes
 
 ; V.2.0
 ; - code completely revised
@@ -574,10 +574,10 @@ command_string			RS.B 0
 cs_line_feed1			RS.B 1
 cs_line_feed2			RS.B 1
 cs_hash				RS.B 1
-cs_delay_counter		RS.B rd_nnnn_size ; before: decimal number
-cs_parts			RS.B rd_r_size ; before: hexadecimal number
+cs_delay_counter		RS.B rd_nnnn_size ; decimal number
+cs_parts			RS.B rd_r_size ; hexadecimal number
 cs_separator			RS.B 1
-cs_checksum			RS.B rd_cc_size ; before: hexadecimal number
+cs_checksum			RS.B rd_cc_size ; hexadecimal number
 cs_line_feed3			RS.B 1
 
 command_string_size		RS.B 0
@@ -1243,7 +1243,6 @@ qh_init_gadgets
 
 ; input
 ; result
-
 		CNOP 0,4
 rd_init_pal_screen_colors
 		lea	rd_pal_screen_rgb4_colors(pc),a0
@@ -1399,7 +1398,7 @@ rd_init_invisible_window_tags
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 adl_open_dos_library
 	lea	dos_library_name(pc),a1
@@ -1418,7 +1417,7 @@ adl_open_dos_library_ok
 
 ; input
 ; result
-; d0.l	... return value: return code/error code
+; d0.l	return code/error code
 	CNOP 0,4
 adl_get_output
 	CALLDOS Output
@@ -1433,7 +1432,7 @@ adl_get_output_ok
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 adl_check_system_properties
 	move.l	_SysBase(pc),a0
@@ -1464,7 +1463,7 @@ adl_check_system_properties_ok
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 adl_open_graphics_library
 	lea	graphics_library_name(pc),a1
@@ -1486,7 +1485,7 @@ adl_open_graphics_library_ok
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 adl_open_intuition_library
 	lea	intuition_library_name(pc),a1
@@ -1508,7 +1507,7 @@ adl_open_intuition_library_ok
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 adl_open_gadtools_library
 	lea	gadtools_library_name(pc),a1
@@ -1530,7 +1529,7 @@ adl_open_gadtools_library_ok
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 adl_search_id
 	move.l	#~("-DL-"),d4
@@ -1621,7 +1620,7 @@ adl_search_id_skip4
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 adl_check_cmd_line
 	lea	adl_cmd_template(pc),a0
@@ -1917,7 +1916,7 @@ adl_print_intro_message_skip
 
 ; input
 ; result
-; d0.l	... return value: return code/error code
+; d0.l	return code/error code
 	CNOP 0,4
 dc_alloc_entries_buffer
 	tst.w	adl_reset_program_active(a3)
@@ -1941,7 +1940,7 @@ dc_alloc_entries_buffer_ok
 
 ; input
 ; result
-; d0.l	.... return value: return code
+; d0.l	.return code
 	CNOP 0,4
 dc_open_asl_library
 	lea	asl_library_name(pc),a1
@@ -1963,7 +1962,7 @@ dc_open_asl_library_ok
 
 ; input
 ; result
-; d0.l	... return value: return code/error code
+; d0.l	return code/error code
 	CNOP 0,4
 dc_get_program_dir
 	CALLDOS GetProgramDir
@@ -2012,7 +2011,7 @@ dc_request_title_skip
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 dc_make_file_request
 	moveq	#ASL_FileRequest,d0
@@ -2039,7 +2038,7 @@ dc_make_file_request_ok
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 dc_display_file_request
 	move.l	dc_file_request(a3),a0
@@ -2057,7 +2056,7 @@ dc_display_file_request_ok
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 dc_get_demofile_path
 	clr.w   dc_multiselect_entries_number(a3)
@@ -2094,10 +2093,10 @@ dc_get_demofile_path_skip2
 
 
 ; input
-; a0	... pointer file name
-; a1 	... pointer directory name
+; a0	pointer file name
+; a1 	pointer directory name
 ; result
-; d0.l	... return value: return code/Error Code
+; d0.l	return code/Error Code
 	CNOP 0,4
 dc_check_demofile_path
 	tst.b	(a1)			; directory name exists ?
@@ -2225,7 +2224,7 @@ dc_start_loop
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 dc_check_entries_number_max
 	move.w  adl_entries_number(a3),d0
@@ -2251,7 +2250,7 @@ dc_print_entries_max_message
 
 ; input
 ; result
-; d0.l	... return value: return code/error code
+; d0.l	return code/error code
 	CNOP 0,4
 dc_init_reset_program
 	tst.w	adl_entries_number(a3)
@@ -2333,7 +2332,7 @@ dc_close_asl_library
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 dc_lock_playlist_file
 	move.l	dc_playlist_file_name(a3),d1
@@ -2354,7 +2353,7 @@ dc_lock_playlist_file_ok
 
 ; input
 ; result
-; d0.l	... return value: return code/error code
+; d0.l	return code/error code
 	CNOP 0,4
 dc_alloc_playlist_file_fib
 	MOVEF.L fib_SIZEOF,d0
@@ -2375,7 +2374,7 @@ dc_alloc_playlist_file_fib_ok
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 dc_get_playlist_file_length
 	move.l	dc_playlist_file_lock(a3),d1
@@ -2398,7 +2397,7 @@ dc_get_playlist_file_length_ok
 
 ; input
 ; result
-; d0.l	... return value: return code/error code
+; d0.l	return code/error code
 	CNOP 0,4
 dc_alloc_playlist_file_buffer
 	move.l	dc_playlist_file_length(a3),d0
@@ -2419,7 +2418,7 @@ dc_alloc_playlist_file_buffer_ok
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 dc_open_playlist_file
 	move.l	dc_playlist_file_name(a3),d1
@@ -2440,7 +2439,7 @@ dc_open_playlist_file_ok
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 dc_read_playlist_file
 	move.l	dc_playlist_file_handle(a3),d1
@@ -2462,7 +2461,7 @@ dc_read_playlist_file_ok
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 dc_parse_playlist_file
 	lea	dc_parsing_begin_text(pc),a0
@@ -2714,7 +2713,7 @@ dc_parse_playlist_file_result
 
 
 ; input
-; a0	... pointer entry in playback queue
+; a0	pointer entry in playback queue
 ; result
 	CNOP 0,4
 dc_parse_playlist_entry_error
@@ -2723,7 +2722,7 @@ dc_parse_playlist_entry_error
 
 
 ; input
-; a0	... pointer entry to delete
+; a0	pointer entry to delete
 ; result
 	CNOP 0,4
 dc_clear_playlist_entry
@@ -2753,7 +2752,7 @@ dc_parse_entry_syntax_error
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 dc_check_entries_number_min
 	tst.w	adl_entries_number(a3)
@@ -2862,7 +2861,7 @@ qh_show_queue_loop
 
 
 ; input
-; a2	... pointer entry in playback queue
+; a2	pointer entry in playback queue
 ; result
 	CNOP 0,4
 qh_get_entry_filename
@@ -2985,7 +2984,7 @@ qh_edit_queue_quit
 
 ; input
 ; result
-; d0.l	... Return-Code
+; d0.l	Return-Code
 	CNOP 0,4
 qh_lock_workbench
 	lea	workbench_screen_name(pc),a0
@@ -3005,7 +3004,7 @@ qh_lock_workbench_ok
 
 ; input
 ; result
-; d0.l	... Return-Code
+; d0.l	Return-Code
 	CNOP 0,4
 qh_get_screen_visual_info
 	move.l	qh_workbench_screen(a3),a0
@@ -3026,7 +3025,7 @@ qh_get_screen_visual_info_ok
 
 ; input
 ; result
-; d0.l	... Return-Code
+; d0.l	Return-Code
 	CNOP 0,4
 qh_create_context_gadget
 	lea	qh_gadget_list(pc),a0
@@ -3046,7 +3045,7 @@ qh_create_context_gadget_ok
 
 ; input
 ; result
-; d0.l	... Return-Code
+; d0.l	Return-Code
 	CNOP 0,4
 qh_create_gadgets
 	move.l	qh_workbench_screen(a3),a0
@@ -3266,9 +3265,9 @@ qh_create_gadgets_ok
 
 
 ; input
-; a0	... pointer entry in playback queue
+; a0	pointer entry in playback queue
 ; result
-; d0.l	... pointer file name
+; d0.l	pointer file name
 	CNOP 0,4
 qh_get_demofile_title
 	moveq	#adl_demofile_path_length-1,d6
@@ -3289,7 +3288,7 @@ qh_get_demofile_title_skip
 
 ; input
 ; result
-; d0.l	... Return-Code
+; d0.l	Return-Code
 	CNOP 0,4
 qh_open_edit_window
 	sub.l	a0,a0			; no NewWindow structure
@@ -3479,10 +3478,10 @@ qh_process_window_events_ok
 
 
 ; input
-; a0	... pointer string
-; d7.l	... number of digits to convert
+; a0	pointer string
+; d7.l	number of digits to convert
 ; result
-; d0.l	... return value: decimal number
+; d0.l	decimal number
 	CNOP 0,4
 qh_ascii_to_dec
 	tst.b	1(a0)
@@ -3505,7 +3504,7 @@ qh_ascii_to_dec_loop
 
 
 ; input
-; d0.l	... entry index number (1..n)
+; d0.l	entry index number (1..n)
 ; result
 	CNOP 0,4
 qh_edit_fetch_entry
@@ -3520,9 +3519,9 @@ qh_edit_fetch_entry
 
 
 ; input
-; d2.l	... entry index number (1..n)
-; a2	... pointer file name
-; a5	... pointer entry in playback queue
+; d2.l	entry index number (1..n)
+; a2	pointer file name
+; a5	pointer entry in playback queue
 ; result
 	CNOP 0,4
 qh_update_gadgets
@@ -3804,8 +3803,8 @@ adl_close_dos_library
 
 
 ; input
-; a0	... pointer text
-; d0.l	... length of text
+; a0	pointer text
+; d0.l	length of text
 ; result
 	CNOP 0,4
 adl_print_text
@@ -3999,8 +3998,8 @@ rd_quit
 
 
 ; input
-; a0	... pointer error text
-; d0.l	... text length
+; a0	pointer error text
+; d0.l	text length
 ; result
 	CNOP 0,4
 rd_print_error_text
@@ -4046,7 +4045,7 @@ rd_init_timer_io
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 rd_open_ciaa_resource
 	lea	CIAA_resource_name(pc),a1
@@ -4071,7 +4070,7 @@ rd_open_ciaa_resource_skip
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 rd_open_ciab_resource
 	lea	CIAB_resource_name(pc),a1
@@ -4096,7 +4095,7 @@ rd_open_ciab_resource_skip
 
 ; input
 ; result
-; d0.l	... return value: return code	
+; d0.l	return code	
 	CNOP 0,4
 rd_open_timer_device
 	lea	timer_device_name(pc),a0
@@ -4119,7 +4118,7 @@ rd_open_timer_device_ok
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 rd_open_icon_library
 	lea	icon_library_name(pc),a1
@@ -4141,7 +4140,7 @@ rd_open_icon_library_ok
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 rd_create_serial_message_port
 	CALLEXEC CreateMsgPort
@@ -4160,7 +4159,6 @@ rd_create_serial_message_port_ok
 
 ; input
 ; result
-; d0.l ... no return value
 	CNOP 0,4
 rd_init_serial_io
 	lea	rd_serial_io(pc),a0
@@ -4174,7 +4172,7 @@ rd_init_serial_io
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 rd_open_serial_device
 	lea	serial_device_name(pc),a0
@@ -4197,7 +4195,7 @@ rd_open_serial_device_ok
 
 ; input
 ; result
-; d0.l	... return value: return code/error code
+; d0.l	return code/error code
 	CNOP 0,4
 rd_alloc_cleared_sprite_data
 	moveq	#sprite_pointer_data_size,d0
@@ -4218,7 +4216,7 @@ rd_alloc_cleared_sprite_data_ok
 
 ; input
 ; result
-; d0.l	... return value: screen structure active screen
+; d0.l	screen structure active screen
 	CNOP 0,4
 rd_get_active_screen
 	moveq	#0,d0			; all locks
@@ -4250,7 +4248,7 @@ rd_get_sprite_resolution_quit
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 rd_get_active_screen_mode
 	move.l	rd_active_screen(a3),d0
@@ -4276,7 +4274,7 @@ rd_get_active_screen_mode_ok
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 rd_check_queue
 	move.l	adl_entries_buffer(a3),a0
@@ -4353,9 +4351,9 @@ rd_get_new_entry_offset_skip
 
 
 ; input
-; d2.l	... Anzahl der Einträge
+; d2.l	number of entries
 ; result
-; d0.l	... return value: random offset
+; d0.l	random offset
 	CNOP 0,4
 rd_get_random_entry
 	move.w	_CUSTOM+VHPOSR,d0	; f(x)
@@ -4375,7 +4373,7 @@ rd_get_random_entry
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 rd_get_demofile_name
 	move.l	rd_demofile_path(a3),a0
@@ -4419,7 +4417,6 @@ rd_get_demofile_name_skip3
 
 ; input
 ; result
-; d0.l ... no return value
 	CNOP 0,4
 rd_print_demofile_start_message
 	lea	rd_demofile_name_header(pc),a0
@@ -4435,7 +4432,7 @@ rd_print_demofile_start_message
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 rd_check_runmode
 	btst	#AFB_68020,adl_cpu_flags+BYTE_SIZE(a3)
@@ -4459,7 +4456,7 @@ rd_check_runmode_skip
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 rd_check_demofile_play_state
 	move.l	rd_demofile_path(a3),a0
@@ -4478,7 +4475,7 @@ rd_check_demofile_play_state_ok
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 rd_open_demofile
 	move.l	rd_demofile_path(a3),a0
@@ -4520,7 +4517,7 @@ rd_close_demofile
 
 ; input
 ; result
-; d0.l	... return value: return code/error code
+; d0.l	return code/error code
 	CNOP 0,4
 rd_check_demofile_header
 	cmp.l	#MAGIC_COOKIE,rd_demofile_MAGIC_COOKIE(a3)
@@ -4567,7 +4564,7 @@ rd_copy_characters_loop
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 rd_set_new_current_dir
 	lea	rd_demo_dir_path(pc),a0
 	move.l	a0,d1
@@ -4614,7 +4611,7 @@ rd_get_prerunscript_path_save
 
 ; input
 ; result
-; d0.l	... return value: return code/error code
+; d0.l	return code/error code
 	CNOP 0,4
 rd_check_prerunscript_path
 	move.l	rd_prerunscript_path(a3),d0
@@ -4643,7 +4640,7 @@ rd_check_prerunscript_path_skip
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 rd_execute_prerunscript
 	move.l	rd_prerunscript_path(a3),d0
@@ -4676,7 +4673,7 @@ rd_execute_prerunscript_ok
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 rd_open_pal_screen
 	sub.l	a0,a0			; no NewScreen structure
@@ -4697,7 +4694,7 @@ rd_open_pal_screen_ok
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 rd_load_pal_screen_colors
 	cmp.w	#OS3_VERSION,adl_os_version(a3)
@@ -4716,7 +4713,7 @@ rd_load_pal_screen_colors_skip
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 rd_check_pal_screen_mode
 	move.l	rd_pal_screen(a3),d0
@@ -4739,7 +4736,7 @@ rd_check_pal_screen_mode_ok
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 rd_open_invisible_window
 	sub.l	a0,a0			; no NewWindow structure
@@ -4848,7 +4845,7 @@ rd_alloc_fast_memory_skip3
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 rd_load_demofile
 	move.l	rd_demofile_path(a3),d1
@@ -4862,14 +4859,13 @@ rd_load_demofile
 	rts
 	CNOP 0,4
 rd_load_demofile_ok
-	CALLEXEC CacheClearU
 	moveq	#RETURN_OK,d0
 	rts
 
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 rd_check_whdloadfile
 	move.l	rd_demofile_seglist(a3),a0
@@ -4993,8 +4989,8 @@ rd_free_whdload_disk_object
 
 
 ; input
-; a0	... pointer string
-; a2	... pointer command string
+; a0	pointer string
+; a2	pointer command string
 ; result
 	CNOP 0,4
 rd_convert_quitkey_hexvalue
@@ -5010,10 +5006,10 @@ rd_convert_quitkey_hexvalue
 
 
 ; input
-; a0	... pointer string
-; d7.l	... number of digits to convert
+; a0	pointer string
+; d7.l	number of digits to convert
 ; result
-; d0.l	... return value: hexadecimal number
+; d0.l	hexadecimal number
 	CNOP 0,4
 rd_ascii_to_hex
 	add.l	d7,a0			; pointer end of string
@@ -5069,7 +5065,7 @@ rd_init_playtimer_start_quit
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 rd_start_playtimer
 	tst.w	rd_playtimer_delay(a3)
@@ -5086,7 +5082,7 @@ rd_set_playtimer_duration
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 rd_set_playtimer
 	lea	rd_serial_io(pc),a1
@@ -5150,7 +5146,7 @@ rd_set_playtimer_ok
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 rd_write_playtimer
 	lea	rd_serial_io(pc),a1
@@ -5403,7 +5399,7 @@ rd_run_dos_file_skip
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 rd_execute_whdload_slave
 	tst.w	whdl_slave_enabled(a3)
@@ -5679,7 +5675,7 @@ rd_init_playtimer_stop_skip
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 rd_stop_playtimer
 	tst.w	rd_playtimer_delay(a3)
@@ -5765,7 +5761,7 @@ rd_free_fast_memory_skip2
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 rd_restore_sprite_resolution
 	move.l	rd_pal_screen(a3),a2
@@ -5822,7 +5818,7 @@ rd_restore_current_dir
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 rd_check_user_break
 	moveq	#0,d0			; no new signals
@@ -5863,7 +5859,7 @@ rd_reset_demo_variables_skip2
 
 ; input
 ; result
-; d0.l	... return value: return code
+; d0.l	return code
 	CNOP 0,4
 rd_check_arg_loop_enabled
 	tst.w	rd_arg_loop_enabled(a3)
@@ -5922,7 +5918,7 @@ rd_close_icon_library
 
 	MC68020
 ; input
-; d0.l	... neuer Inhalt von VBR
+; d0.l	neuer Inhalt von VBR
 ; result
 	CNOP 0,4
 rd_write_vbr
@@ -5934,9 +5930,9 @@ rd_write_vbr
 
 
 ; input
-; d1.l	... neuer Inhalt von CACR
+; d1.l	neuer Inhalt von CACR
 ; result
-; d0.l	... return value: old content of CACR
+; d0.l	old content of CACR
 	MC68040
 	CNOP 0,4
 rd_060_set_cacr
@@ -5952,8 +5948,8 @@ rd_060_set_cacr
 
 
 ; input
-; a1	... pointer buffer for old values
-; a3	... pointer variables_base
+; a1	pointer buffer for old values
+; a3	pointer variables_base
 ; result
 
 	MC68040
@@ -6006,7 +6002,7 @@ rd_040_060_mmu_off_skip
 
 
 ; input
-; a1	... pointer buffer for old values
+; a1	pointer buffer for old values
 ; result
 
 	MC68030
@@ -6033,9 +6029,9 @@ rd_030_mmu_off
 
 
 ; input
-; d1.l	... PCR new content
+; d1.l	PCR new content
 ; result
-; d0.l	... PCR old content
+; d0.l	PCR old content
 	MC68040
 	CNOP 0,4
 rd_060_set_pcr
@@ -6051,7 +6047,7 @@ rd_060_set_pcr
 
 
 ; input
-; a1	... pointer buffer for old values
+; a1	pointer buffer for old values
 ; result
 
 	MC68040
@@ -6085,7 +6081,7 @@ rd_040_060_mmu_on
 
 
 ; input
-; a1	... pointer buffer for old values
+; a1	pointer buffer for old values
 ; result
 
 	MC68030
@@ -6152,7 +6148,7 @@ rp_start_quit
 
 
 ; input
-; d7.l	... number of rasterlines to wait
+; d7.l	number of rasterlines to wait
 ; result
 	CNOP 0,4
 rp_wait_rasterline
@@ -6175,7 +6171,7 @@ rp_wait_rasterline_loop2
 
 
 ; input
-; a6	... exec base
+; a6	exec base
 ; result
 	CNOP 0,4
 rp_clear_cool_capture
@@ -6211,7 +6207,7 @@ rp_stop_playtimer
 
 
 ; input
-; d1.l	... timer value
+; d1.l	timer value
 
 	CNOP 0,4
 rp_create_command_string
@@ -6242,9 +6238,9 @@ rp_create_command_string
 
 
 ; input
-; d1.l	... decimal number
+; d1.l	decimal number
 ; result
-; d0.l	... return value: hexadecimal number & $ff
+; d0.l	hexadecimal number & $ff
 	CNOP 0,4
 rp_dec_to_hex
 	moveq	#0,d0			; result
@@ -6264,9 +6260,9 @@ rp_dec_to_hex_loop
 
 
 ; input
-; a0	... pointer string
-; d1.l	... decimal number
-; d7.l	... number of didits to convert
+; a0	pointer string
+; d1.l	decimal number
+; d7.l	number of didits to convert
 ; result
 	CNOP 0,4
 rp_dec_to_ascii
@@ -6290,9 +6286,9 @@ rp_dec_to_ascii_loop2
 
 
 ; input
-; a0	... pointer string
-; d1.l	... hexadecimal number
-; d7.l	... number of digits to convert
+; a0	pointer string
+; d1.l	hexadecimal number
+; d7.l	number of digits to convert
 ; result
 	CNOP 0,4
 rp_hex_to_ascii
@@ -6313,10 +6309,10 @@ rp_hex_to_ascii_skip
 
 
 ; input
-; a0	... pointer string
-; d7.l	... number of ascii characters
+; a0	pointer string
+; d7.l	number of ascii characters
 ; result
-; d0.l	... return value: command checksum
+; d0.l	command checksum
 	CNOP 0,4
 rp_update_command_checksum
 	moveq	#0,d0			; checksum
@@ -6366,7 +6362,7 @@ rp_write_playtimer_loop
 
 
 ; input
-; d3.w	... RGB4 value
+; d3.w	RGB4 value
 ; result
 	CNOP 0,4
 rp_screen_colour_flash
@@ -6395,7 +6391,7 @@ rp_restore_custom_cool_capture
 
 
 ; input
-; a6	... exec base
+; a6	exec base
 ; result
 	CNOP 0,4
 rp_update_exec_checksum
@@ -6464,7 +6460,7 @@ rp_init_custom_traps_skip
 
 
 ; input
-; a6	... exec base
+; a6	exec base
 ; result
 	CNOP 0,4
 rp_restore_old_traps
@@ -6486,7 +6482,7 @@ rp_restore_old_traps_skip2
 
 
 ; input
-; a1	... target: trap#0 vector
+; a1	target: trap#0 vector
 ; result
 	CNOP 0,4
 rp_copy_old_trap_vectors
@@ -6503,7 +6499,7 @@ rd_copy_old_trap_vectors_loop
 ; GET_RESIDENT_ENTRIES_NUMBER
 ; input
 ; result
-; d0.l	... return value: pointer variable
+; d0.l	pointer variable
 	CNOP 0,4
 rp_trap_0_program
 	lea	rp_entries_number(pc),a0
@@ -6515,7 +6511,7 @@ rp_trap_0_program
 ; GET_RESIDENT_ENTRIES_NUMBER_MAX
 ; input
 ; result
-; d0.l	... return value: pointer variable
+; d0.l	pointer variable
 	CNOP 0,4
 rp_trap_1_program
 	lea	rp_entries_number_max(pc),a0
@@ -6527,7 +6523,7 @@ rp_trap_1_program
 ; GET_RESIDENT_ENTRY_OFFSET
 ; input
 ; result
-; d0.l	... return value: pointer variable
+; d0.l	pointer variable
 	CNOP 0,4
 rp_trap_2_program
 	lea	rp_entry_offset(pc),a0
@@ -6539,7 +6535,7 @@ rp_trap_2_program
 ; GET_RESIDENT_ENTRIES_BUFFER
 ; input
 ; result
-; d0.l	... return value: pointer variable
+; d0.l	pointer variable
 	CNOP 0,4
 rp_trap_3_program
 	lea	rp_entries_buffer(pc),a0
@@ -6551,7 +6547,7 @@ rp_trap_3_program
 ; GET_RESIDENT_ENDLESS_ENABLED
 ; input
 ; result
-; d0.l	... return value: pointer variable
+; d0.l	pointer variable
 	CNOP 0,4
 rp_trap_4_program
 	lea	rp_endless_enabled(pc),a0
@@ -6563,7 +6559,7 @@ rp_trap_4_program
 ; GET_RESIDENT_CUSTOM_VECTORS
 ; input
 ; result
-; d0.l	... return value: pointer own trap vectors
+; d0.l	pointer own trap vectors
 	CNOP 0,4
 rp_trap_5_program
 	lea	rp_custom_trap_0_vector(pc),a0
@@ -6575,7 +6571,7 @@ rp_trap_5_program
 ; REMOVE_RESET_PROGRAM
 ; input
 ; result
-; d0.l	... return value: pointer reset program
+; d0.l	pointer reset program
 	CNOP 0,4
 rp_trap_6_program
 	movem.l	a5-a6,-(a7)
@@ -6591,7 +6587,7 @@ rp_trap_6_program
 
 ; input
 ; result
-; d0.l	... return value: content of VBR
+; d0.l	content of VBR
 	MC68020
 	CNOP 0,4
 rp_read_vbr
@@ -6789,7 +6785,6 @@ adl_message_text2_end
 	EVEN
 
 
-; Header für PrintFault() 
 adl_error_text_header
 	DC.B " ",0
 	EVEN
