@@ -3493,7 +3493,7 @@ qh_ascii_to_dec_skip
 	moveq	#0,d0			; result decimal number
 	subq.w	#1,d7			; loopend at false
 qh_ascii_to_dec_loop
-	move.l	(a1)+,d2                ; decimal digits value (1,10,..)
+	move.l	(a1)+,d2                ; decimal digits value [1,10,..]
 	moveq	#0,d3
 	move.b	-(a0),d3		; ascii value
 	sub.b	#"0",d3			; substract ascii value "0" = 0..9
@@ -3504,7 +3504,7 @@ qh_ascii_to_dec_loop
 
 
 ; input
-; d0.l	entry index number (1..n)
+; d0.l	entry index number [1..n]
 ; result
 	CNOP 0,4
 qh_edit_fetch_entry
@@ -3519,7 +3519,7 @@ qh_edit_fetch_entry
 
 
 ; input
-; d2.l	entry index number (1..n)
+; d2.l	entry index number [1..n]
 ; a2	pointer file name
 ; a5	pointer entry in playback queue
 ; result
@@ -6219,7 +6219,7 @@ rp_create_command_string
 	bsr.s	rp_dec_to_ascii
 
 	moveq	#NIBBLE_MASK_LOW,d1
-	and.l	(a7)+,d1		; number of demo parts (1..15)
+	and.l	(a7)+,d1		; number of demo parts [1..15]
 	bsr.s	rp_dec_to_hex
 	move.l	d0,d1			; return value hexadecimal number
 	moveq	#rd_r_size,d7		; number of digits to convert
