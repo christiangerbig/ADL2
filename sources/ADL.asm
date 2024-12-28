@@ -145,6 +145,7 @@
 ; V.2.09
 ; - CPUSHA IC is executed before the PCR register is set, because the branch
 ;   cache will be disabled and before that, the branch cache should be flushed
+; - exceptions vectors restored before old VBR content set
 
 
 ; OS2.x bugs which have an impact on the ADL
@@ -2255,6 +2256,7 @@ dc_print_entries_max_message
 dc_init_reset_program
 	tst.w	adl_entries_number(a3)
 	bne.s	dc_init_reset_program_skip1
+dc_init_reset_program_ok
 	moveq	#RETURN_OK,d0
 	rts
 	CNOP 0,4
@@ -2318,8 +2320,7 @@ dc_init_reset_program_skip3
 	GET_RESIDENT_ENTRIES_NUMBER
 	move.l	d0,a0
 	move.w	adl_entries_number(a3),(a0)
-	moveq	#RETURN_OK,d0
-	rts
+	bra	dc_init_reset_program_ok
 
 
 ; input
@@ -3940,8 +3941,8 @@ rd_play_loop
 	IFEQ rd_yulquen74_code_enabled
 		bsr	rd_upgrade_cpu_clock
 	ENDC
-	bsr	rd_upgrade_cpu
 	bsr	rd_restore_custom_traps
+	bsr	rd_upgrade_cpu
 
 	bsr	rd_init_playtimer_stop
 	bsr	rd_stop_playtimer
@@ -4739,9 +4740,9 @@ rd_check_pal_screen_mode_ok
 ; d0.l	return code
 	CNOP 0,4
 rd_open_invisible_window
-	sub.l	a0,a0			; no NewWindow structure
 	lea	rd_invisible_window_tags(pc),a1
 	move.l	rd_pal_screen(a3),wtl_WA_CustomScreen+ti_data(a1)
+	sub.l	a0,a0			; no NewWindow structure
 	CALLINT OpenWindowTagList
 	move.l	d0,rd_invisible_window(a3)
 	bne.s	rd_open_invisible_window_ok
@@ -5173,7 +5174,7 @@ rd_write_playtimer_ok
 ; input
 ; result
 
-		CNOP 0,4
+	CNOP 0,4
 rd_get_system_time
 	lea	rd_timer_io(pc),a1
 	move.w	#TR_GETSYSTIME,IO_command(a1)
@@ -5319,7 +5320,7 @@ rd_save_chips_registers
 	move.b	CIACRA(a4),d0
 	move.b	d0,d1		
 	move.b	d0,ocr_ciaa_cra(a0)
-	and.b	#~(CIACRAF_START),d0	; stop timer a
+	and.b	#~(CIACRAF_START),d0	; CIA-A stop timer a
 	or.b	#CIACRAF_LOAD,d0
 	move.b	d0,CIACRA(a4)
 	nop
@@ -5327,13 +5328,13 @@ rd_save_chips_registers
 	move.b	CIATAHI(a4),ocr_ciaa_tahi(a0)
 	btst	#CIACRAB_RUNMODE,d1	; continuous mode ?
 	bne.s	rd_save_chips_registers_skip1
-	or.b	#CIACRAF_START,d1	; restart timer a
+	or.b	#CIACRAF_START,d1	; CIA-A restart timer a
 rd_save_chips_registers_skip1
 	move.b	d1,CIACRA(a4)
 	move.b	CIACRB(a4),d0
 	move.b	d0,d1		
 	move.b	d0,ocr_ciaa_crb(a0)
-	and.b	#~(CIACRBF_ALARM-CIACRBF_START),d0 ; stop timer b
+	and.b	#~(CIACRBF_ALARM-CIACRBF_START),d0 ; CIA-A stop timer b
 	or.b	#CIACRBF_LOAD,d0
 	move.b	d0,CIACRB(a4)
 	nop
@@ -5341,7 +5342,7 @@ rd_save_chips_registers_skip1
 	move.b	CIATBHI(a4),ocr_ciaa_tbhi(a0)
 	btst	#CIACRBB_RUNMODE,d1	; continuous mode ?
 	bne.s	rd_save_chips_registers_skip2
-	or.b	#CIACRBF_START,d1	; restart timer b
+	or.b	#CIACRBF_START,d1	; CIA-A restart timer b
 rd_save_chips_registers_skip2
 	move.b	d1,CIACRB(a4)
 ; CIA-B
@@ -5349,7 +5350,7 @@ rd_save_chips_registers_skip2
 	move.b	CIACRA(a5),d0
 	move.b	d0,d1		
 	move.b	d0,ocr_ciaa_cra(a0)
-	and.b	#~(CIACRAF_START),d0	; stop timer a
+	and.b	#~(CIACRAF_START),d0	; CIA-B stop timer a
 	or.b	#CIACRAF_LOAD,d0
 	move.b	d0,CIACRA(a5)
 	nop
@@ -5357,13 +5358,13 @@ rd_save_chips_registers_skip2
 	move.b	CIATAHI(a5),ocr_ciab_tahi(a0)
 	btst	#CIACRAB_RUNMODE,d1	; continuous mode ?
 	bne.s	rd_save_chips_registers_skip3
-	or.b	#CIACRAF_START,d1	; restart timer a
+	or.b	#CIACRAF_START,d1	; CIA-B restart timer a
 rd_save_chips_registers_skip3
 	move.b	d1,CIACRA(a5)
 	move.b	CIACRB(a5),d0
 	move.b	d0,d1		
 	move.b	d0,ocr_ciab_crb(a0)
-	and.b	#~(CIACRBF_ALARM-CIACRBF_START),d0 ; stop timer b
+	and.b	#~(CIACRBF_ALARM-CIACRBF_START),d0 ; CIA-B stop timer b
 	or.b	#CIACRBF_LOAD,d0
 	move.b	d0,CIACRB(a5)
 	nop
@@ -5371,7 +5372,7 @@ rd_save_chips_registers_skip3
 	move.b	CIATBHI(a5),ocr_ciab_tbhi(a0)
 	btst	#CIACRBB_RUNMODE,d1	; continuous mode ?
 	bne.s	rd_save_chips_registers_skip4
-	or.b	#CIACRBF_START,d1	; restart timer b
+	or.b	#CIACRBF_START,d1	; CIA-B restart timer b
 rd_save_chips_registers_skip4
 	move.b	d1,CIACRB(a5)
 	CALLLIBQ Enable
@@ -5579,6 +5580,33 @@ rd_upgrade_cpu_clock_skip
 ; input
 ; result
 	CNOP 0,4
+rd_restore_custom_traps
+	move.l	rd_old_vbr(a3),d0
+	beq.s	rd_restore_custom_traps_skip
+	move.l	d0,a1			; target: fast memory
+	ADDF.W	TRAP_0_VECTOR,a1
+	bsr.s	rd_copy_custom_traps
+rd_restore_custom_traps_skip
+	move.w	#TRAP_0_VECTOR,a1	; target: chip memory
+	bsr.s	rd_copy_custom_traps
+	CALLEXECQ CacheClearU
+
+
+; input
+; result
+	CNOP 0,4
+rd_copy_custom_traps
+	move.l	rd_custom_traps(a3),a0
+	moveq	#adl_used_trap_vectors_number-1,d7
+rd_copy_custom_traps_loop
+	move.l	(a0)+,(a1)+		; copy vector
+	dbf	d7,rd_copy_custom_traps_loop
+	rts
+
+
+; input
+; result
+	CNOP 0,4
 rd_upgrade_cpu
 	move.l	rd_demofile_path(a3),a0
 	cmp.b   #RUNMODE_PLAIN_TURBO,pqe_runmode(a0)
@@ -5631,33 +5659,6 @@ rd_upgrade_cpu_skip5
 	lea	rd_030_mmu_on(pc),a5
 	CALLLIBS Supervisor
 	bra	rd_upgrade_cpu_quit
-
-
-; input
-; result
-	CNOP 0,4
-rd_restore_custom_traps
-	move.l	rd_old_vbr(a3),d0
-	beq.s	rd_restore_custom_traps_skip
-	move.l	d0,a1			; target: fast memory
-	ADDF.W	TRAP_0_VECTOR,a1
-	bsr.s	rd_copy_custom_traps
-rd_restore_custom_traps_skip
-	move.w	#TRAP_0_VECTOR,a1	; target: chip memory
-	bsr.s	rd_copy_custom_traps
-	CALLEXECQ CacheClearU
-
-
-; input
-; result
-	CNOP 0,4
-rd_copy_custom_traps
-	move.l	rd_custom_traps(a3),a0
-	moveq	#adl_used_trap_vectors_number-1,d7
-rd_copy_custom_traps_loop
-	move.l	(a0)+,(a1)+		; copy vector
-	dbf	d7,rd_copy_custom_traps_loop
-	rts
 
 
 ; input
