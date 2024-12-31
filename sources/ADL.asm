@@ -8,7 +8,7 @@
 
 ; V.2.0
 ; - code completely revised
-; - demoSelector = Demo-Charger
+; - demoSelector = Demo Charger
 ; - all texts changed
 ; - renaming of the run modes for the playlist:
 ;   OCS -> OCSVANILLA
@@ -220,7 +220,7 @@ RUNMODE_AGA_VANILLA		EQU $03
 
 RESET_DEVICE_STOP		EQU 0
 
-; Amiga-Demo-Launcher
+; Amiga Demo Launcher
 adl_demofile_path_length	EQU 124
 adl_prerunscript_path_length	EQU 64
 
@@ -237,7 +237,7 @@ adl_multipart_max		EQU 16
 
 adl_used_trap_vectors_number	EQU 7
 
-; Demo-Charger
+; Demo Charger
 dc_entries_number_default_max	EQU 10
 dc_entries_number_max		EQU 99
 
@@ -246,7 +246,7 @@ dc_file_request_top		EQU 0
 dc_file_request_x_size		EQU 320
 dc_file_request_y_size		EQU 200
 
-; Queue-Handler
+; Queue Handler
 qh_edit_window_left		EQU 0
 qh_edit_window_top		EQU 0
 qh_edit_window_x_size		EQU 260
@@ -302,7 +302,7 @@ qh_negative_button_x_position	EQU ((qh_edit_window_x_size-qh_negative_button_x_s
 qh_negative_button_y_position	EQU ((qh_edit_window_y_size-qh_negative_button_y_size)*89)/100
 qh_negative_button_id		EQU 7
 
-; Run-Demo
+; Run Demo
 rd_yulquen74_code_enabled	EQU TRUE
 
 rd_nnnn_size			EQU 4
@@ -312,14 +312,14 @@ rd_duration_shift		EQU 16
 
 rd_error_message_delay		EQU PAL_FPS*4 ; 4 seconds
 
-; WHD-Load
+; WHD Load
 whdl_preload_length		EQU 8
 whdl_preloadsize_length		EQU 20
 whdl_quitkey_length		EQU 11
 whdl_slave_path_length		EQU 124
 whdl_icon_path_length		EQU 124
 
-; Reset-Program
+; Reset Program
 rp_frames_delay			EQU 50
 rp_rasterlines_delay		EQU 5
 
@@ -375,7 +375,7 @@ wm_loop\@
 
 	RSRESET
 
-; Amiga-Demo-Launcher
+; Amiga Demo Launcher
 adl_os_version			RS.W 1
 adl_cpu_flags			RS.W 1
 	RS_ALIGN_LONGWORD
@@ -393,7 +393,7 @@ adl_entries_number_max		RS.W 1
 
 adl_reset_program_active	RS.W 1
 
-; Demo-Charger
+; Demo Charger
 dc_arg_newentry_enabled		RS.W 1
 dc_arg_playlist_enabled		RS.W 1
 dc_arg_quiet_enabled		RS.W 1
@@ -413,7 +413,7 @@ dc_playlist_file_handle		RS.L 1
 dc_playlist_entries_number	RS.W 1
 dc_transmitted_entries_number 	RS.W 1
 
-; Queue-handler
+; Queue Handler
 qh_arg_showqueue_enabled	RS.W 1
 qh_arg_editentry_enabled	RS.W 1
 qh_arg_editqueue_enabled	RS.W 1
@@ -443,7 +443,7 @@ qh_edit_entry_offset		RS.W 1
 qh_edit_runmode			RS.B 1
 qh_edit_entry_active		RS.B 1
 
-; Run-Demo
+; Run Demo
 rd_arg_prerunscript_enabled	RS.W 1
 rd_arg_random_enabled		RS.W 1
 rd_arg_endless_enabled		RS.W 1
@@ -509,21 +509,21 @@ adl_variables_size		RS.B 0
 
 cmd_results_array		RS.B 0
 
-; Amiga-Demo-Launcher
+; Amiga Demo Launcher
 cra_HELP			RS.L 1
 cra_REMOVE			RS.L 1
-; Demo-Charger
+; Demo Charger
 cra_MAXENTRIES			RS.L 1
 cra_NEWENTRY			RS.L 1
 cra_PLAYLIST			RS.L 1
 cra_QUIET			RS.L 1
-; Queue-Handler
+; Queue Handler
 cra_SHOWQUEUE			RS.L 1
 cra_EDITENTRY			RS.L 1
 cra_EDITQUEUE			RS.L 1
 cra_CLEARQUEUE			RS.L 1
 cra_RESETQUEUE			RS.L 1
-; Run-Demo
+; Run Demo
 cra_PLAYENTRY			RS.L 1
 cra_PRERUNSCRIPT		RS.L 1
 cra_MINS			RS.L 1
@@ -719,12 +719,12 @@ old_chips_registers_size	RS.B 0
 	bsr	adl_check_cmd_line
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_read_arguments
-; Amiga-Demo-Launcher arguments
+; Amiga Demo Launcher arguments
 	tst.w	adl_arg_help_enabled(a3)
 	beq     adl_cleanup_read_arguments
 	tst.w	adl_arg_remove_enabled(a3)
 	beq	adl_cleanup_read_arguments
-; Queue-Handler arguments
+; Queue Handler arguments
 	tst.w	qh_arg_showqueue_enabled(a3)
 	bne.s	adl_check_arg_editentry_enabled
 	bsr	qh_show_queue
@@ -758,7 +758,7 @@ adl_check_queue_empty
 	bsr	qh_check_queue_empty
 	tst.l	d0
 	bne.s	dc_start
-; Demo-Charger arguments
+; Demo Charger arguments
 	tst.w	dc_arg_newentry_enabled(a3)
 	beq.s	dc_start
 	tst.w	dc_arg_playlist_enabled(a3)
@@ -767,7 +767,7 @@ adl_check_queue_empty
 	tst.w	adl_reset_program_active(a3)
 	beq	rd_start
 
-; Demo-Charger
+; Demo Charger
 dc_start
 	tst.w	dc_arg_quiet_enabled(a3)
 	beq.s	dc_start_skip
@@ -890,7 +890,7 @@ adl_init_variables
 	lea	_SysBase(pc),a0
 	move.l	exec_base.w,(a0)
 
-; Amiga-Demo-Launcher
+; Amiga Demo Launcher
 	moveq	#TRUE,d0
 	move.l	d0,adl_dos_return_code(a3)
 
@@ -903,7 +903,7 @@ adl_init_variables
 	move.w	d0,adl_entries_number(a3)
 	move.w	#dc_entries_number_default_max,adl_entries_number_max(a3)
 
-; Demo-Charger
+; Demo Charger
 	move.w	d1,dc_arg_newentry_enabled(a3)
 	move.w	d1,dc_arg_playlist_enabled(a3)
 	move.w	d1,dc_arg_quiet_enabled(a3)
@@ -913,7 +913,7 @@ adl_init_variables
 	move.w	d0,dc_playlist_entries_number(a3)
 	move.w	d0,dc_transmitted_entries_number(a3)
 
-; Queue-Handler 
+; Queue Handler
 	move.w	d1,qh_arg_showqueue_enabled(a3)
 	move.w	d1,qh_arg_editentry_enabled(a3)
 	move.w	d1,qh_arg_editqueue_enabled(a3)
@@ -924,7 +924,7 @@ adl_init_variables
 
 	move.w	d0,qh_check_window_events_active(a3)
 
-; Run-Demo 
+; Run Demo
 	move.w	d1,rd_arg_prerunscript_enabled(a3)
 	move.w	d1,rd_arg_random_enabled(a3)
 	move.w	d1,rd_arg_endless_enabled(a3)
@@ -944,10 +944,10 @@ adl_init_variables
 
 	move.l	d0,rd_clear_030_mmu_register(a3)
 
-; WHD-Load 
+; WHD Load
 	move.w	d1,whdl_slave_enabled(a3)
 
-; Reset-Program
+; Reset Program
 	lea	rp_entries_number_max(pc),a0
 	move.w	#dc_entries_number_default_max,(a0)
 
@@ -1670,7 +1670,7 @@ adl_check_arg_remove
 	move.w	d0,adl_arg_remove_enabled(a3)
 	bra.s	adl_check_cmd_line_ok
 
-; Demo-Charger argument MAXENTRIES
+; Demo Charger argument MAXENTRIES
 	CNOP 0,4
 adl_check_arg_maxentries
 	move.l	cra_MAXENTRIES(a2),d0
@@ -1688,7 +1688,7 @@ adl_update_entries_number_max
 	lea	rp_entries_number_max(pc),a0
 	move.w	d0,(a0)
 
-; Demo-Charger argument NEWENTRY
+; Demo Charger argument NEWENTRY
 adl_check_arg_newentry
 	move.l	cra_NEWENTRY(a2),d0
 	beq.s	adl_check_arg_playlist
@@ -1696,7 +1696,7 @@ adl_check_arg_newentry
 	move.w	d0,dc_arg_newentry_enabled(a3)
 	bra	adl_check_cmd_line_ok
 
-; Demo-Charger argument PLAYLIST
+; Demo Charger argument PLAYLIST
 	CNOP 0,4
 adl_check_arg_playlist
 	move.l	cra_PLAYLIST(a2),dc_playlist_file_name(a3)
@@ -1704,21 +1704,21 @@ adl_check_arg_playlist
 	clr.w	dc_arg_playlist_enabled(a3)
 	bra	adl_check_cmd_line_ok
 
-; Demo-Charger argument QUIET
+; Demo Charger argument QUIET
 	CNOP 0,4
 adl_check_arg_quiet
 	move.l	cra_QUIET(a2),d0
 	not.w	d0
 	move.w	d0,dc_arg_quiet_enabled(a3)
 
-; Queue-Handler argument SHOWQUEUE
+; Queue Handler argument SHOWQUEUE
 	move.l	cra_SHOWQUEUE(a2),d0
 	beq.s	adl_check_arg_editentry
 	not.w	d0
 	move.w	d0,qh_arg_showqueue_enabled(a3)
 	bra	adl_check_cmd_line_ok
 
-; Queue-Handler argument EDITENTRY
+; Queue Handler argument EDITENTRY
 	CNOP 0,4
 adl_check_arg_editentry
 	move.l	cra_EDITENTRY(a2),d0
@@ -1739,7 +1739,7 @@ adl_check_arg_editentry_set
 	clr.w	qh_arg_editentry_enabled(a3)
 	bra	adl_check_cmd_line_ok
 
-; Queue-Handler argument EDITQUEUE
+; Queue Handler argument EDITQUEUE
 	CNOP 0,4
 adl_check_arg_editqueue
 	move.l	cra_EDITQUEUE(a2),d0
@@ -1748,7 +1748,7 @@ adl_check_arg_editqueue
 	move.w	d0,qh_arg_editqueue_enabled(a3)
 	bra	adl_check_cmd_line_ok
 
-; Queue-Handler argument CLEARQUEUE
+; Queue Handler argument CLEARQUEUE
 	CNOP 0,4
 adl_check_arg_clearqueue
 	move.l	cra_CLEARQUEUE(a2),d0
@@ -1757,7 +1757,7 @@ adl_check_arg_clearqueue
 	move.w	d0,qh_arg_clearqueue_enabled(a3)
 	bra	adl_check_cmd_line_ok
 
-; Queue-Handler argument RESETQUEUE
+; Queue Handler argument RESETQUEUE
 	CNOP 0,4
 adl_check_arg_resetqueue
 	move.l	cra_RESETQUEUE(a2),d0
@@ -1766,7 +1766,7 @@ adl_check_arg_resetqueue
 	move.w	d0,qh_arg_resetqueue_enabled(a3)
 	bra	adl_check_cmd_line_ok
 
-; Run-Demo argument PLAYENTRY
+; Run Demo argument PLAYENTRY
 	CNOP 0,4
 adl_check_arg_playentry
 	move.l	cra_PLAYENTRY(a2),d0
@@ -1785,13 +1785,13 @@ arg_check_arg_playentry_max
 adl_check_arg_playentry_set
 	move.w	d0,rd_entry_offset(a3)
 
-; Run-Demo argument PRERUNSCRIPT
+; Run Demo argument PRERUNSCRIPT
 adl_check_arg_prerunscript
 	move.l	cra_PRERUNSCRIPT(a2),rd_prerunscript_path(a3)
 	beq.s	adl_check_arg_secs
 	clr.w	rd_arg_prerunscript_enabled(a3)
 
-; Run-Demo argument SECS
+; Run Demo argument SECS
 adl_check_arg_secs
 	move.l	cra_SECS(a2),d0
 	beq.s	adl_check_arg_mins
@@ -1802,7 +1802,7 @@ adl_check_arg_secs
 	ble.s   adl_check_arg_mins
 	bra	adl_check_cmd_line_fail
 
-; Run-Demo argument MINS
+; Run Demo argument MINS
 	CNOP 0,4
 adl_check_arg_mins
 	move.l	cra_MINS(a2),d1
@@ -1821,7 +1821,7 @@ adl_calculate_playtime
 	MULUF.W	rd_duration_shift,d1,d0
 	move.w	d1,rd_play_duration(a3)
 
-; Run-Demo argument MULTIPART
+; Run Demo argument MULTIPART
 	move.l	cra_MULTIPART(a2),d0
 	beq.s   adl_check_arg_random
 	tst.w	rd_play_duration(a3)
@@ -1844,13 +1844,13 @@ adl_check_arg_multipart_skip3
 	subq.b	#1,d0			; only values 1..15
 	or.b	d0,rd_play_duration+BYTE_SIZE(a3)
 
-; Run-Demo argument RANDOM
+; Run Demo argument RANDOM
 adl_check_arg_random
 	move.l	cra_RANDOM(a2),d0
 	not.w	d0
 	move.w	d0,rd_arg_random_enabled(a3)
 
-; Run-Demo argument ENDLESS
+; Run Demo argument ENDLESS
 	move.l	cra_ENDLESS(a2),d0
 	not.w	d0
 	move.w	d0,rd_arg_endless_enabled(a3)
@@ -1866,18 +1866,18 @@ adl_update_endless_enabled
 	lea	rp_endless_enabled(pc),a0
 	move.w	d0,(a0)
 
-; Run-Demo argument LOOP
+; Run Demo argument LOOP
 adl_check_arg_loop
 	move.l	cra_LOOP(a2),d0
 	not.w	d0
 	move.w	d0,rd_arg_loop_enabled(a3)
 
-; Run-Demo argument RESTORESYSTIME
+; Run Demo argument RESTORESYSTIME
 	move.l	cra_RESTORESYSTIME(a2),d0
 	not.w	d0
 	move.w	d0,rd_arg_restoresystime_enabled(a3)
 
-; Run-Demo argument SOFTRESET
+; Run Demo argument SOFTRESET
 	move.l	cra_SOFTRESET(a2),d0
 	beq.s	rd_check_arg_resetonerror
 	tst.w	rd_arg_loop_enabled(a3)
@@ -1885,7 +1885,7 @@ adl_check_arg_loop
 	not.w	d0
 	move.w	d0,rd_arg_softreset_enabled(a3)
 
-; Run-Demo argument RESETONERROR
+; Run Demo argument RESETONERROR
 rd_check_arg_resetonerror
 	move.l	cra_RESETONERROR(a2),d0
 	tst.w	rd_arg_loop_enabled(a3)
@@ -1913,7 +1913,7 @@ adl_print_intro_message_skip
 	bra.s	adl_print_intro_message_quit
 
 
-; Demo-Charger
+; Demo Charger
 
 ; input
 ; result
@@ -2817,7 +2817,7 @@ dc_do_free_entries_buffer
 	bra.s	dc_free_entries_buffer_quit
 
 
-; Queue-Handler 
+; Queue Handler 
 ; input
 ; result
 	CNOP 0,4
@@ -3098,10 +3098,10 @@ qh_create_gadgets
         move.w	#qh_bwd_button_id,gng_GadgetID(a1)
 	moveq	#0,d0
 	move.l	d0,gng_Flags(a1)
-	moveq	#BOOL_FALSE,d0		; gadget state active
+	moveq	#BOOL_FALSE,d0		; gadget state: active
 	cmp.w	#adl_entries_number_min,qh_edit_entry_offset(a3)
         bne.s	qh_create_bwd_button_skip
-	moveq	#BOOL_TRUE,d0		; gadget state inactive
+	moveq	#BOOL_TRUE,d0		; gadget state: inactive
 qh_create_bwd_button_skip
 	move.l	a4,a0			; previous gadget
 	lea	qh_button_tags(pc),a2
@@ -3141,11 +3141,11 @@ qh_create_bwd_button_skip
         move.w	#qh_fwd_button_id,gng_GadgetID(a1)
 	moveq	#0,d0
 	move.l	d0,gng_Flags(a1)
-	moveq	#BOOL_FALSE,d0		; gadget state active
+	moveq	#BOOL_FALSE,d0		; gadget state: active
 	move.w	qh_edit_entry_offset(a3),d1
 	cmp.w	adl_entries_number(a3),d1
         blt.s	qh_create_fwd_button_skip
-	moveq	#BOOL_TRUE,d0		; gadget state inactive
+	moveq	#BOOL_TRUE,d0		; gadget state: inactive
 qh_create_fwd_button_skip
 	move.l	a4,a0			; previous gadget
 	lea	qh_button_tags(pc),a2
@@ -3232,7 +3232,7 @@ qh_create_mx_gadget_skip
 	move.l	d0,gng_Flags(a1)
 	move.l	a4,a0			; previous gadget
 	lea	qh_button_tags(pc),a2
-	moveq	#BOOL_FALSE,d0		; gadget state active
+	moveq	#BOOL_FALSE,d0		; gadget state: active
   	move.l	d0,ti_data(a2)		; gadget state
 	move.l	#BUTTON_KIND,d0
 	CALLGADTOOLS CreateGadgetA
@@ -3438,7 +3438,7 @@ qh_check_negative_button_event
 	bne.s	qh_process_window_events_ok
 	move.w	#FALSE,qh_check_window_events_active(a3)
 	bra.s	qh_process_window_events_ok
-; gadget down
+; event "gadget down"
 	CNOP 0,4
 qh_check_event_gadget_down
 	cmp.l	#IDCMP_GADGETDOWN,d0
@@ -3450,14 +3450,14 @@ qh_check_event_gadget_down
 	neg.b	d0
 	move.b	d0,qh_edit_entry_active(a3)
 	bra.s	qh_process_window_events_ok
-; close window
+; event "close window"
 	CNOP 0,4
 qh_check_event_close_window
 	cmp.l	#IDCMP_CLOSEWINDOW,d0
 	bne.s	qh_check_event_refresh_window
 	move.w	#FALSE,qh_check_window_events_active(a3)
        	bra.s	qh_process_window_events_ok
-; refresh window
+; event "refresh window"
 	CNOP 0,4
 qh_check_event_refresh_window
 	cmp.l	#IDCMP_REFRESHWINDOW,d0
@@ -3538,10 +3538,10 @@ qh_update_gadgets
 	move.l	qh_bwd_button_gadget(a3),a0
 	move.l	qh_edit_window(a3),a1
 	sub.l	a2,a2			; no requester
-	moveq	#BOOL_FALSE,d0		; gadget state active
+	moveq	#BOOL_FALSE,d0		; gadget state: active
 	cmp.w	#adl_entries_number_min,qh_edit_entry_offset(a3)
         bne.s	qh_update_gadgets_skip1
-	moveq	#BOOL_TRUE,d0		; gadget state inactive
+	moveq	#BOOL_TRUE,d0		; gadget state: inactive
 qh_update_gadgets_skip1
 	move.l	a3,-(a7)
 	lea	qh_set_button_tags(pc),a3
@@ -3561,11 +3561,11 @@ qh_update_gadgets_skip1
 	move.l	qh_fwd_button_gadget(a3),a0
 	move.l	qh_edit_window(a3),a1
 	sub.l	a2,a2			; no requester
-	moveq	#BOOL_FALSE,d0		; gadget state active
+	moveq	#BOOL_FALSE,d0		; gadget state: active
 	move.w	qh_edit_entry_offset(a3),d1
 	cmp.w	adl_entries_number(a3),d1
         blt.s	qh_update_gadgets_skip2
-	moveq	#BOOL_TRUE,d0		; gadget state inactive
+	moveq	#BOOL_TRUE,d0		; gadget state: inactive
 qh_update_gadgets_skip2
 	move.l	a3,-(a7)
 	lea	qh_set_button_tags(pc),a3
@@ -3706,7 +3706,7 @@ qh_check_queue_empty_ok
 	rts
 
 
-; Amiga-Demo-Launcher 
+; Amiga Demo Launcher
 
 ; input
 ; result
@@ -3815,7 +3815,7 @@ adl_print_text
 	CALLDOSQ Write
 
 
-; Run-Demo 
+; Run Demo 
 	CNOP 0,4
 rd_start
 	bsr	rd_init_timer_io
@@ -5494,13 +5494,13 @@ rd_restore_chips_registers
 	move.b	ocr_ciaa_cra(a0),d0
 	btst	#CIACRAB_RUNMODE,d0	; continuous mode ?
 	bne.s	rd_restore_chips_registers_skip1
-	or.b	#CIACRAF_START,d0	; restart timer a
+	or.b	#CIACRAF_START,d0	; CIA-A restart timer a
 rd_restore_chips_registers_skip1
 	move.b	d0,CIACRA(a4)
 	move.b	ocr_ciaa_crb(a0),d0
 	btst	#CIACRBB_RUNMODE,d0 	; continuous mode ?
 	bne.s	rd_restore_chips_registers_skip2
-	or.b	#CIACRBF_START,d0	; restart timer b
+	or.b	#CIACRBF_START,d0	; CIA-A restart timer b
 rd_restore_chips_registers_skip2
 	move.b	d0,CIACRB(a4)
 ; CIA-B
@@ -5517,13 +5517,13 @@ rd_restore_chips_registers_skip2
 	move.b	ocr_ciab_cra(a0),d0
 	btst	#CIACRAB_RUNMODE,d0 	; continuous mode ?
 	bne.s	rd_restore_chips_registers_skip3
-	or.b	#CIACRAF_START,d0	; restart timer a
+	or.b	#CIACRAF_START,d0	; CIA-B restart timer a
 rd_restore_chips_registers_skip3
 	move.b	d0,CIACRA(a5)
 	move.b	ocr_ciab_crb(a0),d0
 	btst	#CIACRBB_RUNMODE,d0	; continuous mode ?
 	bne.s	rd_restore_chips_registers_skip4
-	or.b	#CIACRBF_START,d0	; restart timer b
+	or.b	#CIACRBF_START,d0	; CIA-B restart timer b
 rd_restore_chips_registers_skip4
 	move.b	d0,CIACRB(a5)
 	CALLLIBQ Enable
@@ -5599,7 +5599,7 @@ rd_copy_custom_traps
 	move.l	rd_custom_traps(a3),a0
 	moveq	#adl_used_trap_vectors_number-1,d7
 rd_copy_custom_traps_loop
-	move.l	(a0)+,(a1)+		; copy vector
+	move.l	(a0)+,(a1)+
 	dbf	d7,rd_copy_custom_traps_loop
 	rts
 
@@ -5639,7 +5639,7 @@ rd_upgrade_cpu_skip2
 ; 68030-68040 
 	CNOP 0,4
 rd_upgrade_cpu_skip3
-	moveq	#-1,d0			; set all bits
+	moveq	#-1,d0			; set all CACR bits
 	move.l	rd_old_cacr(a3),d1
 	CALLEXEC CacheControl
 	btst	#AFB_68040,adl_cpu_flags+BYTE_SIZE(a3)
@@ -6101,7 +6101,7 @@ rd_030_mmu_on
 	rte
 
 
-; Reset-Programm 
+; Reset Program
 	MC68000
 	CNOP 0,4
 rp_start
@@ -6270,7 +6270,7 @@ rp_dec_to_ascii
 	lea	rp_dec_table(pc),a1
 	move.l	d7,d0
 	MULUF.L	4,d0,d2
-	lea	(a1,d0.l),a1		; get digit value
+	lea	(a1,d0.l),a1		; digit value
 	subq.w	#1,d7			; loopend at false
 rp_dec_to_ascii_loop1
 	moveq	#-1,d3			; number
@@ -6671,7 +6671,7 @@ topaz_font_name			DC.B "topaz.font",0
 	EVEN
 
 
-; Amiga-Demo-Launcher 
+; Amiga Demo Launcher
 	CNOP 0,4
 adl_variables			DS.B adl_variables_size
 
@@ -6715,21 +6715,21 @@ adl_install_request_text_gadgets
 
 adl_cmd_usage_text
 	DC.B ASCII_LINE_FEED,"Amiga Demo Launcher arguments description:",ASCII_LINE_FEED,ASCII_LINE_FEED
-; Amiga-Demo-Launcher
+; Amiga Demo Launcher
 	DC.B "HELP                   This short arguments description",ASCII_LINE_FEED
 	DC.B "REMOVE                 Remove Amiga Demo Launcher from memory",ASCII_LINE_FEED
-; Demo-Charger
+; Demo Charger
 	DC.B "MAXENTRIES ",155,"3",109,"number 1..n",155,"0",109," Set maximum entries number of playback queue",ASCII_LINE_FEED
 	DC.B "NEWENTRY               Create new entry in playback queue",ASCII_LINE_FEED
 	DC.B "PLAYLIST ",155,"3",109,"file path ",155,"0",109,"    Load and transfer external playlist to playback queue",ASCII_LINE_FEED
 	DC.B "QUIET                  Supress the file requester",ASCII_LINE_FEED
-; Queue-Handler
+; Queue Handler
 	DC.B "SHOWQUEUE              Show content of playback queue",ASCII_LINE_FEED
 	DC.B "EDITENTRY ",155,"3",109,"number 1..n",155,"0",109,"  Edit entry of playback queue",ASCII_LINE_FEED
 	DC.B "EDITQUEUE              Edit content of playback queue",ASCII_LINE_FEED
 	DC.B "CLEARQUEUE             Clear whole playback queue with all its entries",ASCII_LINE_FEED
 	DC.B "RESETQUEUE             Reset playback queue offset and all entry states",ASCII_LINE_FEED
-; Run-Demo
+; Run Demo
 	DC.B "PLAYENTRY ",155,"3",109,"number 1..n",155,"0",109,"  Play entry of playback queue",ASCII_LINE_FEED
 	DC.B "PRERUNSCRIPT ",155,"3",109,"file path ",155,"0",109,"Execute prerrun script file before entry is played",ASCII_LINE_FEED
 	DC.B "MIN/MINS ",155,"3",109,"number 0..99",155,"0",109,"  Playtime in minutes /w reset device",ASCII_LINE_FEED
@@ -6746,21 +6746,21 @@ adl_cmd_usage_text_end
 
 
 adl_cmd_template
-; Amiga-Demo-Launcher
+; Amiga Demo Launcher
 	DC.B "HELP/S,"
 	DC.B "REMOVE/S,"
-; Demo-Charger
+; Demo Charger
 	DC.B "MAXENTRIES/K/N,"
 	DC.B "NEWENTRY/S,"
 	DC.B "PLAYLIST/K,"
 	DC.B "QUIET/S,"
-; Queue-Handler
+; Queue Handler
 	DC.B "SHOWQUEUE/S,"
 	DC.B "EDITENTRY/K/N,"
 	DC.B "EDITQUEUE/S,"
 	DC.B "CLEARQUEUE/S,"
 	DC.B "RESETQUEUE/S,"
-; Run-Demo
+; Run Demo
 	DC.B "PLAYENTRY/K/N,"
 	DC.B "PRERUNSCRIPT/K,"
 	DC.B "MIN=MINS/K/N,"
@@ -6815,7 +6815,7 @@ adl_error_text5_end
 	EVEN
 
 
-; Demo-Charger
+; Demo Charger
 	CNOP 0,4
 dc_playlist_results_array
 	DS.B playlist_results_array_size
@@ -6993,7 +6993,7 @@ dc_error_text18_end
 	EVEN
 
 
-; Queue-Handler
+; Queue Handler
 	CNOP 0,4
 qh_get_visual_info_tags		DS.L 1
 
@@ -7171,7 +7171,7 @@ qh_error_text5_end
 
 
 
-; Run-Demo
+; Run Demo
 	CNOP 0,4
 rd_serial_io
 	DS.B IOEXTSER_size
