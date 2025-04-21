@@ -1,7 +1,7 @@
 ; Requirements
-; CPU:		68000+
-; Chipset:	OCS/ECS PAL+
-; OS:		2.0+
+; 68000+
+; OCS/ECS PAL+
+; 2.0+
 
 
 ; History/changes
