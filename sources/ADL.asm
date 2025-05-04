@@ -157,12 +157,10 @@
 ;   rest is truncated and thus the string is made unsuitable.
 
 
-	SECTION code_and_variables,CODE
-
 	MC68000
 
 
-	INCDIR "Daten:include3.5/"
+	INCDIR "include3.5:"
 
 	INCLUDE "exec/exec.i"
 	INCLUDE "exec/exec_lib.i"
@@ -200,14 +198,13 @@
 	INCLUDE "hardware/intbits.i"
 
 
-	INCDIR "Daten:Asm-Sources/custom-includes/"
+	INCDIR "custom-includes-ocs:"
 
 
 	INCLUDE "macros.i"
 
 
 	INCLUDE "equals.i"
-
 
 FirstCode			EQU 4	; offset in SegList
 
@@ -285,9 +282,9 @@ qh_cycle_gadget_id		EQU 4
 
 qh_mx_gadget_x_size		EQU 105
 qh_mx_gadget_y_size		EQU 11
-qh_mx_gadget_x_position 	EQU ((qh_edit_window_x_size-qh_mx_gadget_x_size)*50)/100
-qh_mx_gadget_y_position1 	EQU ((qh_edit_window_y_size-qh_mx_gadget_y_size)*55)/100
-qh_mx_gadget_y_position2 	EQU ((qh_edit_window_y_size-qh_mx_gadget_y_size)*60)/100
+qh_mx_gadget_x_position	EQU ((qh_edit_window_x_size-qh_mx_gadget_x_size)*50)/100
+qh_mx_gadget_y_position1	EQU ((qh_edit_window_y_size-qh_mx_gadget_y_size)*55)/100
+qh_mx_gadget_y_position2	EQU ((qh_edit_window_y_size-qh_mx_gadget_y_size)*60)/100
 qh_mx_gadget_id			EQU 5
 
 qh_positive_button_x_size	EQU 70
@@ -357,6 +354,8 @@ REMOVE_RESET_PROGRAM		MACRO
 
 
 WAIT_MOUSE			MACRO	; only for testing purposes
+; Input
+; Result
 wm_loop\@
 	move.w	$dff006,$dff180
 	btst	#2,$dff016
@@ -364,145 +363,13 @@ wm_loop\@
 	ENDM
 
 
-	INCLUDE "except-vectors-offsets.i"
+	INCLUDE "except-vectors.i"
 
 
-	INCLUDE "taglists-offsets.i"
+	INCLUDE "taglists.i"
 
 
 	INCLUDE "screen-colors.i"
-
-
-	RSRESET
-
-; Amiga Demo Launcher
-adl_os_version			RS.W 1
-adl_cpu_flags			RS.W 1
-	RS_ALIGN_LONGWORD
-adl_output_handle		RS.L 1
-adl_dos_return_code		RS.L 1
-
-adl_read_arguments		RS.L 1
-adl_arg_help_enabled		RS.W 1
-adl_arg_remove_enabled		RS.W 1
-
-	RS_ALIGN_LONGWORD
-adl_entries_buffer		RS.L 1
-adl_entries_number		RS.W 1
-adl_entries_number_max		RS.W 1
-
-adl_reset_program_active	RS.W 1
-
-; Demo Charger
-dc_arg_newentry_enabled		RS.W 1
-dc_arg_playlist_enabled		RS.W 1
-dc_arg_quiet_enabled		RS.W 1
-
-	RS_ALIGN_LONGWORD
-dc_file_request			RS.L 1
-dc_current_entry		RS.L 1
-dc_multiselect_entries_number	RS.W 1
-
-	RS_ALIGN_LONGWORD
-dc_playlist_file_name		RS.L 1
-dc_playlist_file_lock		RS.L 1
-dc_playlist_file_fib		RS.L 1
-dc_playlist_file_length		RS.L 1
-dc_playlist_file_buffer		RS.L 1
-dc_playlist_file_handle		RS.L 1
-dc_playlist_entries_number	RS.W 1
-dc_transmitted_entries_number 	RS.W 1
-
-; Queue Handler
-qh_arg_showqueue_enabled	RS.W 1
-qh_arg_editentry_enabled	RS.W 1
-qh_arg_editqueue_enabled	RS.W 1
-qh_arg_clearqueue_enabled       RS.W 1
-qh_arg_resetqueue_enabled	RS.W 1
-
-	RS_ALIGN_LONGWORD
-qh_workbench_screen		RS.L 1
-qh_edit_window			RS.L 1
-
-qh_screen_visual_info		RS.L 1
-qh_context_gadget		RS.L 1
-
-qh_text_gadget			RS.L 1
-qh_bwd_button_gadget		RS.L 1
-qh_integer_gadget		RS.L 1
-qh_fwd_button_gadget		RS.L 1
-qh_cycle_gadget			RS.L 1
-qh_mx_gadget			RS.L 1
-
-qh_check_window_events_active	RS.W 1
-
-	RS_ALIGN_LONGWORD
-qh_edit_entry			RS.L 1
-qh_edit_entry_demofile_name	RS.L 1
-qh_edit_entry_offset		RS.W 1
-qh_edit_runmode			RS.B 1
-qh_edit_entry_active		RS.B 1
-
-; Run Demo
-rd_arg_prerunscript_enabled	RS.W 1
-rd_arg_random_enabled		RS.W 1
-rd_arg_endless_enabled		RS.W 1
-rd_arg_loop_enabled		RS.W 1
-rd_arg_restoresystime_enabled	RS.W 1
-rd_arg_softreset_enabled	RS.W 1
-rd_arg_resetonerror_enabled	RS.W 1
-
-	RS_ALIGN_LONGWORD
-rd_serial_message_port		RS.L 1
-rd_playtimer_delay		RS.W 1
-
-	RS_ALIGN_LONGWORD
-rd_tod_time			RS.L 1
-
-rd_play_duration		RS.W 1
-
-rd_entry_offset			RS.W 1
-
-	RS_ALIGN_LONGWORD
-rd_demofile_name		RS.L 1
-rd_demofile_name_length		RS.L 1
-rd_demofile_path		RS.L 1
-rd_demofile_handle		RS.L 1
-rd_demofile_magic_cookie	RS.L 1
-rd_demofile_seglist		RS.L 1
-rd_demofile_dir_lock		RS.L 1
-
-rd_prerunscript_path		RS.L 1
-
-rd_active_screen		RS.L 1
-rd_active_screen_mode		RS.L 1
-rd_pal_screen			RS.L 1
-rd_invisible_window		RS.L 1
-rd_cleared_sprite_pointer_data	RS.L 1
-rd_old_sprite_resolution	RS.L 1
-
-rd_fast_memory_block		RS.L 1
-rd_fast_memory_block_size	RS.L 1
-
-rd_old_current_dir_lock		RS.L 1
-
-rd_custom_traps			RS.L 1
-
-rd_old_vbr			RS.L 1
-rd_old_cacr			RS.L 1
-rd_old_060_pcr			RS.L 1
-rd_clear_030_mmu_register	RS.L 1
-	IFEQ rd_yulquen74_code_enabled
-rd_old_cfg0			RS.W 1
-	ENDC
-
-; WHD-Load
-whdl_slave_enabled		RS.W 1
-	RS_ALIGN_LONGWORD
-whdl_disk_object		RS.L 1
-
-
-adl_variables_size		RS.B 0
 
 
 	RSRESET
@@ -565,7 +432,7 @@ pqe_runmode			RS.B 1
 pqe_entry_active		RS.B 1
 pqe_prerunscript_path		RS.B adl_prerunscript_path_length
 
-playback_queue_entry_size 	RS.B 0
+playback_queue_entry_size	RS.B 0
 
 
 	RSRESET
@@ -685,6 +552,141 @@ ocr_ciab_crb			RS.B 1
 old_chips_registers_size	RS.B 0
 
 
+; Variables
+	RSRESET
+
+; Amiga Demo Launcher
+adl_os_version			RS.W 1
+adl_cpu_flags			RS.W 1
+	RS_ALIGN_LONGWORD
+adl_output_handle		RS.L 1
+adl_dos_return_code		RS.L 1
+
+adl_read_arguments		RS.L 1
+adl_arg_help_enabled		RS.W 1
+adl_arg_remove_enabled		RS.W 1
+
+	RS_ALIGN_LONGWORD
+adl_entries_buffer		RS.L 1
+adl_entries_number		RS.W 1
+adl_entries_number_max		RS.W 1
+
+adl_reset_program_active	RS.W 1
+
+; Demo Charger
+dc_arg_newentry_enabled		RS.W 1
+dc_arg_playlist_enabled		RS.W 1
+dc_arg_quiet_enabled		RS.W 1
+
+	RS_ALIGN_LONGWORD
+dc_file_request			RS.L 1
+dc_current_entry		RS.L 1
+dc_multiselect_entries_number	RS.W 1
+
+	RS_ALIGN_LONGWORD
+dc_playlist_file_name		RS.L 1
+dc_playlist_file_lock		RS.L 1
+dc_playlist_file_fib		RS.L 1
+dc_playlist_file_length		RS.L 1
+dc_playlist_file_buffer		RS.L 1
+dc_playlist_file_handle		RS.L 1
+dc_playlist_entries_number	RS.W 1
+dc_transmitted_entries_number	RS.W 1
+
+; Queue Handler
+qh_arg_showqueue_enabled	RS.W 1
+qh_arg_editentry_enabled	RS.W 1
+qh_arg_editqueue_enabled	RS.W 1
+qh_arg_clearqueue_enabled       RS.W 1
+qh_arg_resetqueue_enabled	RS.W 1
+
+	RS_ALIGN_LONGWORD
+qh_workbench_screen		RS.L 1
+qh_edit_window			RS.L 1
+
+qh_screen_visual_info		RS.L 1
+qh_context_gadget		RS.L 1
+
+qh_text_gadget			RS.L 1
+qh_bwd_button_gadget		RS.L 1
+qh_integer_gadget		RS.L 1
+qh_fwd_button_gadget		RS.L 1
+qh_cycle_gadget			RS.L 1
+qh_mx_gadget			RS.L 1
+
+qh_check_window_events_active	RS.W 1
+
+	RS_ALIGN_LONGWORD
+qh_edit_entry			RS.L 1
+qh_edit_entry_demofile_name	RS.L 1
+qh_edit_entry_offset		RS.W 1
+qh_edit_runmode			RS.B 1
+qh_edit_entry_active		RS.B 1
+
+; Run Demo
+rd_arg_prerunscript_enabled	RS.W 1
+rd_arg_random_enabled		RS.W 1
+rd_arg_endless_enabled		RS.W 1
+rd_arg_loop_enabled		RS.W 1
+rd_arg_restoresystime_enabled	RS.W 1
+rd_arg_softreset_enabled	RS.W 1
+rd_arg_resetonerror_enabled	RS.W 1
+
+	RS_ALIGN_LONGWORD
+rd_serial_message_port		RS.L 1
+rd_playtimer_delay		RS.W 1
+
+	RS_ALIGN_LONGWORD
+rd_tod_time			RS.L 1
+
+rd_play_duration		RS.W 1
+
+rd_entry_offset			RS.W 1
+
+	RS_ALIGN_LONGWORD
+rd_demofile_name		RS.L 1
+rd_demofile_name_length		RS.L 1
+rd_demofile_path		RS.L 1
+rd_demofile_handle		RS.L 1
+rd_demofile_magic_cookie	RS.L 1
+rd_demofile_seglist		RS.L 1
+rd_demofile_dir_lock		RS.L 1
+
+rd_prerunscript_path		RS.L 1
+
+rd_active_screen		RS.L 1
+rd_active_screen_mode		RS.L 1
+rd_pal_screen			RS.L 1
+rd_invisible_window		RS.L 1
+rd_cleared_sprite_pointer_data	RS.L 1
+rd_old_sprite_resolution	RS.L 1
+
+rd_fast_memory_block		RS.L 1
+rd_fast_memory_block_size	RS.L 1
+
+rd_old_current_dir_lock		RS.L 1
+
+rd_custom_traps			RS.L 1
+
+rd_old_vbr			RS.L 1
+rd_old_cacr			RS.L 1
+rd_old_060_pcr			RS.L 1
+rd_clear_030_mmu_register	RS.L 1
+	IFEQ rd_yulquen74_code_enabled
+rd_old_cfg0			RS.W 1
+	ENDC
+
+; WHD-Load
+whdl_slave_enabled		RS.W 1
+	RS_ALIGN_LONGWORD
+whdl_disk_object		RS.L 1
+
+adl_variables_size		RS.B 0
+
+
+	SECTION code.CODE
+
+
 ; Amiga Demo-Launcher
 	movem.l d2-d7/a2-a6,-(a7)
 	lea	adl_variables(pc),a3
@@ -777,7 +779,7 @@ dc_start_skip
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_read_arguments
 
- 	bsr	dc_alloc_entries_buffer
+	bsr	dc_alloc_entries_buffer
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_read_arguments
 
@@ -819,7 +821,7 @@ dc_cleanup_asl_library
 dc_cleanup_reset_program
 	bsr	dc_init_reset_program
 	move.l	d0,adl_dos_return_code(a3)
-	bne  	adl_cleanup_read_arguments
+	bne 	adl_cleanup_read_arguments
 dc_cleanup_entries_buffer
 	bsr	dc_free_entries_buffer
 	bra	adl_cleanup_read_arguments
@@ -1145,7 +1147,7 @@ qh_init_gadgets
 	lea	qh_topaz_80(pc),a1
 	move.l	a1,gng_TextAttr(a0)
 	moveq	#0,d0
-   	move.l	d0,gng_UserData(a0)
+  	move.l	d0,gng_UserData(a0)
 ; text gadget
 	lea	qh_text_gadget_tags(pc),a0
 	move.l	#GTTX_Text,(a0)+
@@ -1251,7 +1253,7 @@ rd_init_pal_screen_colors
 		moveq	#pal_screen_colors_number-1,d7
 rd_init_pal_screen_colors_loop
 		move.w	d0,(a0)+	; COLORxx RGB4 value black
-               	dbf	d7,rd_init_pal_screen_colors_loop
+              	dbf	d7,rd_init_pal_screen_colors_loop
 		rts
 
 
@@ -1290,10 +1292,10 @@ rd_init_video_control_tags
 rd_init_pal_screen_tags
 	lea	rd_pal_screen_tags(pc),a0
 	move.l	#SA_Left,(a0)+
-     	moveq	#pal_screen_left,d2
+    	moveq	#pal_screen_left,d2
 	move.l	d2,(a0)+
 	move.l	#SA_Top,(a0)+
-     	moveq	#pal_screen_top,d2
+    	moveq	#pal_screen_top,d2
 	move.l	d2,(a0)+
 	move.l	#SA_Width,(a0)+
 	moveq	#pal_screen_x_size,d2
@@ -2019,7 +2021,7 @@ dc_make_file_request
 	lea	dc_file_request_tags(pc),a0
 	lea	dc_file_request_pattern_os3x(pc),a1
 	cmp.w	#OS3_VERSION,adl_os_version(a3)
- 	bge.s	dc_make_file_request_skip
+	bge.s	dc_make_file_request_skip
 	lea	dc_file_request_pattern_os2x(pc),a1 ; OS2.x only considers 32 characters string length
 dc_make_file_request_skip
 	move.l	a1,frtl_ASLFR_InitialPattern+ti_data(a0)
@@ -2095,13 +2097,13 @@ dc_get_demofile_path_skip2
 
 ; input
 ; a0	pointer file name
-; a1 	pointer directory name
+; a1	pointer directory name
 ; result
 ; d0.l	return code/Error Code
 	CNOP 0,4
 dc_check_demofile_path
 	tst.b	(a1)			; directory name exists ?
- 	bne.s	dc_check_demofile_name
+	bne.s	dc_check_demofile_name
 	lea	dc_error_text14(pc),a0
 	moveq	#dc_error_text14_end-dc_error_text14,d0
 	bsr	adl_print_text
@@ -2309,7 +2311,7 @@ dc_init_reset_program_loop2
 	tst.l	d0			; VBR = $000000 ?
 	beq.s	dc_init_reset_program_skip3
 	GET_CUSTOM_TRAP_VECTORS
-	move.l	d0,a0 			; source
+	move.l	d0,a0			; source
 	move.w	#TRAP_0_VECTOR,a1	; target chip memory
 	moveq	#adl_used_trap_vectors_number-1,d7
 dc_init_reset_program_loop3
@@ -2346,7 +2348,7 @@ dc_lock_playlist_file
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	rts
- 	CNOP 0,4
+	CNOP 0,4
 dc_lock_playlist_file_ok
 	moveq	#RETURN_OK,d0
 	rts
@@ -2719,7 +2721,7 @@ dc_parse_playlist_file_result
 	CNOP 0,4
 dc_parse_playlist_entry_error
 	bsr.s	dc_clear_playlist_entry
-	bra.s 	dc_parse_entry_syntax_error
+	bra.s	dc_parse_entry_syntax_error
 
 
 ; input
@@ -3071,7 +3073,7 @@ qh_create_gadgets
 	subq.w	#1,d0			; count starts at 0
 	mulu.w	#playback_queue_entry_size,d0
 	move.l	adl_entries_buffer(a3),a0
-  	add.l	d0,a0			; pointer entry in playback queue
+ 	add.l	d0,a0			; pointer entry in playback queue
 	move.l	a0,qh_edit_entry(a3)
 	bsr	qh_get_demofile_title
 	move.l	d0,qh_edit_entry_demofile_name(a3)
@@ -3105,7 +3107,7 @@ qh_create_gadgets
 qh_create_bwd_button_skip
 	move.l	a4,a0			; previous gadget
 	lea	qh_button_tags(pc),a2
-  	move.l	d0,ti_data(a2)		; gadget state
+ 	move.l	d0,ti_data(a2)		; gadget state
 	move.l	#BUTTON_KIND,d0
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,a4
@@ -3149,7 +3151,7 @@ qh_create_bwd_button_skip
 qh_create_fwd_button_skip
 	move.l	a4,a0			; previous gadget
 	lea	qh_button_tags(pc),a2
-  	move.l	d0,ti_data(a2)		; gadget state
+ 	move.l	d0,ti_data(a2)		; gadget state
 	move.l	#BUTTON_KIND,d0
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,a4
@@ -3233,7 +3235,7 @@ qh_create_mx_gadget_skip
 	move.l	a4,a0			; previous gadget
 	lea	qh_button_tags(pc),a2
 	moveq	#BOOL_FALSE,d0		; gadget state: active
-  	move.l	d0,ti_data(a2)		; gadget state
+ 	move.l	d0,ti_data(a2)		; gadget state
 	move.l	#BUTTON_KIND,d0
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,a4
@@ -3335,7 +3337,7 @@ qh_process_window_events
 	move.l	a2,a0
 	CALLGADTOOLS GT_GetIMsg
 	move.l	d0,a4			; intuition message
-	move.l 	im_Class(a4),d0		; IDCMP
+	move.l	im_Class(a4),d0		; IDCMP
 ; event "gadget up"
 	cmp.l	#IDCMP_GADGETUP,d0
 	bne	qh_check_event_gadget_down
@@ -3456,7 +3458,7 @@ qh_check_event_close_window
 	cmp.l	#IDCMP_CLOSEWINDOW,d0
 	bne.s	qh_check_event_refresh_window
 	move.w	#FALSE,qh_check_window_events_active(a3)
-       	bra.s	qh_process_window_events_ok
+      	bra.s	qh_process_window_events_ok
 ; event "refresh window"
 	CNOP 0,4
 qh_check_event_refresh_window
@@ -3532,7 +3534,7 @@ qh_update_gadgets
 	lea	qh_set_text_gadget_tags(pc),a3
 	move.l	a2,ti_data(a3)		; pointer file name
 	sub.l	a2,a2			; no requester
-  	CALLGADTOOLS GT_SetGadgetAttrsA
+ 	CALLGADTOOLS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
 ; backwards button gadget
 	move.l	qh_bwd_button_gadget(a3),a0
@@ -3546,7 +3548,7 @@ qh_update_gadgets_skip1
 	move.l	a3,-(a7)
 	lea	qh_set_button_tags(pc),a3
 	move.l	d0,ti_data(a3)		; gadget state
-  	CALLLIBS GT_SetGadgetAttrsA
+ 	CALLLIBS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
 ; integer gadget
 	move.l	qh_integer_gadget(a3),a0
@@ -3555,7 +3557,7 @@ qh_update_gadgets_skip1
 	move.l	a3,-(a7)
 	lea	qh_set_integer_gadget_tags(pc),a3
 	move.l	d2,ti_data(a3)
-  	CALLLIBS GT_SetGadgetAttrsA
+ 	CALLLIBS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
 ; forward button gadget
 	move.l	qh_fwd_button_gadget(a3),a0
@@ -3570,7 +3572,7 @@ qh_update_gadgets_skip2
 	move.l	a3,-(a7)
 	lea	qh_set_button_tags(pc),a3
 	move.l	d0,ti_data(a3)		; gadget state
-  	CALLLIBS GT_SetGadgetAttrsA
+ 	CALLLIBS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
 ; cycle gadget
 	move.l	qh_cycle_gadget(a3),a0
@@ -3582,7 +3584,7 @@ qh_update_gadgets_skip2
 	move.b	pqe_runmode(a5),d0
 	subq.b	#1,d0
 	move.l	d0,ti_data(a3)		; index number selection text
-  	CALLLIBS GT_SetGadgetAttrsA
+ 	CALLLIBS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
 ; multiselect gadget
 	move.l	qh_mx_gadget(a3),a0
@@ -3594,7 +3596,7 @@ qh_update_gadgets_skip2
 	move.b	pqe_entry_active(a5),d0
 	neg.b	d0
 	move.l	d0,ti_data(a3)		; index number selection text
-  	CALLLIBS GT_SetGadgetAttrsA
+ 	CALLLIBS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
 	rts
 
@@ -3901,7 +3903,7 @@ rd_play_loop
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_pal_screen
 	bsr	rd_clear_mousepointer
- 	bsr	rd_blank_display_loop
+	bsr	rd_blank_display_loop
 	bsr	rd_wait_monitor_switch
 
 	bsr	rd_alloc_fast_memory
@@ -3925,7 +3927,7 @@ rd_play_loop
 	bsr	rd_downgrade_cpu
 	IFEQ rd_yulquen74_code_enabled
 		bsr	rd_downgrade_cpu_clock
- 	ENDC
+	ENDC
 	bsr	rd_get_tod_time
 	bsr	rd_save_chips_registers
 
@@ -4282,13 +4284,13 @@ rd_check_queue
 	ADDF.W	pqe_entry_active,a0
 	MOVEF.L	playback_queue_entry_size,d0
 	move.w	adl_entries_number(a3),d7
-	subq.w 	#1,d7			; loopend at false
+	subq.w	#1,d7			; loopend at false
 rd_check_queue_loop
 	tst.b	(a0)
 	beq.s	rd_check_queue_ok
 	add.l	d0,a0			; next entry
 	dbf	d7,rd_check_queue_loop
-	tst.w 	rd_arg_endless_enabled(a3)
+	tst.w	rd_arg_endless_enabled(a3)
 	bne.s   rd_check_queue_fail
 	bsr.s	rd_deactivate_queue
 rd_check_queue_ok
@@ -5077,7 +5079,7 @@ rd_start_playtimer
 rd_set_playtimer_duration
 	bsr.s	rd_set_playtimer
 	tst.l	d0
-	beq  	rd_write_playtimer
+	beq 	rd_write_playtimer
 	rts
 
 
@@ -5455,7 +5457,7 @@ rd_clear_chips_registers
 	move.w	d0,AUD3VOL(a0)
 ; CIA
 	move.l	#_CIAB,a5
-	lea	_CIAA-_CIAB(a5),a4 	; CIA-A base
+	lea	_CIAA-_CIAB(a5),a4	; CIA-A base
 	moveq	#$7f,d0
 	move.b	d0,CIAICR(a4)		; disable CIA interrupts
 	move.b	d0,CIAICR(a5)
@@ -5498,7 +5500,7 @@ rd_restore_chips_registers
 rd_restore_chips_registers_skip1
 	move.b	d0,CIACRA(a4)
 	move.b	ocr_ciaa_crb(a0),d0
-	btst	#CIACRBB_RUNMODE,d0 	; continuous mode ?
+	btst	#CIACRBB_RUNMODE,d0	; continuous mode ?
 	bne.s	rd_restore_chips_registers_skip2
 	or.b	#CIACRBF_START,d0	; CIA-A restart timer b
 rd_restore_chips_registers_skip2
@@ -5515,7 +5517,7 @@ rd_restore_chips_registers_skip2
 	or.b	#CIAICRF_SETCLR,d0
 	move.b	d0,CIAICR(a5)
 	move.b	ocr_ciab_cra(a0),d0
-	btst	#CIACRAB_RUNMODE,d0 	; continuous mode ?
+	btst	#CIACRAB_RUNMODE,d0	; continuous mode ?
 	bne.s	rd_restore_chips_registers_skip3
 	or.b	#CIACRAF_START,d0	; CIA-B restart timer a
 rd_restore_chips_registers_skip3
@@ -5536,13 +5538,13 @@ rd_restore_chips_registers_skip4
 rd_get_tod_duration
 	CALLEXEC Disable
 	move.l	#_CIAA,a4
-	move.l	rd_tod_time(a3),d0 	; timer before start of entry
+	move.l	rd_tod_time(a3),d0	; timer before start of entry
 	moveq	#0,d1
 	move.b	CIATODHI(a4),d1		; bits 23-16
 	swap	d1			; adjust bits
-	move.b	CIATODMID(a4),d1 	; bits 15-8
+	move.b	CIATODMID(a4),d1	; bits 15-8
 	lsl.w	#8,d1			; adjust bits
-	move.b	CIATODLOW(a4),d1 	; bits 7-0
+	move.b	CIATODLOW(a4),d1	; bits 7-0
 	cmp.l	d0,d1			; TOD overflow ?
 	bge.s	rd_get_tod_duration_skip
 	move.l	#$ffffff,d2		; timer max
@@ -6204,7 +6206,7 @@ rp_init_playtimer_stop
 	CNOP 0,4
 rp_stop_playtimer
 	bsr	rp_set_playtimer
-  	bra	rp_write_playtimer
+ 	bra	rp_write_playtimer
 
 
 ; input
@@ -6622,7 +6624,7 @@ rp_old_adkcon			DC.W 0
 
 rp_entries_number		DC.W 0
 rp_entries_number_max		DC.W 0
-rp_entry_offset 		DC.W 0
+rp_entry_offset		DC.W 0
 rp_endless_enabled		DC.W 0
 
 rp_command_string		DS.B command_string_size
@@ -7205,7 +7207,7 @@ rd_invisible_window_tags
 
         CNOP 0,4
 rd_old_mmu_registers
- 	DS.B old_mmu_registers_size
+	DS.B old_mmu_registers_size
 
 
 	CNOP 0,2
