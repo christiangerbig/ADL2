@@ -1376,7 +1376,7 @@ rd_init_invisible_window_tags
 	lea	rd_invisible_window_name(pc),a1
 	move.l	a1,(a0)+
 	move.l	#WA_CustomScreen,(a0)+
-	move.l	d0,(a0)+		; will be initalized later
+	move.l	d0,(a0)+		; will be initialized later
 	move.l	#WA_MinWidth,(a0)+
 	moveq	#invisible_window_x_size,d2
 	move.l	d2,(a0)+
@@ -1401,7 +1401,7 @@ rd_init_invisible_window_tags
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 adl_open_dos_library
 	lea	dos_library_name(pc),a1
@@ -1420,7 +1420,7 @@ adl_open_dos_library_ok
 
 ; input
 ; result
-; d0.l	return code/error code
+; d0.l	Return code/error code
 	CNOP 0,4
 adl_get_output
 	CALLDOS Output
@@ -1435,7 +1435,7 @@ adl_get_output_ok
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 adl_check_system_properties
 	move.l	_SysBase(pc),a0
@@ -1466,7 +1466,7 @@ adl_check_system_properties_ok
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 adl_open_graphics_library
 	lea	graphics_library_name(pc),a1
@@ -1488,7 +1488,7 @@ adl_open_graphics_library_ok
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 adl_open_intuition_library
 	lea	intuition_library_name(pc),a1
@@ -1510,7 +1510,7 @@ adl_open_intuition_library_ok
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 adl_open_gadtools_library
 	lea	gadtools_library_name(pc),a1
@@ -1532,7 +1532,7 @@ adl_open_gadtools_library_ok
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 adl_search_id
 	move.l	#~("-DL-"),d4
@@ -1623,7 +1623,7 @@ adl_search_id_skip4
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 adl_check_cmd_line
 	lea	adl_cmd_template(pc),a0
@@ -1919,7 +1919,7 @@ adl_print_intro_message_skip
 
 ; input
 ; result
-; d0.l	return code/error code
+; d0.l	Return code/error code
 	CNOP 0,4
 dc_alloc_entries_buffer
 	tst.w	adl_reset_program_active(a3)
@@ -1943,7 +1943,7 @@ dc_alloc_entries_buffer_ok
 
 ; input
 ; result
-; d0.l	.return code
+; d0.l	.Return code
 	CNOP 0,4
 dc_open_asl_library
 	lea	asl_library_name(pc),a1
@@ -1965,7 +1965,7 @@ dc_open_asl_library_ok
 
 ; input
 ; result
-; d0.l	return code/error code
+; d0.l	Return code/error code
 	CNOP 0,4
 dc_get_program_dir
 	CALLDOS GetProgramDir
@@ -2014,7 +2014,7 @@ dc_request_title_skip
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 dc_make_file_request
 	moveq	#ASL_FileRequest,d0
@@ -2041,7 +2041,7 @@ dc_make_file_request_ok
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 dc_display_file_request
 	move.l	dc_file_request(a3),a0
@@ -2059,7 +2059,7 @@ dc_display_file_request_ok
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 dc_get_demofile_path
 	clr.w   dc_multiselect_entries_number(a3)
@@ -2096,10 +2096,10 @@ dc_get_demofile_path_skip2
 
 
 ; input
-; a0	pointer file name
-; a1	pointer directory name
+; a0.l	Pointer file name
+; a1.l	Pointer directory name
 ; result
-; d0.l	return code/Error Code
+; d0.l	Return code/Error Code
 	CNOP 0,4
 dc_check_demofile_path
 	tst.b	(a1)			; directory name exists ?
@@ -2227,7 +2227,7 @@ dc_start_loop
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 dc_check_entries_number_max
 	move.w  adl_entries_number(a3),d0
@@ -2253,7 +2253,7 @@ dc_print_entries_max_message
 
 ; input
 ; result
-; d0.l	return code/error code
+; d0.l	Return code/error code
 	CNOP 0,4
 dc_init_reset_program
 	tst.w	adl_entries_number(a3)
@@ -2335,7 +2335,7 @@ dc_close_asl_library
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 dc_lock_playlist_file
 	move.l	dc_playlist_file_name(a3),d1
@@ -2356,7 +2356,7 @@ dc_lock_playlist_file_ok
 
 ; input
 ; result
-; d0.l	return code/error code
+; d0.l	Return code/error code
 	CNOP 0,4
 dc_alloc_playlist_file_fib
 	MOVEF.L fib_SIZEOF,d0
@@ -2377,7 +2377,7 @@ dc_alloc_playlist_file_fib_ok
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 dc_get_playlist_file_length
 	move.l	dc_playlist_file_lock(a3),d1
@@ -2400,7 +2400,7 @@ dc_get_playlist_file_length_ok
 
 ; input
 ; result
-; d0.l	return code/error code
+; d0.l	Return code/error code
 	CNOP 0,4
 dc_alloc_playlist_file_buffer
 	move.l	dc_playlist_file_length(a3),d0
@@ -2421,7 +2421,7 @@ dc_alloc_playlist_file_buffer_ok
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 dc_open_playlist_file
 	move.l	dc_playlist_file_name(a3),d1
@@ -2442,7 +2442,7 @@ dc_open_playlist_file_ok
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 dc_read_playlist_file
 	move.l	dc_playlist_file_handle(a3),d1
@@ -2464,7 +2464,7 @@ dc_read_playlist_file_ok
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 dc_parse_playlist_file
 	lea	dc_parsing_begin_text(pc),a0
@@ -2716,7 +2716,7 @@ dc_parse_playlist_file_result
 
 
 ; input
-; a0	pointer entry in playback queue
+; a0.l	Pointer entry in playback queue
 ; result
 	CNOP 0,4
 dc_parse_playlist_entry_error
@@ -2725,7 +2725,7 @@ dc_parse_playlist_entry_error
 
 
 ; input
-; a0	pointer entry to delete
+; a0.l	Pointer entry to delete
 ; result
 	CNOP 0,4
 dc_clear_playlist_entry
@@ -2755,7 +2755,7 @@ dc_parse_entry_syntax_error
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 dc_check_entries_number_min
 	tst.w	adl_entries_number(a3)
@@ -2864,7 +2864,7 @@ qh_show_queue_loop
 
 
 ; input
-; a2	pointer entry in playback queue
+; a2.l	Pointer entry in playback queue
 ; result
 	CNOP 0,4
 qh_get_entry_filename
@@ -3268,9 +3268,9 @@ qh_create_gadgets_ok
 
 
 ; input
-; a0	pointer entry in playback queue
+; a0.l	Pointer entry in playback queue
 ; result
-; d0.l	pointer file name
+; d0.l	Pointer file name
 	CNOP 0,4
 qh_get_demofile_title
 	moveq	#adl_demofile_path_length-1,d6
@@ -3481,10 +3481,10 @@ qh_process_window_events_ok
 
 
 ; input
-; a0	pointer string
-; d7.l	number of digits to convert
+; a0.l	Pointer string
+; d7.l	Number of digits to convert
 ; result
-; d0.l	decimal number
+; d0.l	Decimal number
 	CNOP 0,4
 qh_ascii_to_dec
 	tst.b	1(a0)
@@ -3507,7 +3507,7 @@ qh_ascii_to_dec_loop
 
 
 ; input
-; d0.l	entry index number [1..n]
+; d0.l	Entry index number [1..n]
 ; result
 	CNOP 0,4
 qh_edit_fetch_entry
@@ -3522,9 +3522,9 @@ qh_edit_fetch_entry
 
 
 ; input
-; d2.l	entry index number [1..n]
-; a2	pointer file name
-; a5	pointer entry in playback queue
+; d2.l	Entry index number [1..n]
+; a2.l	Pointer file name
+; a5.l	Pointer entry in playback queue
 ; result
 	CNOP 0,4
 qh_update_gadgets
@@ -3806,8 +3806,8 @@ adl_close_dos_library
 
 
 ; input
-; a0	pointer text
-; d0.l	length of text
+; a0.l	Pointer text
+; d0.l	Length of text
 ; result
 	CNOP 0,4
 adl_print_text
@@ -4001,8 +4001,8 @@ rd_quit
 
 
 ; input
-; a0	pointer error text
-; d0.l	text length
+; a0.l	Pointer error text
+; d0.l	Text length
 ; result
 	CNOP 0,4
 rd_print_error_text
@@ -4048,7 +4048,7 @@ rd_init_timer_io
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 rd_open_ciaa_resource
 	lea	CIAA_resource_name(pc),a1
@@ -4073,7 +4073,7 @@ rd_open_ciaa_resource_skip
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 rd_open_ciab_resource
 	lea	CIAB_resource_name(pc),a1
@@ -4098,7 +4098,7 @@ rd_open_ciab_resource_skip
 
 ; input
 ; result
-; d0.l	return code	
+; d0.l	Return code	
 	CNOP 0,4
 rd_open_timer_device
 	lea	timer_device_name(pc),a0
@@ -4121,7 +4121,7 @@ rd_open_timer_device_ok
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 rd_open_icon_library
 	lea	icon_library_name(pc),a1
@@ -4143,7 +4143,7 @@ rd_open_icon_library_ok
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 rd_create_serial_message_port
 	CALLEXEC CreateMsgPort
@@ -4175,7 +4175,7 @@ rd_init_serial_io
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 rd_open_serial_device
 	lea	serial_device_name(pc),a0
@@ -4198,7 +4198,7 @@ rd_open_serial_device_ok
 
 ; input
 ; result
-; d0.l	return code/error code
+; d0.l	Return code/error code
 	CNOP 0,4
 rd_alloc_cleared_sprite_data
 	moveq	#sprite_pointer_data_size,d0
@@ -4219,7 +4219,7 @@ rd_alloc_cleared_sprite_data_ok
 
 ; input
 ; result
-; d0.l	screen structure active screen
+; d0.l	Screen structure active screen
 	CNOP 0,4
 rd_get_active_screen
 	moveq	#0,d0			; all locks
@@ -4251,7 +4251,7 @@ rd_get_sprite_resolution_quit
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 rd_get_active_screen_mode
 	move.l	rd_active_screen(a3),d0
@@ -4277,7 +4277,7 @@ rd_get_active_screen_mode_ok
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 rd_check_queue
 	move.l	adl_entries_buffer(a3),a0
@@ -4354,9 +4354,9 @@ rd_get_new_entry_offset_skip
 
 
 ; input
-; d2.l	number of entries
+; d2.l	Number of entries
 ; result
-; d0.l	random offset
+; d0.l	Random offset
 	CNOP 0,4
 rd_get_random_entry
 	move.w	_CUSTOM+VHPOSR,d0	; f(x)
@@ -4376,7 +4376,7 @@ rd_get_random_entry
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 rd_get_demofile_name
 	move.l	rd_demofile_path(a3),a0
@@ -4435,7 +4435,7 @@ rd_print_demofile_start_message
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 rd_check_runmode
 	btst	#AFB_68020,adl_cpu_flags+BYTE_SIZE(a3)
@@ -4459,7 +4459,7 @@ rd_check_runmode_skip
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 rd_check_demofile_play_state
 	move.l	rd_demofile_path(a3),a0
@@ -4478,7 +4478,7 @@ rd_check_demofile_play_state_ok
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 rd_open_demofile
 	move.l	rd_demofile_path(a3),a0
@@ -4520,7 +4520,7 @@ rd_close_demofile
 
 ; input
 ; result
-; d0.l	return code/error code
+; d0.l	Return code/error code
 	CNOP 0,4
 rd_check_demofile_header
 	cmp.l	#MAGIC_COOKIE,rd_demofile_MAGIC_COOKIE(a3)
@@ -4567,7 +4567,7 @@ rd_copy_characters_loop
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 rd_set_new_current_dir
 	lea	rd_demo_dir_path(pc),a0
 	move.l	a0,d1
@@ -4614,7 +4614,7 @@ rd_get_prerunscript_path_save
 
 ; input
 ; result
-; d0.l	return code/error code
+; d0.l	Return code/error code
 	CNOP 0,4
 rd_check_prerunscript_path
 	move.l	rd_prerunscript_path(a3),d0
@@ -4643,7 +4643,7 @@ rd_check_prerunscript_path_skip
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 rd_execute_prerunscript
 	move.l	rd_prerunscript_path(a3),d0
@@ -4676,7 +4676,7 @@ rd_execute_prerunscript_ok
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 rd_open_pal_screen
 	sub.l	a0,a0			; no NewScreen structure
@@ -4697,7 +4697,7 @@ rd_open_pal_screen_ok
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 rd_load_pal_screen_colors
 	cmp.w	#OS3_VERSION,adl_os_version(a3)
@@ -4716,7 +4716,7 @@ rd_load_pal_screen_colors_skip
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 rd_check_pal_screen_mode
 	move.l	rd_pal_screen(a3),d0
@@ -4739,7 +4739,7 @@ rd_check_pal_screen_mode_ok
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 rd_open_invisible_window
 	lea	rd_invisible_window_tags(pc),a1
@@ -4848,7 +4848,7 @@ rd_alloc_fast_memory_skip3
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 rd_load_demofile
 	move.l	rd_demofile_path(a3),d1
@@ -4868,7 +4868,7 @@ rd_load_demofile_ok
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 rd_check_whdloadfile
 	move.l	rd_demofile_seglist(a3),a0
@@ -4992,8 +4992,8 @@ rd_free_whdload_disk_object
 
 
 ; input
-; a0	pointer string
-; a2	pointer command string
+; a0.l	Pointer string
+; a2.l	Pointer command string
 ; result
 	CNOP 0,4
 rd_convert_quitkey_hexvalue
@@ -5009,10 +5009,10 @@ rd_convert_quitkey_hexvalue
 
 
 ; input
-; a0	pointer string
-; d7.l	number of digits to convert
+; a0.l	Pointer string
+; d7.l	Number of digits to convert
 ; result
-; d0.l	hexadecimal number
+; d0.l	Hexadecimal number
 	CNOP 0,4
 rd_ascii_to_hex
 	add.l	d7,a0			; pointer end of string
@@ -5068,7 +5068,7 @@ rd_init_playtimer_start_quit
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 rd_start_playtimer
 	tst.w	rd_playtimer_delay(a3)
@@ -5085,7 +5085,7 @@ rd_set_playtimer_duration
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 rd_set_playtimer
 	lea	rd_serial_io(pc),a1
@@ -5149,7 +5149,7 @@ rd_set_playtimer_ok
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 rd_write_playtimer
 	lea	rd_serial_io(pc),a1
@@ -5402,7 +5402,7 @@ rd_run_dos_file_skip
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 rd_execute_whdload_slave
 	tst.w	whdl_slave_enabled(a3)
@@ -5678,7 +5678,7 @@ rd_init_playtimer_stop_skip
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 rd_stop_playtimer
 	tst.w	rd_playtimer_delay(a3)
@@ -5764,7 +5764,7 @@ rd_free_fast_memory_skip2
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 rd_restore_sprite_resolution
 	move.l	rd_pal_screen(a3),a2
@@ -5821,7 +5821,7 @@ rd_restore_current_dir
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 rd_check_user_break
 	moveq	#0,d0			; no new signals
@@ -5862,7 +5862,7 @@ rd_reset_demo_variables_skip2
 
 ; input
 ; result
-; d0.l	return code
+; d0.l	Return code
 	CNOP 0,4
 rd_check_arg_loop_enabled
 	tst.w	rd_arg_loop_enabled(a3)
@@ -5921,7 +5921,7 @@ rd_close_icon_library
 
 	MC68020
 ; input
-; d0.l	neuer Inhalt von VBR
+; d0.l	VBR new content
 ; result
 	CNOP 0,4
 rd_write_vbr
@@ -5933,9 +5933,9 @@ rd_write_vbr
 
 
 ; input
-; d1.l	neuer Inhalt von CACR
+; d1.l	CACR new content
 ; result
-; d0.l	old content of CACR
+; d0.l	CACR old content
 	MC68040
 	CNOP 0,4
 rd_060_set_cacr
@@ -5951,8 +5951,8 @@ rd_060_set_cacr
 
 
 ; input
-; a1	pointer buffer for old values
-; a3	pointer variables_base
+; a1.l	Pointer buffer for old values
+; a3.l	Pointer variables_base
 ; result
 
 	MC68040
@@ -6005,7 +6005,7 @@ rd_040_060_mmu_off_skip
 
 
 ; input
-; a1	pointer buffer for old values
+; a1.l	Pointer buffer for old values
 ; result
 
 	MC68030
@@ -6050,7 +6050,7 @@ rd_060_set_pcr
 
 
 ; input
-; a1	pointer buffer for old values
+; a1.l	Pointer buffer for old values
 ; result
 
 	MC68040
@@ -6084,7 +6084,7 @@ rd_040_060_mmu_on
 
 
 ; input
-; a1	pointer buffer for old values
+; a1.l	Pointer buffer for old values
 ; result
 
 	MC68030
@@ -6151,7 +6151,7 @@ rp_start_quit
 
 
 ; input
-; d7.l	number of rasterlines to wait
+; d7.l	Number of rasterlines to wait
 ; result
 	CNOP 0,4
 rp_wait_rasterline
@@ -6174,7 +6174,7 @@ rp_wait_rasterline_loop2
 
 
 ; input
-; a6	exec base
+; a6.l	Exec base
 ; result
 	CNOP 0,4
 rp_clear_cool_capture
@@ -6210,7 +6210,7 @@ rp_stop_playtimer
 
 
 ; input
-; d1.l	timer value
+; d1.l	Timer value
 
 	CNOP 0,4
 rp_create_command_string
@@ -6241,9 +6241,9 @@ rp_create_command_string
 
 
 ; input
-; d1.l	decimal number
+; d1.l	Decimal number
 ; result
-; d0.l	hexadecimal number & $ff
+; d0.l	Hexadecimal number & $ff
 	CNOP 0,4
 rp_dec_to_hex
 	moveq	#0,d0			; result
@@ -6263,9 +6263,9 @@ rp_dec_to_hex_loop
 
 
 ; input
-; a0	pointer string
-; d1.l	decimal number
-; d7.l	number of didits to convert
+; a0.l	Pointer string
+; d1.l	Decimal number
+; d7.l	Number of didits to convert
 ; result
 	CNOP 0,4
 rp_dec_to_ascii
@@ -6289,9 +6289,9 @@ rp_dec_to_ascii_loop2
 
 
 ; input
-; a0	pointer string
-; d1.l	hexadecimal number
-; d7.l	number of digits to convert
+; a0.l	Pointer string
+; d1.l	Hexadecimal number
+; d7.l	Number of digits to convert
 ; result
 	CNOP 0,4
 rp_hex_to_ascii
@@ -6312,10 +6312,10 @@ rp_hex_to_ascii_skip
 
 
 ; input
-; a0	pointer string
-; d7.l	number of ascii characters
+; a0.l	Pointer string
+; d7.l	Number of ascii characters
 ; result
-; d0.l	command checksum
+; d0.l	Command checksum
 	CNOP 0,4
 rp_update_command_checksum
 	moveq	#0,d0			; checksum
@@ -6394,7 +6394,7 @@ rp_restore_custom_cool_capture
 
 
 ; input
-; a6	exec base
+; a6.l	Exec base
 ; result
 	CNOP 0,4
 rp_update_exec_checksum
@@ -6463,7 +6463,7 @@ rp_init_custom_traps_skip
 
 
 ; input
-; a6	exec base
+; a6.l	Exec base
 ; result
 	CNOP 0,4
 rp_restore_old_traps
@@ -6476,16 +6476,16 @@ rp_restore_old_traps
 	beq.s	rp_restore_old_traps_skip2
 	move.l	d0,a1
 rp_restore_old_traps_skip1
-	add.w	#TRAP_0_VECTOR,a1	; trap0 vector fast memory
+	add.w	#TRAP_0_VECTOR,a1	; vector fast memory
 	bsr.s	rp_copy_old_trap_vectors
 rp_restore_old_traps_skip2
-	move.w	#TRAP_0_VECTOR,a1	; trap0 vector chip memory
+	move.w	#TRAP_0_VECTOR,a1	; vector chip memory
 	bsr.s	rp_copy_old_trap_vectors
 	CALLLIBQ CacheClearU
 
 
 ; input
-; a1	target: trap#0 vector
+; a1.l	Target: trap #0 vector
 ; result
 	CNOP 0,4
 rp_copy_old_trap_vectors
@@ -6502,7 +6502,7 @@ rd_copy_old_trap_vectors_loop
 ; GET_RESIDENT_ENTRIES_NUMBER
 ; input
 ; result
-; d0.l	pointer variable
+; d0.l	Pointer variable
 	CNOP 0,4
 rp_trap_0_program
 	lea	rp_entries_number(pc),a0
@@ -6514,7 +6514,7 @@ rp_trap_0_program
 ; GET_RESIDENT_ENTRIES_NUMBER_MAX
 ; input
 ; result
-; d0.l	pointer variable
+; d0.l	Pointer variable
 	CNOP 0,4
 rp_trap_1_program
 	lea	rp_entries_number_max(pc),a0
@@ -6526,7 +6526,7 @@ rp_trap_1_program
 ; GET_RESIDENT_ENTRY_OFFSET
 ; input
 ; result
-; d0.l	pointer variable
+; d0.l	Pointer variable
 	CNOP 0,4
 rp_trap_2_program
 	lea	rp_entry_offset(pc),a0
@@ -6538,7 +6538,7 @@ rp_trap_2_program
 ; GET_RESIDENT_ENTRIES_BUFFER
 ; input
 ; result
-; d0.l	pointer variable
+; d0.l	Pointer variable
 	CNOP 0,4
 rp_trap_3_program
 	lea	rp_entries_buffer(pc),a0
@@ -6550,7 +6550,7 @@ rp_trap_3_program
 ; GET_RESIDENT_ENDLESS_ENABLED
 ; input
 ; result
-; d0.l	pointer variable
+; d0.l	Pointer variable
 	CNOP 0,4
 rp_trap_4_program
 	lea	rp_endless_enabled(pc),a0
@@ -6562,7 +6562,7 @@ rp_trap_4_program
 ; GET_RESIDENT_CUSTOM_VECTORS
 ; input
 ; result
-; d0.l	pointer own trap vectors
+; d0.l	Pointer own trap vectors
 	CNOP 0,4
 rp_trap_5_program
 	lea	rp_custom_trap_0_vector(pc),a0
@@ -6574,7 +6574,7 @@ rp_trap_5_program
 ; REMOVE_RESET_PROGRAM
 ; input
 ; result
-; d0.l	pointer reset program
+; d0.l	Pointer reset program
 	CNOP 0,4
 rp_trap_6_program
 	movem.l	a5-a6,-(a7)
@@ -6590,7 +6590,7 @@ rp_trap_6_program
 
 ; input
 ; result
-; d0.l	content of VBR
+; d0.l	VBR content
 	MC68020
 	CNOP 0,4
 rp_read_vbr
@@ -6601,6 +6601,7 @@ rp_read_vbr
 	rte
 
 
+; Variables
 rp_reset_program_memory		DC.L 0
 rp_reset_program_size		DC.L 0
 
@@ -6624,10 +6625,11 @@ rp_old_adkcon			DC.W 0
 
 rp_entries_number		DC.W 0
 rp_entries_number_max		DC.W 0
-rp_entry_offset		DC.W 0
+rp_entry_offset			DC.W 0
 rp_endless_enabled		DC.W 0
 
-rp_command_string		DS.B command_string_size
+rp_command_string		
+	DS.B command_string_size
 
 	CNOP 0,4
 rp_dec_table
@@ -6647,35 +6649,59 @@ _IconBase			DC.L 0
 _CIABase			DC.L 0
 
 
-dos_library_name		DC.B "dos.library",0
+dos_library_name		
+	DC.B "dos.library",0
 	EVEN
-graphics_library_name		DC.B "graphics.library",0
+
+graphics_library_name		
+	DC.B "graphics.library",0
 	EVEN
-intuition_library_name		DC.B "intuition.library",0
+
+intuition_library_name		
+	DC.B "intuition.library",0
 	EVEN
-gadtools_library_name		DC.B "gadtools.library",0
+
+gadtools_library_name		
+	DC.B "gadtools.library",0
 	EVEN
-asl_library_name		DC.B "asl.library",0
+
+asl_library_name		
+	DC.B "asl.library",0
 	EVEN
-icon_library_name		DC.B "icon.library",0
+
+icon_library_name		
+	DC.B "icon.library",0
 	EVEN
-ciaa_resource_name		DC.B "ciaa.resource",0
+
+ciaa_resource_name		
+	DC.B "ciaa.resource",0
 	EVEN
-ciab_resource_name		DC.B "ciab.resource",0
+
+ciab_resource_name		
+	DC.B "ciab.resource",0
 	EVEN
-serial_device_name		DC.B "serial.device",0
+
+serial_device_name		
+	DC.B "serial.device",0
 	EVEN
-timer_device_name		DC.B "timer.device",0
+
+timer_device_name		
+	DC.B "timer.device",0
 	EVEN
-workbench_screen_name		DC.B "Workbench",0
+
+workbench_screen_name		
+	DC.B "Workbench",0
 	EVEN
-topaz_font_name			DC.B "topaz.font",0
+
+topaz_font_name			
+	DC.B "topaz.font",0
 	EVEN
 
 
 ; Amiga Demo Launcher
 	CNOP 0,4
-adl_variables			DS.B adl_variables_size
+adl_variables			
+	DS.B adl_variables_size
 
 
 	CNOP 0,4
@@ -6705,11 +6731,13 @@ adl_intro_message_text_end
 adl_install_request_title
 	DC.B "Amiga Demo Launcher message",0
 	EVEN
+
 adl_install_request_text_body
 	DC.B "CoolCapture vector already used.",ASCII_LINE_FEED,ASCII_LINE_FEED
 	DC.B "Should the Amiga Demo Launcher be installed",ASCII_LINE_FEED
 	DC.B "and other reset programs be disabled?",ASCII_LINE_FEED,0
 	EVEN
+
 adl_install_request_text_gadgets
 	DC.B "Proceed|Quit",0
 	EVEN
@@ -6791,26 +6819,32 @@ adl_message_text2_end
 adl_error_text_header
 	DC.B " ",0
 	EVEN
+
 adl_error_text_tail
 	DC.B ASCII_LINE_FEED
 adl_error_text_tail_end
 	EVEN
+
 adl_error_text1
 	DC.B ASCII_LINE_FEED,"OS 2.0 or better required",ASCII_LINE_FEED,ASCII_LINE_FEED
 adl_error_text1_end
 	EVEN
+
 adl_error_text2
 	DC.B ASCII_LINE_FEED,"PAL machine required",ASCII_LINE_FEED
 adl_error_text2_end
 	EVEN
+
 adl_error_text3
 	DC.B ASCII_LINE_FEED,"Couldnt open graphics.library",ASCII_LINE_FEED,ASCII_LINE_FEED
 adl_error_text3_end
 	EVEN
+
 adl_error_text4
 	DC.B ASCII_LINE_FEED,"Couldn't open intuition.library",ASCII_LINE_FEED,ASCII_LINE_FEED
 adl_error_text4_end
 	EVEN
+
 adl_error_text5
 	DC.B ASCII_LINE_FEED,"Couldn't open gadtools.library",ASCII_LINE_FEED,ASCII_LINE_FEED
 adl_error_text5_end
@@ -6849,6 +6883,7 @@ dc_parsing_begin_text
 	DC.B ASCII_LINE_FEED,"Parsing and transferring playlist to playback queue......"
 dc_parsing_begin_text_end
 	EVEN
+
 dc_parsing_result_text
 	DC.B "done",ASCII_LINE_FEED,ASCII_LINE_FEED
 	DC.B "result: "
@@ -6882,6 +6917,7 @@ dc_file_request_pattern_os2x
 	DC.B "#?.txt|"
 	DC.B "_dl.#?)",0
 	EVEN
+
 dc_file_request_pattern_os3x
 	DC.B "~(#?.bin|"
 	DC.B "#?.dat#?|"
@@ -6897,6 +6933,7 @@ dc_file_request_pattern_os3x
 dc_file_request_positive_text
 	DC.B "Use",0
 	EVEN
+
 dc_file_request_negative_text
 	DC.B "Quit",0
 	EVEN
@@ -6905,9 +6942,11 @@ dc_file_request_negative_text
 dc_runmode_request_title
 	DC.B "Define run mode",0
 	EVEN
+
 dc_runmode_request_text_body
 	DC.B "In which mode should the demo run?",ASCII_LINE_FEED,0
 	EVEN
+
 dc_runmode_request_text_gadgets
 	DC.B "OCS vanilla|AGA vanilla|Plain/Turbo",0
 	EVEN
@@ -6918,38 +6957,47 @@ dc_message_text
 dc_message_text_end
 	EVEN
 
+
 dc_error_text1
 	DC.B ASCII_LINE_FEED,"Couldn't allocate entries/playback queue buffer"
 dc_error_text1_end
 	EVEN
+
 dc_error_text2
 	DC.B ASCII_LINE_FEED,"Couldn't find playlist file",ASCII_LINE_FEED
 dc_error_text2_end
 	EVEN
+
 dc_error_text3
 	DC.B ASCII_LINE_FEED,"Couldn't allocate file info block structure"
 dc_error_text3_end
 	EVEN
+
 dc_error_text4
 	DC.B ASCII_LINE_FEED,"Couldn't examine playlist file",ASCII_LINE_FEED
 dc_error_text4_end
 	EVEN
+
 dc_error_text5
 	DC.B ASCII_LINE_FEED,"Couldn't allocate memory for playlist file"
 dc_error_text5_end
 	EVEN
+
 dc_error_text6
 	DC.B ASCII_LINE_FEED,"Couldn't open playlist file",ASCII_LINE_FEED
 dc_error_text6_end
 	EVEN
+
 dc_error_text7
 	DC.B ASCII_LINE_FEED,"Playlist file read error",ASCII_LINE_FEED
 dc_error_text7_end
 	EVEN
+
 dc_error_text8
 	DC.B ASCII_LINE_FEED,"Couldn't allocate dos object",ASCII_LINE_FEED
 dc_error_text8_end
 	EVEN
+
 dc_error_text9
 	DC.B ASCII_LINE_FEED,"Entry "
 dc_entries_string
@@ -6957,38 +7005,47 @@ dc_entries_string
 	DC.B "could not be transferred. Playlist arguments syntax error",ASCII_LINE_FEED,ASCII_LINE_FEED,ASCII_LINE_FEED
 dc_error_text9_end
 	EVEN
+
 dc_error_text10
 	DC.B ASCII_LINE_FEED,"Couldn't open asl.library",ASCII_LINE_FEED,ASCII_LINE_FEED
 dc_error_text10_end
 	EVEN
+
 dc_error_text11
 	DC.B ASCII_LINE_FEED,"Couldn't find program directory",ASCII_LINE_FEED,ASCII_LINE_FEED
 dc_error_text11_end
 	EVEN
+
 dc_error_text12
 	DC.B ASCII_LINE_FEED,"Couldn't get program directory name"
 dc_error_text12_end
 	EVEN
+
 dc_error_text13
 	DC.B ASCII_LINE_FEED,"Couldn't initialize file requester structure",ASCII_LINE_FEED,ASCII_LINE_FEED
 dc_error_text13_end
 	EVEN
+
 dc_error_text14
 	DC.B ASCII_LINE_FEED,"Directory not found"
 dc_error_text14_end
 	EVEN
+
 dc_error_text15
 	DC.B ASCII_LINE_FEED,"No demo file selected"
 dc_error_text15_end
 	EVEN
+
 dc_error_text16
 	DC.B ASCII_LINE_FEED,"Demo filepath is longer than 123 characters"
 dc_error_text16_end
 	EVEN
+
 dc_error_text17
 	DC.B ASCII_LINE_FEED,"Demo file not found"
 dc_error_text17_end
 	EVEN
+
 dc_error_text18
 	DC.B ASCII_LINE_FEED,"Couldn't allocate memory for resident program"
 dc_error_text18_end
@@ -6997,94 +7054,119 @@ dc_error_text18_end
 
 ; Queue Handler
 	CNOP 0,4
-qh_get_visual_info_tags		DS.L 1
+qh_get_visual_info_tags		
+	DS.L 1
 
 
 	CNOP 0,4
-qh_gadget_list			DS.L 1
+qh_gadget_list			
+	DS.L 1
 
 
 	CNOP 0,4
-qh_new_gadget			DS.B gng_SIZEOF
+qh_new_gadget			
+	DS.B gng_SIZEOF
 
 	CNOP 0,4
-qh_topaz_80			DS.B ta_SIZEOF
-
-
-	CNOP 0,4
-qh_button_tags			DS.L 3
-
-	CNOP 0,4
-qh_set_button_tags		DS.L 3
+qh_topaz_80			
+	DS.B ta_SIZEOF
 
 
 	CNOP 0,4
-qh_text_gadget_tags		DS.L 5
+qh_button_tags			
+	DS.L 3
 
 	CNOP 0,4
-qh_set_text_gadget_tags		DS.L 3
-
-
-	CNOP 0,4
-qh_integer_gadget_tags		DS.L 5
-
-	CNOP 0,4
-qh_set_integer_gadget_tags	DS.L 3
+qh_set_button_tags		
+	DS.L 3
 
 
 	CNOP 0,4
-qh_cycle_gadget_tags		DS.L 5
+qh_text_gadget_tags		
+	DS.L 5
 
 	CNOP 0,4
-qh_set_cycle_gadget_tags	DS.L 3
-
-	CNOP 0,4
-qh_cycle_gadget_array		DS.L 4
-
-
-	CNOP 0,4
-qh_mx_gadget_tags		DS.L 5
-
-	CNOP 0,4
-qh_set_mx_gadget_tags		DS.L 3
-
-	CNOP 0,4
-qh_mx_gadget_array		DS.L 3
+qh_set_text_gadget_tags		
+	DS.L 3
 
 
 	CNOP 0,4
-qh_edit_window_tags		DS.B edit_window_tag_list_size
+qh_integer_gadget_tags		
+	DS.L 5
+
+	CNOP 0,4
+qh_set_integer_gadget_tags	
+	DS.L 3
 
 
+	CNOP 0,4
+qh_cycle_gadget_tags		
+	DS.L 5
 
-qh_bwd_button_text		DC.B "<",0
+	CNOP 0,4
+qh_set_cycle_gadget_tags	
+	DS.L 3
+
+	CNOP 0,4
+qh_cycle_gadget_array		
+	DS.L 4
+
+
+	CNOP 0,4
+qh_mx_gadget_tags		
+	DS.L 5
+
+	CNOP 0,4
+qh_set_mx_gadget_tags		
+	DS.L 3
+
+	CNOP 0,4
+qh_mx_gadget_array
+	DS.L 3
+
+
+	CNOP 0,4
+qh_edit_window_tags		
+	DS.B edit_window_tag_list_size
+
+
+qh_bwd_button_text
+	DC.B "<",0
 	EVEN
 
-qh_fwd_button_text		DC.B ">",0
+qh_fwd_button_text		
+	DC.B ">",0
 	EVEN
 
 
-qh_cycle_gadget_choice_text1	DC.B "plain/turbo",0
+qh_cycle_gadget_choice_text1	
+	DC.B "plain/turbo",0
 	EVEN
 
-qh_cycle_gadget_choice_text2	DC.B "OCS vanilla",0
+qh_cycle_gadget_choice_text2	
+	DC.B "OCS vanilla",0
 	EVEN
 
-qh_cycle_gadget_choice_text3	DC.B "AGA vanilla",0
-	EVEN
-
-
-qh_mx_gadget_choice_text1	DC.B "Not played",0
-	EVEN
-
-qh_mx_gadget_choice_text2	DC.B "Played",0
+qh_cycle_gadget_choice_text3	
+	DC.B "AGA vanilla",0
 	EVEN
 
 
-qh_positive_button_text		DC.B "Save",0
+qh_mx_gadget_choice_text1	
+	DC.B "Not played",0
 	EVEN
 
-qh_negative_button_text		DC.B "Quit",0
+qh_mx_gadget_choice_text2	
+	DC.B "Played",0
+	EVEN
+
+
+qh_positive_button_text		
+	DC.B "Save",0
+	EVEN
+
+qh_negative_button_text		
+	DC.B "Quit",0
 	EVEN
 
 
@@ -7095,24 +7177,29 @@ qh_show_entry_current_number
 	DC.B " ",34
 qh_show_entry_current_number_end
 	EVEN
+
 qh_show_entry_space
 	DC.B 34," ................................................"
 qh_show_entry_space_end
 	EVEN
+
 qh_entry_active_text1
 	DC.B " [not played]"
 qh_entry_active_text1_end
 	EVEN
+
 qh_entry_active_text2
 	DC.B " [played]"
 qh_entry_active_text2_end
 	EVEN
 
 
-qh_edit_window_name1		DC.B "Edit entry",0
+qh_edit_window_name1		
+	DC.B "Edit entry",0
 	EVEN
 
-qh_edit_window_name2		DC.B "Edit queue",0
+qh_edit_window_name2		
+	DC.B "Edit queue",0
 	EVEN
 
 
@@ -7120,6 +7207,7 @@ qh_info_message_text1
 	DC.B ASCII_LINE_FEED,"Playback queue is empty.",ASCII_LINE_FEED,ASCII_LINE_FEED
 qh_info_message_text1_end
 	EVEN
+
 qh_info_message_text2
 	DC.B ASCII_LINE_FEED,ASCII_LINE_FEED,"Playback queue has "
 qh_not_used_entries_string
@@ -7128,22 +7216,27 @@ qh_not_used_entries_string
 	DC.B "unused entries left.",ASCII_LINE_FEED,ASCII_LINE_FEED
 qh_info_message_text2_end
 	EVEN
+
 qh_info_message_text3
 	DC.B ASCII_LINE_FEED,"The playback queue is empty.",ASCII_LINE_FEED,ASCII_LINE_FEED
 qh_info_message_text3_end
 	EVEN
+
 qh_info_message_text4
 	DC.B ASCII_LINE_FEED,"No playback queue entries to clear.",ASCII_LINE_FEED,ASCII_LINE_FEED
 qh_info_message_text4_end
 	EVEN
+
 qh_info_message_text5
 	DC.B ASCII_LINE_FEED,"Playback queue entries cleared.",ASCII_LINE_FEED,ASCII_LINE_FEED
 qh_info_message_text5_end
 	EVEN
+
 qh_info_message_text6
 	DC.B ASCII_LINE_FEED,"Queue already set back.",ASCII_LINE_FEED,ASCII_LINE_FEED
 qh_info_message_text6_end
 	EVEN
+
 qh_info_message_text7
 	DC.B ASCII_LINE_FEED,"Queue position set back to first entry. All demo play states cleared.",ASCII_LINE_FEED,ASCII_LINE_FEED
 qh_info_message_text7_end
@@ -7154,23 +7247,26 @@ qh_error_text1
 	DC.B ASCII_LINE_FEED,"Couldn't lock workbench",ASCII_LINE_FEED
 qh_error_text1_end
 	EVEN
+
 qh_error_text2
 	DC.B ASCII_LINE_FEED,"Couldn't get workbench visuals",ASCII_LINE_FEED
 qh_error_text2_end
 	EVEN
+
 qh_error_text3
 	DC.B ASCII_LINE_FEED,"Couldn't create context gadget",ASCII_LINE_FEED
 qh_error_text3_end
 	EVEN
+
 qh_error_text4
 	DC.B ASCII_LINE_FEED,"Couldn't create gadget",ASCII_LINE_FEED
 qh_error_text4_end
 	EVEN
+
 qh_error_text5
 	DC.B ASCII_LINE_FEED,"Couldn't open edit window",ASCII_LINE_FEED
 qh_error_text5_end
 	EVEN
-
 
 
 ; Run Demo
@@ -7215,15 +7311,18 @@ rd_old_chips_registers
 	DS.B old_chips_registers_size
 
 
-rd_pal_screen_name		DC.B "Amiga Demo Launcher 2",0
+rd_pal_screen_name		
+	DC.B "Amiga Demo Launcher 2",0
 	EVEN
 
 
-rd_invisible_window_name	DC.B "Amiga Demo Launcher 2",0
+rd_invisible_window_name	
+	DC.B "Amiga Demo Launcher 2",0
 	EVEN
 
 
-rd_demo_dir_path		DS.B adl_demofile_path_length
+rd_demo_dir_path		
+	DS.B adl_demofile_path_length
 	EVEN
 
 
@@ -7231,6 +7330,7 @@ rd_demofile_name_header
 	DC.B ASCII_LINE_FEED,"Playing entry ",34
 rd_demofile_name_header_end
 	EVEN
+
 rd_demofile_name_tail
 	DC.B 34,ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_demofile_name_tail_end
@@ -7254,14 +7354,17 @@ rd_info_message_text1
 	DC.B ASCII_LINE_FEED,"End of playback queue reached",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_info_message_text1_end
 	EVEN
+
 rd_info_message_text2
 	DC.B ASCII_LINE_FEED,"Entry already played",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_info_message_text2_end
 	EVEN
+
 rd_info_message_text3
 	DC.B "No more entries left to play",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_info_message_text3_end
 	EVEN
+
 rd_info_message_text4
 	DC.B "Replay loop stopped",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_info_message_text4_end
@@ -7275,106 +7378,132 @@ rd_error_text_header_index
 	DC.B " "
 rd_error_text_header_end
 	EVEN
+
 rd_error_text1
 	DC.B ASCII_LINE_FEED,"Couldn't open ciaa.resource",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text1_end
 	EVEN
+
 rd_error_text2
 	DC.B ASCII_LINE_FEED,"Couldn't open ciab.resource",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text2_end
 	EVEN
+
 rd_error_text3
 	DC.B ASCII_LINE_FEED,"Couldn't open timer.device",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text3_end
 	EVEN
+
 rd_error_text4
 	DC.B ASCII_LINE_FEED,"Couldn't open icon.library",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text4_end
 	EVEN
+
 rd_error_text5
 	DC.B ASCII_LINE_FEED,"Couldn't create serial message port",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text5_end
 	EVEN
+
 rd_error_text6
 	DC.B ASCII_LINE_FEED,"Couldn't open serial.device",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text6_end
 	EVEN
+
 rd_error_text7
 	DC.B ASCII_LINE_FEED,"Couldnt allocate sprite data structure"
 rd_error_text7_end
 	EVEN
+
 rd_error_text8
 	DC.B ASCII_LINE_FEED,"Invalid monitor ID",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text8_end
 	EVEN
+
 rd_error_text9
 	DC.B "Run mode AGA vanilla not supported on this config",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text9_end
 	EVEN
+
 rd_error_text10
 	DC.B ASCII_LINE_FEED,"Couldn't open demo file",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text10_end
 	EVEN
+
 rd_error_text11
 	DC.B ASCII_LINE_FEED,"No executable demo file"
 rd_error_text11_end
 	EVEN
+
 rd_error_text12
 	DC.B ASCII_LINE_FEED,"Couldn't find demo directory",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text12_end
 	EVEN
+
 rd_error_text13
 	DC.B ASCII_LINE_FEED,"Prerun script filepath is longer than 63 characters"
 rd_error_text13_end
 	EVEN
+
 rd_error_text14
 	DC.B ASCII_LINE_FEED,"Couldn't execute prerun script file",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text14_end
 	EVEN
+
 rd_error_text15
 	DC.B ASCII_LINE_FEED,"Couldn't open degrade screen",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text15_end
 	EVEN
+
 rd_error_text16
 	DC.B ASCII_LINE_FEED,"Lores PAL screen not supported",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text16_end
 	EVEN
+
 rd_error_text17
 	DC.B ASCII_LINE_FEED,"Couldn't open invisible window",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text17_end
 	EVEN
+
 rd_error_text18
 	DC.B ASCII_LINE_FEED,"Couldn't load demo file",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text18_end
 	EVEN
+
 rd_error_text19
 	DC.B ASCII_LINE_FEED,"Couldn't open WHDLoad .info file",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text19_end
 	EVEN
+
 rd_error_text20a
 	DC.B ASCII_LINE_FEED,"Serial device in use",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text20a_end
 	EVEN
+
 rd_error_text20b
 	DC.B ASCII_LINE_FEED,"Baud rate not supported by hardware",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text20b_end
 	EVEN
+
 rd_error_text20c
 	DC.B ASCII_LINE_FEED,"Bad parameter",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text20c_end
 	EVEN
+
 rd_error_text20d
 	DC.B ASCII_LINE_FEED,"Hardware data overrun",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text20d_end
 	EVEN
+
 rd_error_text20e
 	DC.B ASCII_LINE_FEED,"No data set ready",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text20e_end
 	EVEN
+
 rd_error_text21
 	DC.B ASCII_LINE_FEED,"Write to serial port failed",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text21_end
 	EVEN
+
 rd_error_text22
 	DC.B ASCII_LINE_FEED,"Couldn't execute WHDLoad slave file",ASCII_LINE_FEED,ASCII_LINE_FEED
 rd_error_text22_end
@@ -7382,11 +7511,16 @@ rd_error_text22_end
 
 
 ; WHD-Load
-whdl_tooltype_PRELOAD		DC.B "PRELOAD",0
+whdl_tooltype_PRELOAD		
+	DC.B "PRELOAD",0
 	EVEN
-whdl_tooltype_PRELOADSIZE	DC.B "PRELOADSIZE",0
+
+whdl_tooltype_PRELOADSIZE	
+	DC.B "PRELOADSIZE",0
 	EVEN
-whdl_tooltype_QUITKEY		DC.B "QUITKEY",0
+
+whdl_tooltype_QUITKEY		
+	DC.B "QUITKEY",0
 	EVEN
 
 
