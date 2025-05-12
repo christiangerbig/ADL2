@@ -2312,7 +2312,7 @@ dc_init_reset_program_loop2
 	beq.s	dc_init_reset_program_skip3
 	GET_CUSTOM_TRAP_VECTORS
 	move.l	d0,a0			; source
-	move.w	#TRAP_0_VECTOR,a1	; target chip memory
+	move.w	#TRAP_0_VECTOR,a1	; destination chip memory
 	moveq	#adl_used_trap_vectors_number-1,d7
 dc_init_reset_program_loop3
 	move.l	(a0)+,(a1)+
@@ -4543,8 +4543,8 @@ rd_get_demofile_dir_path
 	moveq	#adl_demofile_path_length-1,d7
 	move.l	rd_demofile_path(a3),a0 ; source
 	add.l	d7,a0			; end of source
-	lea	rd_demo_dir_path(pc),a1 ; target
-	add.l	d7,a1			; end of target
+	lea	rd_demo_dir_path(pc),a1 ; destination
+	add.l	d7,a1			; end of destination
 rd_get_dir_loop
 	move.b	-(a0),d0
 	subq.w	#1,d7
@@ -4652,7 +4652,7 @@ rd_execute_prerunscript
 	CNOP 0,4
 rd_copy_prerunscript_path
 	move.l	d0,a0			; source: prerun script path
-	lea	rd_prerunscript_cmd_line_path(pc),a1 ; target: command line
+	lea	rd_prerunscript_cmd_line_path(pc),a1 ; destination: command line
 	moveq	#adl_prerunscript_path_length-1,d7
 rd_copy_prerunscript_path_loop
 	move.b	(a0)+,(a1)+
@@ -5585,11 +5585,11 @@ rd_upgrade_cpu_clock_skip
 rd_restore_custom_traps
 	move.l	rd_old_vbr(a3),d0
 	beq.s	rd_restore_custom_traps_skip
-	move.l	d0,a1			; target: fast memory
+	move.l	d0,a1			; destination: fast memory
 	ADDF.W	TRAP_0_VECTOR,a1
 	bsr.s	rd_copy_custom_traps
 rd_restore_custom_traps_skip
-	move.w	#TRAP_0_VECTOR,a1	; target: chip memory
+	move.w	#TRAP_0_VECTOR,a1	; destination: chip memory
 	bsr.s	rd_copy_custom_traps
 	CALLEXECQ CacheClearU
 
@@ -6258,7 +6258,7 @@ rp_dec_to_hex_loop
 	add.w	d2,d0			; set nibble
 	ext.l	d1
 	bne.s	rp_dec_to_hex_loop
-	and.l	#$000000ff,d0		; only lower byte
+	and.l	#$000000ff,d0		; only low byte
 	rts
 
 
