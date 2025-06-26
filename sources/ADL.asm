@@ -208,7 +208,7 @@
 
 FirstCode			EQU 4	; offset in SegList
 
-MAGIC_COOKIE			EQU $000003f3
+MAGIC_COOKIE			EQU 00003f3
 magic_cookie_length		EQU LONGWORD_SIZE
 
 RUNMODE_PLAIN_TURBO		EQU $01
@@ -2006,7 +2006,7 @@ dc_display_remaining_files
 	sub.w	adl_entries_number(a3),d1 ; remaining number of free entries
 	cmp.w	#adl_entries_number_min,d1
 	bne.s	dc_request_title_skip
-	clr.b	dc_file_request_character_s-dc_file_request_remaining_files(a0) ; delete "s" of demos
+	clr.b	dc_file_request_char_s-dc_file_request_remaining_files(a0) ; delete "s" of demos
 dc_request_title_skip
 	moveq	#2,d7			; number of digits to convert
 	bra	rp_dec_to_ascii
@@ -4559,9 +4559,9 @@ rd_get_dir_skip1
 	move.b	d0,(a1)			; set ":"
 rd_get_dir_skip2
 	subq.w	#1,d7			; loopend at false
-rd_copy_characters_loop
+rd_copy_chars_loop
 	move.b	-(a0),-(a1)
-	dbf	d7,rd_copy_characters_loop
+	dbf	d7,rd_copy_chars_loop
         rts
 
 
@@ -6167,7 +6167,7 @@ rp_wait_rasterline_loop2
 	swap	d1
 	move.w	VHPOSR(a5),d1
 	and.l	d2,d1			; only bits V0-V8
-	cmp.l	d1,d0			; still same raster line ?
+	cmp.l	d1,d0			; still same rasterline ?
 	beq.s	rp_wait_rasterline_loop2
 	dbf	d7,rp_wait_rasterline_loop1
 	rts
@@ -6907,7 +6907,7 @@ dc_file_request_title
 dc_file_request_remaining_files
 	DC.B "   "
 	DC.B "demo"
-dc_file_request_character_s
+dc_file_request_char_s
 	DC.B "s",0
 	EVEN
 
