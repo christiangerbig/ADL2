@@ -1,0 +1,6 @@
+"Programme:Testdemo/WHDLoad/Kefrens/Megademo7/Megademo7.Slave" PLAINTURBO SECS 10 MULTIPART 4
+"Programme:Testdemos/OCS/Kefrens/Kefrens.7Up" OCSVANILLA SECS 20
+"Programme:Testdemos/OCS/Andromeda/Jointro2" OCSVANILLA MINS 01 SECS 00
+"Programme:Testdemos/OCS/Andromeda/TopSecret15Intro" OCSVANILLA MINS 00 SECS 20 PRERUNSCRIPT "Daten:hello.script"
+"Programme:Testdemos/AGA/Cocoon/Catabasis/Catabasis.exe" AGAVANILLA PRERUNSCRIPT "Daten:hello2.script"
+"Programme:Testdemos/AGA/PolkaBrothers/FridayAt8" AGAVANILLA
