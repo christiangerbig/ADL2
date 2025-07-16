@@ -4039,7 +4039,8 @@ rd_start
 	move.l	d0,rd_active_screen(a3)
 	bsr	rd_get_sprite_resolution
 	bsr	rd_get_first_window
-	bsr	rd_get_screen_mode
+	move.l	d0,rd_first_window(a3)
+	bsr	rd_check_screen_mode
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_cleared_sprite_data
 
@@ -4447,6 +4448,7 @@ rd_get_sprite_resolution_skip
 
 ; Input
 ; Result
+; d0.l  Window structure first window
 		CNOP 0,4
 rd_get_first_window
 		move.l	rd_active_screen(a3),d0
@@ -4456,7 +4458,7 @@ rd_get_first_window_quit
 		CNOP 0,4
 rd_get_first_window_skip
 		move.l	d0,a0
-		move.l	sc_FirstWindow(a0),rd_first_window(a3)
+		move.l	sc_FirstWindow(a0),d0
 		bra.s	rd_get_first_window_quit
 
 
@@ -4464,27 +4466,27 @@ rd_get_first_window_skip
 ; result
 ; d0.l	Return code
 	CNOP 0,4
-rd_get_screen_mode
+rd_check_screen_mode
 	move.l	rd_active_screen(a3),d0
-	beq.s	rd_get_screen_mode_ok
+	beq.s	rd_check_screen_mode_ok
 	move.l	d0,a0
 	ADDF.W	sc_ViewPort,a0
 	CALLGRAF GetVPModeID
 	cmp.l	#INVALID_ID,d0
-	bne.s	rd_get_screen_mode_skip
+	bne.s	rd_check_screen_mode_skip
 	lea	rd_error_text8(pc),a0
 	moveq	#rd_error_text8_end-rd_error_text8,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
-rd_get_screen_mode_quit
+rd_check_screen_mode_quit
 	rts
 	CNOP 0,4
-rd_get_screen_mode_skip
+rd_check_screen_mode_skip
 	and.l	#MONITOR_ID_MASK,d0	; without resolution
 	move.l	d0,rd_active_screen_mode(a3)
-rd_get_screen_mode_ok
+rd_check_screen_mode_ok
 	moveq	#RETURN_OK,d0
-	bra.s	rd_get_screen_mode_quit
+	bra.s	rd_check_screen_mode_quit
 
 
 ; input
