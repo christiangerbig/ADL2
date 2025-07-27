@@ -149,6 +149,10 @@
 ; - Code optimized
 ; - Bugfix: Sprite degrader to lores
 
+; V.2.10
+; - Identifier changed from "-DL-" to NOT("ADL2")
+; - code cleared
+
 
 ; OS2.x bugs which have an impact on the ADL
 ; - DIWHIGH = $00ff (first copperlist) -> Blank screen with some old OCS intros,
@@ -318,6 +322,7 @@ qh_cycle_gadget_x_position	EQU ((qh_edit_window_x_size-qh_cycle_gadget_x_size)*5
 qh_cycle_gadget_y_position1	EQU ((qh_edit_window_y_size-qh_cycle_gadget_y_size)*30)/100
 qh_cycle_gadget_y_position2	EQU ((qh_edit_window_y_size-qh_cycle_gadget_y_size)*40)/100
 qh_cycle_gadget_id		EQU 4
+qh_cycle_gadget_init_choice	EQU 0	; ordinal number for first choice
 
 qh_mx_gadget_x_size		EQU 105
 qh_mx_gadget_y_size		EQU 11
@@ -325,6 +330,7 @@ qh_mx_gadget_x_position		EQU ((qh_edit_window_x_size-qh_mx_gadget_x_size)*50)/10
 qh_mx_gadget_y_position1	EQU ((qh_edit_window_y_size-qh_mx_gadget_y_size)*55)/100
 qh_mx_gadget_y_position2	EQU ((qh_edit_window_y_size-qh_mx_gadget_y_size)*60)/100
 qh_mx_gadget_id			EQU 5
+qh_mx_gadget_init_choice	EQU 0	; ordinal number for first choice
 
 qh_positive_button_x_size	EQU 70
 qh_positive_button_y_size	EQU 12
@@ -367,9 +373,6 @@ rp_color_error			EQU $d74
 
 
 	INCLUDE "taglists.i"
-
-
-	INCLUDE "screen-colors.i"
 
 
 	RSRESET
@@ -558,6 +561,8 @@ old_chips_registers_size	RS.B 0
 ; Amiga Demo Launcher
 adl_os_version			RS.W 1
 adl_cpu_flags			RS.W 1
+
+adl_abort			RS.W 1
 	RS_ALIGN_LONGWORD
 adl_output_handle		RS.L 1
 adl_dos_return_code		RS.L 1
@@ -633,7 +638,7 @@ rd_arg_softreset_enabled	RS.W 1
 rd_arg_resetonerror_enabled	RS.W 1
 
 	RS_ALIGN_LONGWORD
-rd_serial_message_port		RS.L 1
+rd_serial_msg_port		RS.L 1
 rd_playtimer_delay		RS.W 1
 
 	RS_ALIGN_LONGWORD
@@ -691,7 +696,7 @@ adl_variables_size		RS.B 0
 
 ; Amiga Demo-Launcher
 	movem.l d2-d7/a2-a6,-(a7)
-	lea	adl_variables(pc),a3
+	lea	adl_variables(pc),a3	; base for all variables
 	bsr	adl_init_variables
 	bsr	adl_init_structures
 
@@ -701,11 +706,6 @@ adl_variables_size		RS.B 0
 	bsr	adl_get_output
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_dos_library
-
-	bsr	adl_check_system_properties
-	move.l	d0,adl_dos_return_code(a3)
-	bne	adl_cleanup_dos_library
-
 	bsr	adl_open_graphics_library
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_dos_library
@@ -715,54 +715,69 @@ adl_variables_size		RS.B 0
 	bsr	adl_open_gadtools_library
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_intuition_library
-
-	bsr	adl_search_id
+	bsr	adl_open_asl_library
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_gadtools_library
+	bsr	adl_open_icon_library
+	move.l	d0,adl_dos_return_code(a3)
+	bne	adl_cleanup_asl_library
+
+	bsr	adl_check_system_props
+	move.l	d0,adl_dos_return_code(a3)
+	bne	adl_cleanup_icon_library
+
+	bsr	adl_search_id
+
+	tst.w	adl_abort(a3)
+	beq	adl_cleanup_icon_library
 
 	bsr	adl_check_cmd_line
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_read_arguments
-; Amiga Demo Launcher arguments
+
 	tst.w	adl_arg_help_enabled(a3)
 	beq     adl_cleanup_read_arguments
 	tst.w	adl_arg_remove_enabled(a3)
 	beq	adl_cleanup_read_arguments
+
+
 ; Queue Handler arguments
 	tst.w	qh_arg_showqueue_enabled(a3)
-	bne.s	adl_precheck_arg_editentry
+	bne.s	qh_precheck_arg_editentry
 	bsr	qh_show_queue
 	bra	adl_cleanup_read_arguments
 	CNOP 0,4
-adl_precheck_arg_editentry
+qh_precheck_arg_editentry
 	tst.w	qh_arg_editentry_enabled(a3)
-	bne.s	adl_precheck_arg_editqueue
+	bne.s	qh_precheck_arg_editqueue
 	bsr	qh_edit_single_entry
 	bra	adl_cleanup_read_arguments
 	CNOP 0,4
-adl_precheck_arg_editqueue
+qh_precheck_arg_editqueue
 	tst.w	qh_arg_editqueue_enabled(a3)
-	bne.s	adl_precheck_arg_clearqueue
+	bne.s	qh_precheck_arg_clearqueue
 	bsr	qh_edit_queue
 	bra	adl_cleanup_read_arguments
 	CNOP 0,4
-adl_precheck_arg_clearqueue
+qh_precheck_arg_clearqueue
 	tst.w	qh_arg_clearqueue_enabled(a3)
-	bne.s	adl_precheck_arg_resetqueue
+	bne.s	qh_precheck_arg_resetqueue
 	bsr	qh_clear_queue
 	bra	adl_cleanup_read_arguments
 	CNOP 0,4
-adl_precheck_arg_resetqueue
+qh_precheck_arg_resetqueue
 	tst.w	qh_arg_resetqueue_enabled(a3)
-        bne.s	adl_precheck_queue_empty
+        bne.s	qh_precheck_queue_empty
 	bsr	qh_reset_queue
 	bra	adl_cleanup_read_arguments
 	CNOP 0,4
-adl_precheck_queue_empty
+qh_precheck_queue_empty
 	bsr	qh_check_queue_empty
 	tst.l	d0
 	bne.s	dc_start
-; Demo Charger arguments
+
+
+; Demo Charger
 	tst.w	dc_arg_newentry_enabled(a3)
 	beq.s	dc_start
 	tst.w	dc_arg_playlist_enabled(a3)
@@ -771,7 +786,6 @@ adl_precheck_queue_empty
 	tst.w	adl_reset_program_active(a3)
 	beq	rd_start
 
-; Demo Charger
 dc_start
 	tst.w	dc_arg_quiet_enabled(a3)
 	beq.s	dc_start_skip
@@ -779,29 +793,24 @@ dc_start
 dc_start_skip
 	bsr	dc_check_entries_number_max
 	move.l	d0,adl_dos_return_code(a3)
-	bne	adl_cleanup_read_arguments
-
+	bne	dc_cleanup_reset_program
 	bsr	dc_alloc_entries_buffer
 	move.l	d0,adl_dos_return_code(a3)
-	bne	adl_cleanup_read_arguments
-
+	bne	dc_cleanup_reset_program
 	tst.w	dc_arg_playlist_enabled(a3)
 	beq.s	dc_check_playlist
 
-; No playlist file given by argument - new entries via file requester
+; No playlist file given by argument - New entries via file requester
 	tst.w	dc_arg_quiet_enabled(a3)
 	beq.s	dc_cleanup_entries_buffer
-	bsr	dc_open_asl_library
-	move.l	d0,adl_dos_return_code(a3)
-	bne	dc_cleanup_entries_buffer
 	bsr	dc_get_program_dir
 	move.l	d0,adl_dos_return_code(a3)
-	bne.s	dc_cleanup_asl_library
+	bne	adl_cleanup_read_arguments
 dc_demo_charge_loop
 	bsr	dc_display_remaining_files
 	bsr	dc_make_file_request
 	move.l	d0,adl_dos_return_code(a3)
-	bne.s	dc_cleanup_asl_library
+	bne	adl_cleanup_read_arguments
 	bsr	dc_display_file_request
 	move.l	d0,adl_dos_return_code(a3)
 	bne.s	dc_cleanup_file_request
@@ -814,12 +823,10 @@ dc_demo_charge_loop
 	move.l	d0,adl_dos_return_code(a3)
 	beq.s	dc_demo_charge_loop
 
-	bra.s	dc_cleanup_asl_library
+	bra.s	dc_cleanup_reset_program
 	CNOP 0,4
 dc_cleanup_file_request
 	bsr	dc_free_file_request
-dc_cleanup_asl_library
-	bsr	dc_close_asl_library
 dc_cleanup_reset_program
 	bsr	dc_init_reset_program
 	move.l	d0,adl_dos_return_code(a3)
@@ -873,6 +880,10 @@ adl_cleanup_read_arguments
 	bsr	adl_print_io_error
 adl_cleanup_reset_program
 	bsr	adl_remove_reset_program
+adl_cleanup_icon_library
+	bsr	adl_close_icon_library
+adl_cleanup_asl_library
+	bsr	adl_close_asl_library
 adl_cleanup_gadtools_library
 	bsr	adl_close_gadtools_library
 adl_cleanup_intuition_library
@@ -897,10 +908,12 @@ adl_init_variables
 	move.l	exec_base.w,(a0)
 
 ; Amiga Demo Launcher
+	moveq	#FALSE,d1
+	move.w	d1,adl_abort(a3)
+
 	moveq	#TRUE,d0
 	move.l	d0,adl_dos_return_code(a3)
 
-	moveq	#FALSE,d1
 	move.w	d1,adl_reset_program_active(a3)
 
 	move.w	d1,adl_arg_help_enabled(a3)
@@ -977,11 +990,15 @@ adl_init_structures
 	bsr	qh_init_get_visual_info_tags
 	bsr	qh_init_edit_window_tags
 	bsr	qh_init_gadgets
-	bsr	rd_init_pal_screen_colors
-	bsr	rd_init_pal_screen_colors32
-	bsr	rd_init_video_control_tags
 	bsr	rd_init_pal_screen_tags
-	bra	rd_init_invisible_window_tags
+	bsr	rd_init_pal_screen_color_spec
+	bsr	rd_init_pal_screen_rgb4_colors
+	bsr	rd_init_pal_screen_rgb32_colors
+	bsr	rd_init_video_control_tags
+	bsr	rd_init_invisible_window_tags
+	bsr	rd_init_serial_io
+	bsr	rd_init_timer_io
+	rts
 
 
 ; input
@@ -1040,7 +1057,7 @@ dc_init_file_request_tags
 ; window tags
 	move.l	#ASLFR_Window,(a0)+
 	moveq	#0,d0
-	move.l	d0,(a0)+
+	move.l	d0,(a0)+		; will be initializer later
 ; text tags
 	move.l	#ASLFR_TitleText,(a0)+
 	lea	dc_file_request_title(pc),a1
@@ -1169,16 +1186,16 @@ qh_init_text_gadget
 	moveq	#0,d0
 	move.l	d0,(a0)+
 	move.l	#GTTX_Border,(a0)+
-	moveq	#BOOL_TRUE,d0
-	move.l	d0,(a0)+
-	moveq	#TAG_DONE,d0
-	move.l	d0,(a0)
+	moveq	#BOOL_TRUE,d2
+	move.l	d2,(a0)+
+	moveq	#TAG_DONE,d2
+	move.l	d2,(a0)
+
 	lea	qh_set_text_gadget_tags(pc),a0
 	move.l	#GTTX_Text,(a0)+
 	moveq	#0,d0
 	move.l	d0,(a0)+
-	moveq	#TAG_DONE,d0
-	move.l	d0,(a0)
+	move.l	d2,(a0)
 	rts
 
 ; Input
@@ -1187,16 +1204,17 @@ qh_init_text_gadget
 qh_init_button_gadgets
 	lea	qh_button_tags(pc),a0
 	move.l	#GA_Disabled,(a0)+
-	moveq	#BOOL_FALSE,d0
-	move.l	d0,(a0)+
-	moveq	#TAG_DONE,d0
-	move.l	d0,(a0)
+	moveq	#BOOL_FALSE,d2
+	move.l	d2,(a0)+
+	moveq	#TAG_DONE,d2
+	move.l	d2,(a0)
+
 	lea	qh_set_button_tags(pc),a0
 	move.l	#GA_Disabled,(a0)+
-	moveq	#BOOL_FALSE,d0
-	move.l	d0,(a0)+
-	moveq	#TAG_DONE,d0
-	move.l	d0,(a0)
+	moveq	#BOOL_FALSE,d2
+	move.l	d2,(a0)+
+	moveq	#TAG_DONE,d2
+	move.l	d2,(a0)
 	rts
 
 ; Input
@@ -1209,16 +1227,16 @@ qh_init_integer_gadget
 	move.w	qh_edit_entry_offset(a3),d0
 	move.l	d0,(a0)+
 	move.l	#GTIN_MaxChars,(a0)+
-	moveq	#qh_integer_gadget_digits_number,d0
-	move.l	d0,(a0)+
-	moveq	#TAG_DONE,d0
-	move.l	d0,(a0)
+	moveq	#qh_integer_gadget_digits_number,d2
+	move.l	d2,(a0)+
+	moveq	#TAG_DONE,d2
+	move.l	d2,(a0)
+
 	lea	qh_set_integer_gadget_tags(pc),a0
 	move.l	#GTIN_Number,(a0)+
 	moveq	#0,d0
 	move.l	d0,(a0)+
-	moveq	#TAG_DONE,d0
-	move.l	d0,(a0)
+	move.l	d2,(a0)
 	rts
 
 ; Input
@@ -1232,22 +1250,25 @@ qh_init_cycle_gadget
 	move.l	a1,(a0)+
 	lea	qh_cycle_gadget_choice_text3(pc),a1
 	move.l	a1,(a0)+
-	clr.w	(a0)
+	moveq	#0,d0
+	move.l	d0,(a0)			; terminate array
+
 	lea	qh_cycle_gadget_tags(pc),a0
 	move.l	#GTCY_Labels,(a0)+
 	lea	qh_cycle_gadget_array(pc),a1
 	move.l	a1,(a0)+
 	move.l	#GTCY_Active,(a0)+
-	moveq	#0,d0
-	move.l	d0,(a0)+
-	moveq	#TAG_DONE,d0
-	move.l	d0,(a0)
+	moveq	#qh_cycle_gadget_init_choice,d2
+	move.l	d2,(a0)+		
+	moveq	#TAG_DONE,d2
+	move.l	d2,(a0)
+
 	lea	qh_set_cycle_gadget_tags(pc),a0
 	move.l	#GTCY_Active,(a0)+
-	moveq	#0,d0
-	move.l	d0,(a0)+
-	moveq	#TAG_DONE,d0
-	move.l	d0,(a0)
+	moveq	#qh_cycle_gadget_init_choice,d2
+	move.l	d2,(a0)+
+	moveq	#TAG_DONE,d2
+	move.l	d2,(a0)
 	rts
 
 ; Input
@@ -1260,64 +1281,24 @@ qh_init_mx_gadget
 	lea	qh_mx_gadget_choice_text2(pc),a1
 	move.l	a1,(a0)+
 	moveq	#0,d0
-	move.l	d0,(a0)
+	move.l	d0,(a0)			; terminate array
+
 	lea	qh_mx_gadget_tags(pc),a0
 	move.l	#GTMX_Labels,(a0)+
 	lea	qh_mx_gadget_array(pc),a1
 	move.l	a1,(a0)+
 	move.l	#GTMX_Active,(a0)+
-	moveq	#0,d0
-	move.l	d0,(a0)+
-	moveq	#TAG_DONE,d0
-	move.l	d0,(a0)
+	moveq	#qh_mx_gadget_init_choice,d2
+	move.l	d2,(a0)+
+	moveq	#TAG_DONE,d2
+	move.l	d2,(a0)
+
 	lea	qh_set_mx_gadget_tags(pc),a0
 	move.l	#GTMX_Active,(a0)+
-	moveq	#0,d0
-	move.l	d0,(a0)+
-	moveq	#TAG_DONE,d0
-	move.l	d0,(a0)
-	rts
-
-
-; input
-; result
-	CNOP 0,4
-rd_init_pal_screen_colors
-	lea	rd_pal_screen_rgb4_colors(pc),a0
-	moveq	#0,d0
-	moveq	#pal_screen_colors_number-1,d7
-rd_init_pal_screen_colors_loop
-	move.w	d0,(a0)+		; COLORxx = RGB4 black
-        dbf	d7,rd_init_pal_screen_colors_loop
-	rts
-
-
-; input
-; result
-	CNOP 0,4
-rd_init_pal_screen_colors32
-	lea	rd_pal_screen_rgb32_colors(pc),a0
-	move.w	#pal_screen_colors_number,s02c_colors_number(a0)
-	moveq	#0,d0
-	move.w	d0,s02c_start_color(a0)	; COLOR00
-	lea	s02c_color00(a0),a0
-	moveq	#pal_screen_colors_number-1,d7
-rd_init_pal_screen_colors32_loop
-	move.l	d0,(a0)+		; R32 = black
-	move.l	d0,(a0)+		; G32 = black
-	move.l	d0,(a0)+		; B32 = black
-	dbf	d7,rd_init_pal_screen_colors32_loop
-	move.l	d0,(a0)
-	rts
-
-
-; input
-; result
-	CNOP 0,4
-rd_init_video_control_tags
-	lea	rd_video_control_tags(pc),a0
+	moveq	#qh_mx_gadget_init_choice,d2
+	move.l	d2,(a0)+
 	moveq	#TAG_DONE,d2
-	move.l	d2,vctl_TAG_DONE(a0)
+	move.l	d2,(a0)
 	rts
 
 
@@ -1356,8 +1337,8 @@ rd_init_pal_screen_tags
 	move.l	a1,(a0)+
 	move.l	#SA_VideoControl,(a0)+
 	lea	rd_video_control_tags(pc),a1
-	move.l	#VTAG_SPRITERESN_SET,vctl_VTAG_SPRITERESN+ti_tag(a1)
-	move.l	#SPRITERESN_140NS,vctl_VTAG_SPRITERESN+ti_data(a1)
+	move.l	#VTAG_SPRITERESN_SET,vctl_VTAG_SPRITERESN+ti_Tag(a1)
+	move.l	#SPRITERESN_140NS,vctl_VTAG_SPRITERESN+ti_Data(a1)
 	move.l	a1,(a0)+
 	move.l	#SA_Font,(a0)+
 	move.l	d0,(a0)+
@@ -1380,6 +1361,66 @@ rd_init_pal_screen_tags
 	move.l	d2,(a0)+
 	moveq	#TAG_DONE,d2
 	move.l	d2,(a0)
+	rts
+
+
+; Input
+; Result
+		CNOP 0,4
+rd_init_pal_screen_color_spec
+		lea	rd_pal_screen_color_spec(pc),a0 ; OS2.x
+		moveq	#0,d0		; black
+		moveq	#0,d1		; color index
+		MOVEF.W	pal_screen_colors_number-1,d7
+rd_init_pal_screen_color_spec_loop
+		move.w	d1,(a0)+	; color index
+		move.w	d0,(a0)+	; R4
+		move.w	d0,(a0)+	; G4
+		addq.w	#1,d1
+		move.w	d0,(a0)+	; B4
+		dbf	d7,rd_init_pal_screen_color_spec_loop
+		move.w	#-1,(a0)	; terminate array
+		rts
+
+
+; input
+; result
+	CNOP 0,4
+rd_init_pal_screen_rgb4_colors
+	lea	rd_pal_screen_rgb4_colors(pc),a0 ; for LoadRGB4()
+	moveq	#$000,d0		; black
+	moveq	#pal_screen_colors_number-1,d7
+rd_init_pal_screen_rgb4_colors_loop
+	move.w	d0,(a0)+		; RGB4
+        dbf	d7,rd_init_pal_screen_rgb4_colors_loop
+	rts
+
+
+; input
+; result
+	CNOP 0,4
+rd_init_pal_screen_rgb32_colors
+	lea	rd_pal_screen_rgb32_colors(pc),a0 ; for LoadRGB32()
+	move.w	#pal_screen_colors_number,(a0)+
+	moveq	#0,d0
+	move.w	d0,(a0)+		; start with COLOR00
+	MOVEF.W	pal_screen_colors_number-1,d7
+rd_init_pal_screen_rgb32_colors_loop
+	move.l	d0,(a0)+		; R32
+	move.l	d0,(a0)+		; G32
+	move.l	d0,(a0)+		; B32
+	dbf	d7,rd_init_pal_screen_rgb32_colors_loop
+	move.l	d0,(a0)			; terminate list
+	rts
+
+
+; input
+; result
+	CNOP 0,4
+rd_init_video_control_tags
+	lea	rd_video_control_tags(pc),a0
+	moveq	#TAG_DONE,d2
+	move.l	d2,vctl_TAG_DONE(a0)
 	rts
 
 
@@ -1436,6 +1477,32 @@ rd_init_invisible_window_tags
 
 ; input
 ; result
+	CNOP 0,4
+rd_init_serial_io
+	lea	rd_serial_io(pc),a0
+	moveq	#0,d0
+	move.b	d0,LN_Type(a0)
+	move.b	d0,LN_Pri(a0)
+	move.l	d0,LN_Name(a0)
+	move.l	d0,MN_ReplyPort(a0)	; will be initialized later
+	rts
+
+
+; input
+; result
+	CNOP 0,4
+rd_init_timer_io
+	lea	rd_timer_io(pc),a0
+	moveq	#0,d0
+	move.b	d0,LN_Type(a0)
+	move.b	d0,LN_Pri(a0)
+	move.l	d0,LN_Name(a0)
+	move.l	d0,MN_ReplyPort(a0)
+	rts
+
+
+; input
+; result
 ; d0.l	Return code
 	CNOP 0,4
 adl_open_dos_library
@@ -1473,34 +1540,48 @@ adl_get_output_ok
 
 ; input
 ; result
+; d0.l	Screen structure active screen
+	CNOP 0,4
+rd_get_active_screen
+	moveq	#0,d0			; all locks
+	CALLINT LockIBase
+	move.l	d0,a0
+	move.l	ib_ActiveScreen(a6),a2
+	CALLLIBS UnlockIBase
+	move.l	a2,d0
+	rts
+
+
+; input
+; result
 ; d0.l	Return code
 	CNOP 0,4
-adl_check_system_properties
+adl_check_system_props
 	move.l	_SysBase(pc),a0
 	move.w	AttnFlags(a0),adl_cpu_flags(a3)
 	move.w	Lib_Version(a0),d0
 	move.w	d0,adl_os_version(a3)
 	cmp.w	#OS2_VERSION,d0
-	bge.s	adl_check_system_properties_skip
+	bge.s	adl_check_system_props_skip
 	lea	adl_error_text1(pc),a0
 	moveq	#adl_error_text1_end-adl_error_text1,d0
 	bsr	adl_print_text
-adl_check_system_properties_fail
+adl_check_system_props_fail
 	moveq	#RETURN_FAIL,d0
-adl_check_system_properties_quit
+adl_check_system_props_quit
 	rts
 	CNOP 0,4
-adl_check_system_properties_skip
+adl_check_system_props_skip
 	cmp.b	#PAL_FPS,VBlankFrequency(a0) ; OS1.3+
-	beq.s	adl_check_system_properties_ok
+	beq.s	adl_check_system_props_ok
 	lea	adl_error_text2(pc),a0
 	move.l	#adl_error_text2_end-adl_error_text2,d0
 	bsr	adl_print_text
-	bra.s	adl_check_system_properties_fail
+	bra.s	adl_check_system_props_fail
 	CNOP 0,4
-adl_check_system_properties_ok
+adl_check_system_props_ok
 	moveq	#RETURN_OK,d0
-	bra.s	adl_check_system_properties_quit
+	bra.s	adl_check_system_props_quit
 
 
 ; input
@@ -1574,50 +1655,150 @@ adl_open_gadtools_library_ok
 
 ; input
 ; result
+; d0.l	.Return code
+	CNOP 0,4
+adl_open_asl_library
+	lea	asl_library_name(pc),a1
+	moveq	#OS2_VERSION,d0
+	CALLEXEC OpenLibrary
+	lea	_ASLBase(pc),a0
+	move.l	d0,(a0)
+	bne.s	adl_open_asl_library_ok
+	lea	adl_error_text6(pc),a0
+	moveq	#adl_error_text6_end-adl_error_text6,d0
+	bsr	adl_print_text
+	moveq	#RETURN_FAIL,d0
+adl_open_asl_library_quit
+	rts
+	CNOP 0,4
+adl_open_asl_library_ok
+	moveq	#RETURN_OK,d0
+	bra.s	adl_open_asl_library_quit
+
+
+; input
+; result
 ; d0.l	Return code
 	CNOP 0,4
+adl_open_icon_library
+	lea	icon_library_name(pc),a1
+	moveq	#OS2_VERSION,d0
+	CALLEXEC OpenLibrary
+	lea	_IconBase(pc),a0
+	move.l	d0,(a0)
+	bne.s	adl_open_icon_library_ok
+	lea	adl_error_text7(pc),a0
+	moveq	#adl_error_text7_end-adl_error_text7,d0
+	bsr	adl_print_text
+	moveq	#RETURN_FAIL,d0
+adl_open_icon_library_quit
+	rts
+	CNOP 0,4
+adl_open_icon_library_ok
+	moveq	#RETURN_OK,d0
+	bra.s	adl_open_icon_library_quit
+
+
+; input
+; result
+	CNOP 0,4
 adl_search_id
-	move.l	#~("-DL-"),d4
-	move.l	_SysBase(pc),a6
-	move.w	#4*LONGWORD_SIZE,a1
+	move.l	#~("ADL2"),d4		; encrypted id
+	move.w	#QUADWORD_SIZE*2,a1
 	move.l	MaxLocMem(a6),a2
 	move.l	a2,d7
 	lsr.l	#4,d7			; chip memory size in 16 byte steps
 	subq.l	#1,d7			; loopend at false
 adl_search_id_loop
 	sub.l	a1,a2
-	movem.l	(a2),d0-d3
-	not.l	d0
+	movem.l	(a2),d0-d3		; fetch 16 bytes
 	cmp.l	d4,d0
-	beq.s	adl_search_id_skip1_3
-	not.l	d1
+	beq.s	adl_search_id_skip1
 	cmp.l	d4,d1
-	beq.s	adl_search_id_skip1_4
-	not.l	d2
+	beq.s	adl_search_id_skip2
 	cmp.l	d4,d2
-	beq.s	adl_search_id_skip1_2
-	not.l	d3
+	beq.s	adl_search_id_skip3
 	cmp.l	d4,d3
-	beq.s	adl_search_id_skip1_1
+	beq.s	adl_search_id_skip4
 	subq.l	#1,d7
 	bpl.s	adl_search_id_loop
-	bra.s	adl_search_id_skip4
+; No ADL2 id found
+	bsr	adl_init_values
+adl_search_id_quit
+	rts
 	CNOP 0,4
-adl_search_id_skip1_1
-	addq.w	#QUADWORD_SIZE,a2	; reset program
-	bra.s	adl_search_id_skip1_4
+adl_search_id_skip1
+	subq.w	#LONGWORD_SIZE,a2	; pointer reset program
+	bsr.s	adl_init_values
+	bra.s	adl_search_id_quit
 	CNOP 0,4
-adl_search_id_skip1_2
-	addq.w	#LONGWORD_SIZE,a2	; reset program
-	bra.s	adl_search_id_skip1_4
+adl_search_id_skip2
+	bsr.s	adl_init_values
+	bra.s	adl_search_id_quit
 	CNOP 0,4
-adl_search_id_skip1_3
-	subq.w	#LONGWORD_SIZE,a2	; reset program
-adl_search_id_skip1_4
+adl_search_id_skip3
+	addq.w	#LONGWORD_SIZE,a2	; pointer reset program
+	bsr.s	adl_init_values
+	bra.s	adl_search_id_quit
+	CNOP 0,4
+adl_search_id_skip4
+	add.w	#QUADWORD_SIZE,a2	; pointer reset program
+	bsr.s	adl_init_values
+	bra.s	adl_search_id_quit
+
+
+; Input
+; a2.l	Pointer reset program in memory
+; Result
+	CNOP 0,4
+adl_init_values
+	move.l	_SysBase(pc),a6
 	move.l	CoolCapture(a6),d0
-	beq.s   adl_search_id_skip2
+	bne.s	adl_init_values_skip1
+; Enable inactive ADL2 in memory
+	bsr.s	adl_init_cool_capture
+	jsr	rp_init_custom_traps-rp_start(a2) ; init custom traps
+	bsr.s	adl_update_values
+adl_init_values_quit
+	rts
+	CNOP 0,4
+adl_init_values_skip1
+; Cool Capture already in use
 	cmp.l	a2,d0
-	beq.s	adl_search_id_skip3
+	bne.s   adl_init_values_skip2
+	bsr.s	adl_update_values
+	bra.s	adl_init_values_quit
+	CNOP 0,4
+adl_init_values_skip2
+; Cool Capture already used by different reset program
+	bsr.s	adl_do_request
+	cmp.l	#BOOL_TRUE,d0		; requester gadget "Proceed" clicked ?
+	beq.s	adl_init_values_skip3
+	clr.w	adl_abort(a3)
+	bra.s	adl_init_values_quit
+	CNOP 0,4
+adl_init_values_skip3
+	bsr.s	adl_set_default_values
+	bra.s	adl_init_values_quit
+
+
+; Input
+; a2.l	Pointer reset program in memory
+; a6.l	Exec base
+; Result
+	CNOP 0,4
+adl_init_cool_capture
+	move.l	a2,CoolCapture(a6)
+	bsr	rp_update_exec_checksum
+	CALLLIBS CacheClearU
+	rts
+
+
+; Input
+; Output
+; d0.l	Boolean value for clicked gadget
+	CNOP 0,4
+adl_do_request
 	sub.l	a0,a0			; requester on workbench/public screen
 	lea	adl_cool_capture_request(pc),a1
 	move.l	a0,a2			; no IDCMP flags
@@ -1625,20 +1806,13 @@ adl_search_id_skip1_4
 	move.l	a0,a3			; no arguments list
 	CALLINT EasyRequestArgs
 	move.l	(a7)+,a3
-	cmp.l	#BOOL_TRUE,d0		; gadget "Proceed" ?
-	beq.s	adl_search_id_skip4
-adl_search_id_fail
-	moveq	#RETURN_FAIL,d0
-adl_search_id_quit
 	rts
-; update values
+
+
+; input
+; result
 	CNOP 0,4
-adl_search_id_skip2
-	move.l	a2,CoolCapture(a6)
-	bsr	rp_update_exec_checksum
-	CALLLIBS CacheClearU
-	jsr	rp_init_custom_traps-rp_start(a2) ; init custom traps
-adl_search_id_skip3
+adl_update_values
 	GET_RESIDENT_ENTRIES_NUMBER_MAX
 	move.l	d0,a0
 	move.w	(a0),adl_entries_number_max(a3)
@@ -1651,17 +1825,18 @@ adl_search_id_skip3
 	move.l	d0,a0
 	move.w	(a0),rd_entry_offset(a3)
 	clr.w   adl_reset_program_active(a3)
-adl_search_id_ok
-	moveq	#RETURN_OK,d0
-	bra.s	adl_search_id_quit
-; default values
+	rts
+
+
+; input
+; result
 	CNOP 0,4
-adl_search_id_skip4
+adl_set_default_values
 	moveq	#dc_entries_number_default_max,d2
 	move.w	d2,adl_entries_number_max(a3)
 	lea	rp_entries_number_max(pc),a0
 	move.w	d2,(a0)
-	bra.s	adl_search_id_ok
+	rts
 
 
 ; input
@@ -1680,11 +1855,12 @@ adl_check_cmd_line
 adl_check_cmd_line_fail
 	bsr.s	adl_print_cmd_usage
 	moveq	#RETURN_FAIL,d0
+adl_check_cmd_line_quit
 	rts
 	CNOP 0,4
 adl_check_cmd_line_ok
 	moveq	#RETURN_OK,d0
-	rts
+	bra.s	adl_check_cmd_line_quit
 
 
 ; input
@@ -1702,8 +1878,7 @@ adl_print_cmd_usage
 adl_check_arg_help
 	move.l	cra_HELP(a2),d0
 	beq.s	adl_check_arg_remove
-	not.w	d0
-	move.w	d0,adl_arg_help_enabled(a3)
+	clr.w	adl_arg_help_enabled(a3)
 	bsr.s	adl_print_cmd_usage
 	bra.s	adl_check_cmd_line_ok
 
@@ -1712,8 +1887,7 @@ adl_check_arg_help
 adl_check_arg_remove
 	move.l	cra_REMOVE(a2),d0
 	beq.s	adl_check_arg_maxentries
-	not.w	d0
-	move.w	d0,adl_arg_remove_enabled(a3)
+	clr.w	adl_arg_remove_enabled(a3)
 	bra.s	adl_check_cmd_line_ok
 
 ; Demo Charger argument MAXENTRIES
@@ -1738,8 +1912,7 @@ adl_check_arg_maxentries_skip
 adl_check_arg_newentry
 	move.l	cra_NEWENTRY(a2),d0
 	beq.s	adl_check_arg_playlist
-        not.w	d0
-	move.w	d0,dc_arg_newentry_enabled(a3)
+	clr.w	dc_arg_newentry_enabled(a3)
 	bra	adl_check_cmd_line_ok
 
 ; Demo Charger argument PLAYLIST
@@ -1760,8 +1933,7 @@ adl_check_arg_quiet
 ; Queue Handler argument SHOWQUEUE
 	move.l	cra_SHOWQUEUE(a2),d0
 	beq.s	adl_check_arg_editentry
-	not.w	d0
-	move.w	d0,qh_arg_showqueue_enabled(a3)
+	clr.w	qh_arg_showqueue_enabled(a3)
 	bra	adl_check_cmd_line_ok
 
 ; Queue Handler argument EDITENTRY
@@ -1772,15 +1944,15 @@ adl_check_arg_editentry
 	move.l	d0,a0
 	move.l	(a0),d0		; entry number
 	cmp.w	#adl_entries_number_min,d0
-	bge.s	arg_check_arg_editentry_max
+	bge.s	arg_check_arg_editentry_skip1
 	bra	adl_check_cmd_line_fail
 	CNOP 0,4
-arg_check_arg_editentry_max
+arg_check_arg_editentry_skip1
 	cmp.w	adl_entries_number(a3),d0
-	ble.s   adl_check_arg_editentry_set
+	ble.s   adl_check_arg_editentry_skip2
 	bra	adl_check_cmd_line_fail
 	CNOP 0,4
-adl_check_arg_editentry_set
+adl_check_arg_editentry_skip2
 	move.w	d0,qh_edit_entry_offset(a3)
 	clr.w	qh_arg_editentry_enabled(a3)
 	bra	adl_check_cmd_line_ok
@@ -1790,8 +1962,7 @@ adl_check_arg_editentry_set
 adl_check_arg_editqueue
 	move.l	cra_EDITQUEUE(a2),d0
 	beq.s	adl_check_arg_clearqueue
-	not.w	d0
-	move.w	d0,qh_arg_editqueue_enabled(a3)
+	clr.w	qh_arg_editqueue_enabled(a3)
 	bra	adl_check_cmd_line_ok
 
 ; Queue Handler argument CLEARQUEUE
@@ -1799,8 +1970,7 @@ adl_check_arg_editqueue
 adl_check_arg_clearqueue
 	move.l	cra_CLEARQUEUE(a2),d0
 	beq.s	adl_check_arg_resetqueue
-	not.w	d0
-	move.w	d0,qh_arg_clearqueue_enabled(a3)
+	clr.w	qh_arg_clearqueue_enabled(a3)
 	bra	adl_check_cmd_line_ok
 
 ; Queue Handler argument RESETQUEUE
@@ -1808,8 +1978,7 @@ adl_check_arg_clearqueue
 adl_check_arg_resetqueue
 	move.l	cra_RESETQUEUE(a2),d0
 	beq.s	adl_check_arg_playentry
-	not.w	d0
-	move.w	d0,qh_arg_resetqueue_enabled(a3)
+	clr.w	qh_arg_resetqueue_enabled(a3)
 	bra	adl_check_cmd_line_ok
 
 ; Run Demo argument PLAYENTRY
@@ -1903,14 +2072,14 @@ adl_check_arg_random
 	not.w	d0
 	move.w	d0,rd_arg_endless_enabled(a3)
 	tst.w	adl_reset_program_active(a3)
-	bne.s	adl_update_endless_enabled
+	bne.s	adl_update_endless_skip
 	move.l	d0,d2
 	GET_RESIDENT_ENDLESS_ENABLED
 	move.l	d0,a0
 	move.w	d2,(a0)
 	bra.s	adl_check_arg_loop
 	CNOP 0,4
-adl_update_endless_enabled
+adl_update_endless_skip
 	lea	rp_endless_enabled(pc),a0
 	move.w	d0,(a0)
 
@@ -1930,16 +2099,14 @@ adl_check_arg_loop
 	beq.s	rd_check_arg_resetonerror
 	tst.w	rd_arg_loop_enabled(a3)
 	beq.s	rd_check_arg_resetonerror
-	not.w	d0
-	move.w	d0,rd_arg_softreset_enabled(a3)
+	clr.w	rd_arg_softreset_enabled(a3)
 
 ; Run Demo argument RESETONERROR
 rd_check_arg_resetonerror
 	move.l	cra_RESETONERROR(a2),d0
 	tst.w	rd_arg_loop_enabled(a3)
 	beq	adl_check_cmd_line_ok
-	not.w	d0
-	move.w	d0,rd_arg_resetonerror_enabled(a3)
+	clr.w	rd_arg_resetonerror_enabled(a3)
 	bra	adl_check_cmd_line_ok
 
 
@@ -1990,37 +2157,14 @@ dc_alloc_entries_buffer_ok
 
 ; input
 ; result
-; d0.l	.Return code
-	CNOP 0,4
-dc_open_asl_library
-	lea	asl_library_name(pc),a1
-	moveq	#OS2_VERSION,d0
-	CALLEXEC OpenLibrary
-	lea	_ASLBase(pc),a0
-	move.l	d0,(a0)
-	bne.s	dc_open_asl_library_ok
-	lea	dc_error_text10(pc),a0
-	moveq	#dc_error_text10_end-dc_error_text10,d0
-	bsr	adl_print_text
-	moveq	#RETURN_FAIL,d0
-dc_open_asl_library_quit
-	rts
-	CNOP 0,4
-dc_open_asl_library_ok
-	moveq	#RETURN_OK,d0
-	bra.s	dc_open_asl_library_quit
-
-
-; input
-; result
 ; d0.l	Return code/error code
 	CNOP 0,4
 dc_get_program_dir
 	CALLDOS GetProgramDir
 	tst.l	d0
 	bne.s	dc_get_program_dir_skip
-	lea	dc_error_text11(pc),a0
-	moveq	#dc_error_text11_end-dc_error_text11,d0
+	lea	dc_error_text10(pc),a0
+	moveq	#dc_error_text10_end-dc_error_text10,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 dc_get_program_dir_quit
@@ -2029,13 +2173,13 @@ dc_get_program_dir_quit
 dc_get_program_dir_skip
 	move.l	d0,d1			; directory lock
 	lea	dc_current_dir_name(pc),a0
-	move.l	a0,d2			; buffer directory name
+	move.l	a0,d2			; buffer for directory name
 	MOVEF.L	adl_demofile_path_length,d3
 	CALLLIBS NameFromLock
 	tst.l	d0
 	bne.s	dc_get_program_dir_ok
-	lea	dc_error_text12(pc),a0
-	moveq	#dc_error_text12_end-dc_error_text12,d0
+	lea	dc_error_text11(pc),a0
+	moveq	#dc_error_text11_end-dc_error_text11,d0
 	bsr	adl_print_text
 	MOVEF.L	ERROR_DIR_NOT_FOUND,d0
 	bra.s	dc_get_program_dir_quit
@@ -2058,7 +2202,8 @@ dc_display_remaining_files
 	clr.b	dc_file_request_char_s-dc_file_request_remaining_files(a0) ; delete letter "s" of demos
 dc_display_remaining_files_skip
 	moveq	#2,d7			; number of digits to convert
-	bra	rp_dec_to_ascii
+	bsr	rp_dec_to_ascii
+	rts
 
 
 ; input
@@ -2073,12 +2218,12 @@ dc_make_file_request
 	bge.s	dc_make_file_request_skip
 	lea	dc_file_request_pattern_os2x(pc),a1 ; OS2.x only considers 32 characters string length
 dc_make_file_request_skip
-	move.l	a1,frtl_ASLFR_InitialPattern+ti_data(a0)
+	move.l	a1,frtl_ASLFR_InitialPattern+ti_Data(a0)
 	CALLASL AllocAslRequest
 	move.l	d0,dc_file_request(a3)
 	bne.s	dc_make_file_request_ok
-	lea	dc_error_text13(pc),a0
-	moveq	#dc_error_text13_end-dc_error_text13,d0
+	lea	dc_error_text12(pc),a0
+	moveq	#dc_error_text12_end-dc_error_text12,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 dc_make_file_request_quit
@@ -2148,16 +2293,16 @@ dc_get_demo_filepath_skip2
 
 
 ; input
-; a0.l	file name
-; a1.l	directory name
+; a0.l	File name
+; a1.l	Directory name
 ; result
 ; d0.l	Return code/Error Code
 	CNOP 0,4
 dc_check_demo_filepath
 	tst.b	(a1)			; directory name string empty ?
 	bne.s	dc_check_demo_filepath_skip1
-	lea	dc_error_text14(pc),a0
-	moveq	#dc_error_text14_end-dc_error_text14,d0
+	lea	dc_error_text13(pc),a0
+	moveq	#dc_error_text13_end-dc_error_text13,d0
 	bsr	adl_print_text
 	MOVEF.L ERROR_DIR_NOT_FOUND,d0
 dc_check_demo_filepath_quit
@@ -2166,8 +2311,8 @@ dc_check_demo_filepath_quit
 dc_check_demo_filepath_skip1
 	tst.b	(a0)			; file name string empty ?
 	bne.s	dc_check_demo_filepath_skip2
-	lea	dc_error_text15(pc),a0
-	moveq	#dc_error_text15_end-dc_error_text15,d0
+	lea	dc_error_text14(pc),a0
+	moveq	#dc_error_text14_end-dc_error_text14,d0
 	bsr	adl_print_text
 	MOVEF.L ERROR_OBJECT_NOT_FOUND,d0
 	bra.s	dc_check_demo_filepath_quit
@@ -2183,7 +2328,7 @@ dc_check_demo_filepath_skip2
 	bsr	dc_clear_playlist_entry
 	move.l	(a7)+,a0		; pointer file name
 dc_check_demo_filepath_loop1
-	tst.b	(a1)			; end of directory name (nullbyte) ?
+	tst.b	(a1)			; nullbyte ?
 	beq.s	dc_check_demo_filepath_loop2
 	cmp.b	#"/",(a1)
 	bne.s	dc_check_demo_filepath_skip3
@@ -2199,8 +2344,8 @@ dc_check_demo_filepath_loop2
 	blt.s	dc_check_demo_filepath_skip4
 	move.l	dc_current_entry(a3),a0
 	bsr	dc_clear_playlist_entry
-	lea	dc_error_text16(pc),a0
-	moveq	#dc_error_text16_end-dc_error_text16,d0
+	lea	dc_error_text15(pc),a0
+	moveq	#dc_error_text15_end-dc_error_text15,d0
 	bsr	adl_print_text
 	MOVEF.L ERROR_INVALID_COMPONENT_NAME,d0
 	bra	dc_check_demo_filepath_quit
@@ -2222,8 +2367,8 @@ dc_check_demo_filepath_loop3
 	blt.s	dc_check_demo_filepath_skip5
 	move.l	dc_current_entry(a3),a0
 	bsr	dc_clear_playlist_entry
-	lea	dc_error_text16(pc),a0
-	moveq	#dc_error_text16_end-dc_error_text16,d0
+	lea	dc_error_text15(pc),a0
+	moveq	#dc_error_text15_end-dc_error_text15,d0
 	bsr	adl_print_text
 	MOVEF.L ERROR_INVALID_COMPONENT_NAME,d0
 	bra	dc_check_demo_filepath_quit
@@ -2232,14 +2377,14 @@ dc_check_demo_filepath_skip5
 	move.b	(a0)+,(a2)+
 	cmp.b	#":",(a0)
 	bne.s	dc_check_demo_filepath_skip6
-	lea	dc_error_text17(pc),a0
-	moveq	#dc_error_text17_end-dc_error_text17,d0
+	lea	dc_error_text16(pc),a0
+	moveq	#dc_error_text16_end-dc_error_text16,d0
 	bsr	adl_print_text
 	MOVEF.L ERROR_OBJECT_NOT_FOUND,d0
 	bra	dc_check_demo_filepath_quit
 	CNOP 0,4
 dc_check_demo_filepath_skip6
-	tst.b	(a0)
+	tst.b	(a0)			; nullbyte ?
 	bne.s	dc_check_demo_filepath_loop3
 	clr.b	(a2)			; insert nullbyte
 	addq.w	#1,adl_entries_number(a3)
@@ -2270,10 +2415,11 @@ dc_display_runmode_request
 	addq.b  #1,d0                   ; adjust result
 	MOVEF.L playback_queue_entry_size,d1
 	move.l	dc_current_entry(a3),a0
+	ADDF.W	pqe_runmode,a0
 	move.w	dc_multiselect_entries_number(a3),d7
 	subq.w	#1,d7			; loopend at false
 dc_display_runmode_request_loop
-	move.b	d0,pqe_runmode(a0)
+	move.b	d0,(a0)			; store selected runmode
 	sub.l	d1,a0			; previous entry
 	dbf	d7,dc_display_runmode_request_loop
 	rts
@@ -2328,7 +2474,7 @@ dc_init_reset_program_skip1
 	move.w	d0,d7
 	move.w	adl_entries_number_max(a3),d1
 	mulu.w	#playback_queue_entry_size,d1 ; total playback queue size
-	add.l	d1,d0			; total size of reset program section
+	add.l	d1,d0			; total size of reset program section with playback queue
 	lea	rp_reset_program_size(pc),a0
 	move.l	d0,(a0)
 	move.l	#MEMF_CLEAR|MEMF_CHIP|MEMF_PUBLIC|MEMF_REVERSE,d1
@@ -2336,8 +2482,8 @@ dc_init_reset_program_skip1
 	lea	rp_reset_program_memory(pc),a0
 	move.l	d0,(a0)
 	bne.s	dc_init_reset_program_skip2
-	lea	dc_error_text18(pc),a0
-	moveq	#dc_error_text18_end-dc_error_text18,d0
+	lea	dc_error_text17(pc),a0
+	moveq	#dc_error_text17_end-dc_error_text17,d0
 	bsr	adl_print_text
 	moveq	#ERROR_NO_FREE_STORE,d0
 	bra.s	dc_init_reset_program_quit
@@ -2345,7 +2491,7 @@ dc_init_reset_program_skip1
 dc_init_reset_program_skip2
 	lea	rp_start(pc),a0		; source
 	move.l	d0,a1			; destination
-	move.l	d0,a2			; reset program
+	move.l	d0,a2			; store pointer reset program
 	move.l	d0,CoolCapture(a6)
 	subq.w	#1,d7			; loopend at false
 dc_init_reset_program_loop1
@@ -2353,7 +2499,7 @@ dc_init_reset_program_loop1
 	dbf	d7,dc_init_reset_program_loop1
 	move.l	adl_entries_buffer(a3),a0 ; source
 	move.w	adl_entries_number_max(a3),d7
-	mulu.w	#playback_queue_entry_size,d7 ; total size of reset program section
+	mulu.w	#playback_queue_entry_size,d7 ; total size of reset program section with playback queue
 	subq.w	#1,d7			; loopend at false
 dc_init_reset_program_loop2
 	move.b	(a0)+,(a1)+
@@ -2380,15 +2526,6 @@ dc_init_reset_program_skip3
 	move.l	d0,a0
 	move.w	adl_entries_number(a3),(a0)
 	bra	dc_init_reset_program_ok
-
-
-; input
-; result
-	CNOP 0,4
-dc_close_asl_library
-	move.l	_ASLBase(pc),a1
-	CALLEXEC CloseLibrary
-	rts
 
 
 ; input
@@ -2552,7 +2689,7 @@ dc_parse_playlist_file_quit
 dc_parse_playlist_file_skip1
 	addq.w	#1,dc_playlist_entries_number(a3)
 	MOVEF.L	DOS_RDARGS,d1
-	moveq	#0,d2														; no tags
+	moveq	#0,d2			; no tag list														; no tags
 	CALLDOS AllocDosObject
 	tst.l	d0
 	bne.s	dc_parse_playlist_file_skip2
@@ -2580,7 +2717,7 @@ dc_parse_playlist_entry
 	move.l	d4,CS_Length(a4)
 	lea	dc_playlist_results_array(pc),a5
 	moveq	#0,d0
-	move.l	d0,pra_demofile(a5)	; clear whole results array
+	move.l	d0,pra_demofile(a5)	; clear results array
 	move.l	d0,pra_OCSVANILLA(a5)
 	move.l	d0,pra_AGAVANILLA(a5)
 	move.l	d0,pra_PLAINTURBO(a5)
@@ -2624,7 +2761,7 @@ dc_copy_demofile_path_loop
 	CNOP 0,4
 dc_copy_demofile_path_skip
 	move.b	(a0)+,(a1)+
-	bne.s	dc_copy_demofile_path_loop ; loop until nullbyte found
+	bne.s	dc_copy_demofile_path_loop ; loop until nullbyte
 	move.l	d6,a1			; entry in playback queue
 	clr.b	pqe_runmode(a1)
 
@@ -2642,7 +2779,7 @@ dc_check_arg_agavanilla
 	move.b	#RUNMODE_AGA_VANILLA,pqe_runmode(a1)
 	bra.s	dc_check_entry_run_mode
 
-; Playlist argument: TURBO
+; Playlist argument: PLAINTURBO
 	CNOP 0,4
 dc_check_arg_turbo
 	tst.l	pra_PLAINTURBO(a5)
@@ -2657,7 +2794,7 @@ dc_check_entry_run_mode
 	bsr	dc_parse_playlist_entry_error
 	bra	dc_free_custom_arguments
 
-; Playlist-Argument: SECS
+; Playlist argument: SECS
 	CNOP 0,4
 dc_check_arg_secs
 	move.l	d6,a1			; entry in playback queue
@@ -2672,7 +2809,7 @@ dc_check_arg_secs
 	bsr	dc_parse_playlist_entry_error
 	bra	dc_free_custom_arguments
 
-; Playlist-Argument: MINS
+; Playlist argument: MINS
 	CNOP 0,4
 dc_check_arg_mins
 	move.l	pra_MINS(a5),d1
@@ -2722,7 +2859,7 @@ dc_check_arg_multipart_skip3
 	subq.b	#1,d0			; only values 1..15
 	or.b	d0,pqe_playtime+BYTE_SIZE(a1)
 
-; Playlist-Argument: PRERUNSCRIPT
+; Playlist argument: PRERUNSCRIPT
 dc_check_arg_prerunscript
 	move.l	pra_PRERUNSCRIPT(a5),d0
 	beq.s	dc_foreward_transmitted_entry
@@ -2740,7 +2877,7 @@ dc_check_arg_prerunscript_loop
 	CNOP 0,4
 dc_copy_prerunscript_skip
 	move.b	(a0)+,(a1)+
-	bne.s	dc_check_arg_prerunscript_loop ; loop until nullbyte found
+	bne.s	dc_check_arg_prerunscript_loop ; loop until nullbyte
 dc_foreward_transmitted_entry
 	addq.w	#1,dc_transmitted_entries_number(a3)
 	addq.w	#1,adl_entries_number(a3)
@@ -2757,7 +2894,7 @@ dc_free_custom_arguments
 	CALLDOS FreeArgs
 dc_free_DosObject
 	moveq	#DOS_RDARGS,d1
-	move.l	a4,d2			; ReadArgs structure
+	move.l	a4,d2			; RDArgs structure
 	CALLLIBS FreeDosObject
 	bra	dc_parse_playlist_file_loop1
 
@@ -2784,16 +2921,17 @@ dc_parse_playlist_file_result
 
 
 ; input
-; a0.l	entry in playback queue
+; a0.l	Entry in playback queue
 ; result
 	CNOP 0,4
 dc_parse_playlist_entry_error
 	bsr.s	dc_clear_playlist_entry
-	bra.s	dc_parse_entry_syntax_error
+	bsr.s	dc_parse_entry_syntax_error
+	rts
 
 
 ; input
-; a0.l	entry to delete
+; a0.l	Entry to delete
 ; result
 	CNOP 0,4
 dc_clear_playlist_entry
@@ -2899,7 +3037,7 @@ dc_free_entries_buffer_skip
 	CNOP 0,4
 qh_show_queue
 	move.l	adl_entries_buffer(a3),a2
-	tst.b	(a2)
+	tst.b	(a2)			; buffer empty ?
 	bne.s	qh_show_queue_skip
         lea	qh_info_message_text1(pc),a0
 	moveq	#qh_info_message_text1_end-qh_info_message_text1,d0
@@ -2941,11 +3079,11 @@ qh_show_queue_loop
 
 
 ; input
-; a2.l	entry in playback queue
+; a2.l	Entry in playback queue
 ; result
 	CNOP 0,4
 qh_get_entry_filename
-	moveq	#0,d0			; counter length of file name
+	moveq	#0,d0			; counter file name length
 	moveq	#"/",d2
 	moveq	#":",d3
 	moveq	#adl_demofile_path_length-1,d6
@@ -2965,14 +3103,14 @@ qh_get_entry_filename_skip1
 qh_get_entry_filename_skip2
 	subq.w	#1,d0			; substract "/" or ":"
 	addq.w	#1,a0			; skip "/" or ":"
-	cmp.w	#qh_show_entry_space_end-qh_show_entry_space-1,d0 ; file name length <= output line length ?
+	cmp.w	#qh_show_entry_space_end-qh_show_entry_space-1,d0 ; output line length max ?
 	ble.s	qh_get_entry_filename_skip3
-	moveq	#qh_show_entry_space_end-qh_show_entry_space-1,d0 ; text length = output line length
+	moveq	#qh_show_entry_space_end-qh_show_entry_space-1,d0
 qh_get_entry_filename_skip3
 	move.w	d0,d4			; file name length
 	bsr	adl_print_text
 	lea	qh_show_entry_space(pc),a0 ; output string
-	moveq	#qh_show_entry_space_end-qh_show_entry_space-1,d0 ; text length output line
+	moveq	#qh_show_entry_space_end-qh_show_entry_space-1,d0 ; length output line
 	sub.w	d4,d0			; substract file name length
 	bsr	adl_print_text
 	tst.b	pqe_entry_active(a2)
@@ -3027,7 +3165,7 @@ qh_edit_entry_quit
 	CNOP 0,4
 qh_edit_queue
 	move.l	adl_entries_buffer(a3),a0
-	tst.b	(a0)
+	tst.b	(a0)			; buffer empty ?
 	bne.s	qh_edit_queue_skip
         lea	qh_info_message_text1(pc),a0
 	moveq	#qh_info_message_text1_end-qh_info_message_text1,d0
@@ -3139,7 +3277,7 @@ qh_create_gadgets
 	move.l	sc_Font(a0),a0
 	move.w	ta_YSize(a0),d2
 	addq.w	#1,d2			; window title bar height
-	move.l	qh_context_gadget(a3),a4 ; previous gadget
+	move.l	qh_context_gadget(a3),a4
 	bsr	qh_create_text_gadget
 	move.l	d0,a4
 
@@ -3176,9 +3314,9 @@ qh_create_gadgets_ok
 
 ; Input
 ; d2.w	Window title bar height
-; a4.l	previous gadget structure
+; a4.l	Previous gadget structure
 ; Result
-; d0.l	this gadget structure
+; d0.l	This gadget structure
 	CNOP 0,4
 qh_create_text_gadget
 	lea	qh_new_gadget(pc),a1
@@ -3203,7 +3341,7 @@ qh_create_text_gadget
 	move.l	d0,qh_edit_entry_demo_filename(a3)
 	move.l	a4,a0 			; previous gadget
 	lea	qh_text_gadget_tags(pc),a2
-	move.l	d0,ti_data(a2)		; file name
+	move.l	d0,ti_Data(a2)		; file name
 	move.l	#TEXT_KIND,d0
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,qh_text_gadget(a3)
@@ -3212,9 +3350,9 @@ qh_create_text_gadget
 
 ; Input
 ; d2.w	Window title bar height
-; a4.l	previous gadget structure
+; a4.l	Previous gadget structure
 ; Result
-; d0.l	this gadget structure
+; d0.l	This gadget structure
 	CNOP 0,4
 qh_create_backward_button
 	lea	qh_new_gadget(pc),a1
@@ -3229,14 +3367,14 @@ qh_create_backward_button
         move.w	#qh_backward_button_id,gng_GadgetID(a1)
 	moveq	#0,d0
 	move.l	d0,gng_Flags(a1)
-	moveq	#BOOL_FALSE,d0		; gadget state: inactive
+	moveq	#BOOL_FALSE,d0		; gadget state: active
 	cmp.w	#adl_entries_number_min,qh_edit_entry_offset(a3)
         bne.s	qh_create_backward_button_skip
-	moveq	#BOOL_TRUE,d0		; gadget state: active
+	moveq	#BOOL_TRUE,d0		; gadget state: inactive
 qh_create_backward_button_skip
 	move.l	a4,a0			; previous gadget
 	lea	qh_button_tags(pc),a2
- 	move.l	d0,ti_data(a2)		; gadget state
+ 	move.l	d0,ti_Data(a2)		; gadget state
 	move.l	#BUTTON_KIND,d0
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,qh_backward_button_gadget(a3)
@@ -3245,9 +3383,9 @@ qh_create_backward_button_skip
 
 ; Input
 ; d2.w	Window title bar height
-; a4.l	previous gadget structure
+; a4.l	Previous gadget structure
 ; Result
-; d0.l	this gadget structure
+; d0.l	This gadget structure
 	CNOP 0,4
 qh_create_integer_gadget
 	lea	qh_new_gadget(pc),a1
@@ -3271,9 +3409,9 @@ qh_create_integer_gadget
 
 ; Input
 ; d2.w	Window title bar height
-; a4.l	previous gadget structure
+; a4.l	Previous gadget structure
 ; Result
-; d0.l	this gadget structure
+; d0.l	This gadget structure
 	CNOP 0,4
 qh_create_forward_button
 	lea	qh_new_gadget(pc),a1
@@ -3288,15 +3426,15 @@ qh_create_forward_button
         move.w	#qh_foreward_button_id,gng_GadgetID(a1)
 	moveq	#0,d0
 	move.l	d0,gng_Flags(a1)
-	moveq	#BOOL_FALSE,d0		; gadget state: inactive
+	moveq	#BOOL_FALSE,d0		; gadget state: active
 	move.w	qh_edit_entry_offset(a3),d1
 	cmp.w	adl_entries_number(a3),d1
         blt.s	qh_create_forward_button_skip
-	moveq	#BOOL_TRUE,d0		; gadget state: active
+	moveq	#BOOL_TRUE,d0		; gadget state: inactive
 qh_create_forward_button_skip
 	move.l	a4,a0			; previous gadget
 	lea	qh_button_tags(pc),a2
- 	move.l	d0,ti_data(a2)		; gadget state
+ 	move.l	d0,ti_Data(a2)		; gadget state
 	move.l	#BUTTON_KIND,d0
 	CALLGADTOOLS CreateGadgetA
 	move.l	d0,qh_foreward_button_gadget(a3)
@@ -3305,9 +3443,9 @@ qh_create_forward_button_skip
 
 ; Input
 ; d2.w	Window title bar height
-; a4.l	previous gadget structure
+; a4.l	Previous gadget structure
 ; Result
-; d0.l	this gadget structure
+; d0.l	This gadget structure
 	CNOP 0,4
 qh_create_cycle_gadget
 	lea	qh_new_gadget(pc),a1
@@ -3345,9 +3483,9 @@ qh_create_cycle_gadget_skip
 
 ; Input
 ; d2.w	Window title bar height
-; a4.l	previous gadget structure
+; a4.l	Previous gadget structure
 ; Result
-; d0.l	this gadget structure
+; d0.l	This gadget structure
 	CNOP 0,4
 qh_create_mx_gadget
 	lea	qh_new_gadget(pc),a1
@@ -3383,9 +3521,9 @@ qh_create_mx_gadget_skip
 
 ; Input
 ; d2.w	Window title bar height
-; a4.l	previous gadget structure
+; a4.l	Previous gadget structure
 ; Result
-; d0.l	this gadget structure
+; d0.l	This gadget structure
 	CNOP 0,4
 qh_create_positive_button
 	lea	qh_new_gadget(pc),a1
@@ -3403,14 +3541,14 @@ qh_create_positive_button
 	move.l	a4,a0			; previous gadget
 	lea	qh_button_tags(pc),a2
 	moveq	#BOOL_FALSE,d0		; gadget state: active
- 	move.l	d0,ti_data(a2)		; gadget state
+ 	move.l	d0,ti_Data(a2)		; gadget state
 	move.l	#BUTTON_KIND,d0
 	CALLGADTOOLS CreateGadgetA
 	rts
 
 ; Input
 ; d2.w	Window title bar height
-; a4.l	previous gadget structure
+; a4.l	Previous gadget structure
 ; Result
 	CNOP 0,4
 qh_create_negative_button
@@ -3434,9 +3572,9 @@ qh_create_negative_button
 
 
 ; input
-; a0.l	entry in playback queue
+; a0.l	Entry in playback queue
 ; result
-; d0.l	file name
+; d0.l	File name
 	CNOP 0,4
 qh_get_demofile_title
 	moveq	#adl_demofile_path_length-1,d6
@@ -3473,11 +3611,11 @@ qh_open_edit_window_quit
 	rts
 	CNOP 0,4
 qh_open_edit_window_skip1
-	move.l	d0,a2			; store window
-	move.l	d0,a0			; window
+	move.l	d0,a2			; store window structure
+	move.l	d0,a0			; window structure
 	sub.l	a1,a1			; no requester
 	CALLGADTOOLS GT_RefreshWindow
-        move.l	a2,a0			; window
+        move.l	a2,a0			; window structure
 	lea	qh_edit_window_name1(pc),a1 ; new window title
 	tst.w	qh_arg_editentry_enabled(a3)
 	beq.s	qh_open_edit_window_skip2
@@ -3633,7 +3771,7 @@ qh_process_window_events_skip12
 	move.l	qh_edit_window(a3),a5
 	move.l	a5,a0
 	CALLGADTOOLS GT_BeginRefresh
-	move.l	a5,a0			; window
+	move.l	a5,a0			; window structure
 	moveq	#BOOL_TRUE,d0		; completed
 	CALLLIBS GT_EndRefresh
 qh_process_window_events_ok
@@ -3647,7 +3785,7 @@ qh_process_window_events_ok
 
 
 ; input
-; a0.l	string
+; a0.l	String
 ; d7.l	Number of digits to convert
 ; result
 ; d0.l	Decimal number
@@ -3698,7 +3836,7 @@ qh_update_gadgets
 	move.l	qh_edit_window(a3),a1
 	move.l	a3,-(a7)
 	lea	qh_set_text_gadget_tags(pc),a3
-	move.l	a2,ti_data(a3)		; file name
+	move.l	a2,ti_Data(a3)		; file name
 	sub.l	a2,a2			; no requester
  	CALLGADTOOLS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
@@ -3706,14 +3844,14 @@ qh_update_gadgets
 	move.l	qh_backward_button_gadget(a3),a0
 	move.l	qh_edit_window(a3),a1
 	sub.l	a2,a2			; no requester
-	moveq	#BOOL_FALSE,d0		; gadget state: intive
+	moveq	#BOOL_FALSE,d0		; gadget state: active
 	cmp.w	#adl_entries_number_min,qh_edit_entry_offset(a3)
         bne.s	qh_update_gadgets_skip1
-	moveq	#BOOL_TRUE,d0		; gadget state: active
+	moveq	#BOOL_TRUE,d0		; gadget state: inactive
 qh_update_gadgets_skip1
 	move.l	a3,-(a7)
 	lea	qh_set_button_tags(pc),a3
-	move.l	d0,ti_data(a3)		; gadget state
+	move.l	d0,ti_Data(a3)		; gadget state
  	CALLLIBS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
 
@@ -3722,22 +3860,22 @@ qh_update_gadgets_skip1
 	sub.l	a2,a2			; no requester
 	move.l	a3,-(a7)
 	lea	qh_set_integer_gadget_tags(pc),a3
-	move.l	d2,ti_data(a3)
+	move.l	d2,ti_Data(a3)
  	CALLLIBS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
 ; Forward button gadget
 	move.l	qh_foreward_button_gadget(a3),a0
 	move.l	qh_edit_window(a3),a1
 	sub.l	a2,a2			; no requester
-	moveq	#BOOL_FALSE,d0		; gadget state: inactive
+	moveq	#BOOL_FALSE,d0		; gadget state: active
 	move.w	qh_edit_entry_offset(a3),d1
 	cmp.w	adl_entries_number(a3),d1
         blt.s	qh_update_gadgets_skip2
-	moveq	#BOOL_TRUE,d0		; gadget state: active
+	moveq	#BOOL_TRUE,d0		; gadget state: inactive
 qh_update_gadgets_skip2
 	move.l	a3,-(a7)
 	lea	qh_set_button_tags(pc),a3
-	move.l	d0,ti_data(a3)		; gadget state
+	move.l	d0,ti_Data(a3)		; gadget state
  	CALLLIBS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
 
@@ -3749,7 +3887,7 @@ qh_update_gadgets_skip2
 	moveq	#0,d0
 	move.b	pqe_runmode(a5),d0
 	subq.b	#1,d0
-	move.l	d0,ti_data(a3)		; index number selection text
+	move.l	d0,ti_Data(a3)		; index number selection text
  	CALLLIBS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
 
@@ -3761,7 +3899,7 @@ qh_update_gadgets_skip2
 	moveq	#0,d0
 	move.b	pqe_entry_active(a5),d0
 	neg.b	d0
-	move.l	d0,ti_data(a3)		; index number selection text
+	move.l	d0,ti_Data(a3)		; index number selection text
  	CALLLIBS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
 	rts
@@ -3809,7 +3947,7 @@ qh_unlock_workbench
 	CNOP 0,4
 qh_clear_queue
 	move.l	adl_entries_buffer(a3),a0
-	tst.b	(a0)
+	tst.b	(a0)			; empty buffer ?
 	bne.s   qh_clear_queue_ok
 	lea	qh_info_message_text4(pc),a0
 	moveq	#qh_info_message_text4_end-qh_info_message_text4,d0
@@ -3872,10 +4010,11 @@ qh_reset_queue_ok
 
 ; input
 ; result
+; d0.l	Return code
 	CNOP 0,4
 qh_check_queue_empty
 	move.l	adl_entries_buffer(a3),a2
-	tst.b	(a2)
+	tst.b	(a2)			; buffer empty ?
 	bne.s	qh_check_queue_empty_ok
 	moveq	#RETURN_WARN,d0
 qh_check_queue_empty_quit
@@ -3943,15 +4082,33 @@ adl_remove_reset_program_quit
 adl_remove_reset_program_skip2
 	REMOVE_RESET_PROGRAM
 	move.l	d0,a0
-	move.l	(a0)+,a1
+	move.l	(a0)+,a1		; pointer reset program		
 	moveq	#0,d0
 	move.l	d0,LONGWORD_SIZE(a1)	; clear ADL id
-	move.l	(a0),d0
+	move.l	(a0),d0			; total size of reset program section including playback queue
 	CALLEXEC FreeMem
 	lea	adl_message_text1(pc),a0
 	moveq	#adl_message_text1_end-adl_message_text1,d0
 	bsr	adl_print_text
 	bra.s	adl_remove_reset_program_quit
+
+
+; input
+; result
+	CNOP 0,4
+adl_close_icon_library
+	move.l	_IconBase(pc),a1
+	CALLEXEC CloseLibrary
+	rts
+
+
+; input
+; result
+	CNOP 0,4
+adl_close_asl_library
+	move.l	_ASLBase(pc),a1
+	CALLEXEC CloseLibrary
+	rts
 
 
 ; input
@@ -4006,8 +4163,6 @@ adl_print_text
 ; Run Demo
 	CNOP 0,4
 rd_start
-	bsr	rd_init_timer_io
-
 	bsr	rd_open_ciaa_resource
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_read_arguments
@@ -4015,39 +4170,35 @@ rd_start
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_read_arguments
 
-	bsr	rd_open_icon_library
+	bsr	rd_create_serial_msg_port
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_read_arguments
-
-	bsr	rd_create_serial_message_port
-	move.l	d0,adl_dos_return_code(a3)
-	bne	rd_cleanup_icon_library
-	bsr	rd_init_serial_io
+	
 	bsr	rd_open_serial_device
 	move.l	d0,adl_dos_return_code(a3)
-	bne	rd_cleanup_serial_message_port
+	bne	rd_cleanup_serial_msg_port
 
 	bsr	rd_open_timer_device
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_serial_device
 
-	bsr	rd_alloc_cleared_sprite_data
+	bsr	rd_alloc_mouse_pointer_data
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_timer_device
 
 	bsr	rd_get_active_screen
 	move.l	d0,rd_active_screen(a3)
-	bsr	rd_get_sprite_resolution
 	bsr	rd_get_first_window
 	move.l	d0,rd_first_window(a3)
 	bsr	rd_check_screen_mode
 	move.l	d0,adl_dos_return_code(a3)
-	bne	rd_cleanup_cleared_sprite_data
+	bne	rd_cleanup_mouse_pointer_data
+	bsr	rd_get_sprite_resolution
 
 rd_play_loop
 	bsr	rd_check_queue
 	move.l	d0,adl_dos_return_code(a3)
-	bne	rd_cleanup_cleared_sprite_data
+	bne	rd_cleanup_mouse_pointer_data
 	bsr	rd_get_new_entry_offset
 	bsr	rd_get_demo_filename
 	move.l	d0,adl_dos_return_code(a3)
@@ -4163,7 +4314,7 @@ rd_cleanup_io_error
 
 	bsr	rd_check_user_break
 	move.l	d0,adl_dos_return_code(a3)
-	bne.s	rd_cleanup_cleared_sprite_data
+	bne.s	rd_cleanup_mouse_pointer_data
 
 	bsr	rd_reset_demo_variables
 
@@ -4171,19 +4322,16 @@ rd_cleanup_io_error
 	tst.l	d0
 	beq	rd_play_loop
 
-rd_cleanup_cleared_sprite_data
-	bsr	rd_free_cleared_sprite_data
+rd_cleanup_mouse_pointer_data
+	bsr	rd_free_mouse_pointer_data
 
 rd_cleanup_timer_device
 	bsr	rd_close_timer_device
 
 rd_cleanup_serial_device
 	bsr	rd_close_serial_device
-rd_cleanup_serial_message_port
-	bsr	rd_delete_serial_message_port
-
-rd_cleanup_icon_library
-	bsr	rd_close_icon_library
+rd_cleanup_serial_msg_port
+	bsr	rd_delete_serial_msg_port
 
 rd_quit
 	bra	adl_cleanup_read_arguments
@@ -4217,19 +4365,6 @@ rd_print_error_text
 	CALLLIBS Delay
 	CALLEXEC ColdReboot
 rd_print_error_text_quit
-	rts
-
-
-; input
-; result
-	CNOP 0,4
-rd_init_timer_io
-	lea	rd_timer_io(pc),a0
-	moveq	#0,d0
-	move.b	d0,LN_Type(a0)
-	move.b	d0,LN_Pri(a0)
-	move.l	d0,LN_Name(a0)
-	move.l	d0,MN_ReplyPort(a0)
 	rts
 
 
@@ -4289,80 +4424,20 @@ rd_open_ciab_resource_skip
 ; result
 ; d0.l	Return code
 	CNOP 0,4
-rd_open_timer_device
-	lea	timer_device_name(pc),a0
-	lea	rd_timer_io(pc),a1
-	moveq	#UNIT_MICROHZ,d0
-	moveq	#0,d1			; no flags
-	CALLEXEC OpenDevice
-	tst.l	d0
-	beq.s	rd_open_timer_device_ok
+rd_create_serial_msg_port
+	CALLEXEC CreateMsgPort
+	move.l	d0,rd_serial_msg_port(a3)
+	bne.s	rd_create_serial_msg_port_ok
 	lea	rd_error_text3(pc),a0
 	moveq	#rd_error_text3_end-rd_error_text3,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
-rd_open_timer_device_quit
+rd_create_serial_msg_port_quit
 	rts
 	CNOP 0,4
-rd_open_timer_device_ok
+rd_create_serial_msg_port_ok
 	moveq	#RETURN_OK,d0
-	bra.s	rd_open_timer_device_quit
-
-
-; input
-; result
-; d0.l	Return code
-	CNOP 0,4
-rd_open_icon_library
-	lea	icon_library_name(pc),a1
-	moveq	#OS2_VERSION,d0
-	CALLEXEC OpenLibrary
-	lea	_IconBase(pc),a0
-	move.l	d0,(a0)
-	bne.s	rd_open_icon_library_ok
-	lea	rd_error_text4(pc),a0
-	moveq	#rd_error_text4_end-rd_error_text4,d0
-	bsr	adl_print_text
-	moveq	#RETURN_FAIL,d0
-rd_open_icon_library_quit
-	rts
-	CNOP 0,4
-rd_open_icon_library_ok
-	moveq	#RETURN_OK,d0
-	bra.s	rd_open_icon_library_quit
-
-
-; input
-; result
-; d0.l	Return code
-	CNOP 0,4
-rd_create_serial_message_port
-	CALLEXEC CreateMsgPort
-	move.l	d0,rd_serial_message_port(a3)
-	bne.s	rd_create_serial_message_port_ok
-	lea	rd_error_text5(pc),a0
-	moveq	#rd_error_text5_end-rd_error_text5,d0
-	bsr	adl_print_text
-	moveq	#RETURN_FAIL,d0
-rd_create_serial_message_port_quit
-	rts
-	CNOP 0,4
-rd_create_serial_message_port_ok
-	moveq	#RETURN_OK,d0
-	bra.s	rd_create_serial_message_port_quit
-
-
-; input
-; result
-	CNOP 0,4
-rd_init_serial_io
-	lea	rd_serial_io(pc),a0
-	move.l	rd_serial_message_port(a3),MN_ReplyPort(a0)
-	moveq	#0,d0
-	move.b	d0,LN_Type(a0)
-	move.b	d0,LN_Pri(a0)
-	move.l	d0,LN_Name(a0)
-	rts
+	bra.s	rd_create_serial_msg_port_quit
 
 
 ; input
@@ -4372,13 +4447,14 @@ rd_init_serial_io
 rd_open_serial_device
 	lea	serial_device_name(pc),a0
 	lea	rd_serial_io(pc),a1
+	move.l	rd_serial_msg_port(a3),MN_ReplyPort(a1)
 	moveq	#0,d0			; unit 0
 	moveq	#0,d1			; no flags
 	CALLEXEC OpenDevice
 	tst.l	d0
 	beq.s	rd_open_serial_device_ok
-	lea	rd_error_text6(pc),a0
-	moveq	#rd_error_text6_end-rd_error_text6,d0
+	lea	rd_error_text4(pc),a0
+	moveq	#rd_error_text4_end-rd_error_text4,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 rd_open_serial_device_quit
@@ -4391,38 +4467,48 @@ rd_open_serial_device_ok
 
 ; input
 ; result
-; d0.l	Return code/error code
+; d0.l	Return code
 	CNOP 0,4
-rd_alloc_cleared_sprite_data
-	moveq	#sprite_pointer_data_size,d0
-	move.l	#MEMF_CLEAR|MEMF_CHIP|MEMF_PUBLIC|MEMF_REVERSE,d1
-	CALLEXEC AllocMem
-	move.l	d0,rd_mouse_pointer_data(a3)
-	bne.s	rd_alloc_cleared_sprite_data_ok
-	lea	rd_error_text7(pc),a0
-	moveq	#rd_error_text7_end-rd_error_text7,d0
+rd_open_timer_device
+	lea	timer_device_name(pc),a0
+	lea	rd_timer_io(pc),a1
+	moveq	#UNIT_MICROHZ,d0
+	moveq	#0,d1			; no flags
+	CALLEXEC OpenDevice
+	tst.l	d0
+	beq.s	rd_open_timer_device_ok
+	lea	rd_error_text5(pc),a0
+	moveq	#rd_error_text5_end-rd_error_text5,d0
 	bsr	adl_print_text
-	moveq	#ERROR_NO_FREE_STORE,d0
-rd_alloc_cleared_sprite_data_quit
+	moveq	#RETURN_FAIL,d0
+rd_open_timer_device_quit
 	rts
 	CNOP 0,4
-rd_alloc_cleared_sprite_data_ok
+rd_open_timer_device_ok
 	moveq	#RETURN_OK,d0
-	bra.s	rd_alloc_cleared_sprite_data_quit
+	bra.s	rd_open_timer_device_quit
 
 
 ; input
 ; result
-; d0.l	Screen structure active screen
+; d0.l	Return code/error code
 	CNOP 0,4
-rd_get_active_screen
-	moveq	#0,d0			; all locks
-	CALLINT LockIBase
-	move.l	d0,a0
-	move.l	ib_ActiveScreen(a6),a2
-	CALLLIBS UnlockIBase
-	move.l	a2,d0
+rd_alloc_mouse_pointer_data
+	moveq	#sprite_pointer_data_size,d0
+	move.l	#MEMF_CLEAR|MEMF_CHIP|MEMF_PUBLIC|MEMF_REVERSE,d1
+	CALLEXEC AllocMem
+	move.l	d0,rd_mouse_pointer_data(a3)
+	bne.s	rd_alloc_mouse_pointer_data_ok
+	lea	rd_error_text6(pc),a0
+	moveq	#rd_error_text6_end-rd_error_text6,d0
+	bsr	adl_print_text
+	moveq	#ERROR_NO_FREE_STORE,d0
+rd_alloc_mouse_pointer_data_quit
 	rts
+	CNOP 0,4
+rd_alloc_mouse_pointer_data_ok
+	moveq	#RETURN_OK,d0
+	bra.s	rd_alloc_mouse_pointer_data_quit
 
 
 ; input
@@ -4474,8 +4560,8 @@ rd_check_screen_mode
 	CALLGRAF GetVPModeID
 	cmp.l	#INVALID_ID,d0
 	bne.s	rd_check_screen_mode_skip
-	lea	rd_error_text8(pc),a0
-	moveq	#rd_error_text8_end-rd_error_text8,d0
+	lea	rd_error_text7(pc),a0
+	moveq	#rd_error_text7_end-rd_error_text7,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 rd_check_screen_mode_quit
@@ -4658,8 +4744,8 @@ rd_check_runmode_skip
 	bne.s   rd_check_runmode_ok
 	move.l	rd_demofile_path(a3),a0
 	move.b	#FALSE,pqe_entry_active(a0) ; entry state: played
-	lea	rd_error_text9(pc),a0
-	moveq	#rd_error_text9_end-rd_error_text9,d0
+	lea	rd_error_text8(pc),a0
+	moveq	#rd_error_text8_end-rd_error_text8,d0
 	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	bsr.s	rd_check_runmode_quit
@@ -4698,8 +4784,8 @@ rd_open_demofile
 	CALLDOS Open
 	move.l	d0,rd_demofile_handle(a3)
 	bne.s	rd_open_demofile_ok
-	lea	rd_error_text10(pc),a0
-	moveq	#rd_error_text10_end-rd_error_text10,d0
+	lea	rd_error_text9(pc),a0
+	moveq	#rd_error_text9_end-rd_error_text9,d0
 	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 rd_open_demofile_quit
@@ -4738,8 +4824,8 @@ rd_close_demofile
 rd_check_demofile_header
 	cmp.l	#MAGIC_COOKIE,rd_demofile_MAGIC_COOKIE(a3)
 	beq.s	rd_check_demofile_header_ok
-	lea	rd_error_text11(pc),a0
-	moveq	#rd_error_text11_end-rd_error_text11,d0
+	lea	rd_error_text10(pc),a0
+	moveq	#rd_error_text10_end-rd_error_text10,d0
 	bsr	rd_print_error_text
 	MOVEF.L ERROR_FILE_NOT_OBJECT,d0
 rd_check_demofile_header_quit
@@ -4789,8 +4875,8 @@ rd_set_new_current_dir
 	CALLDOS Lock
 	move.l	d0,rd_demofile_dir_lock(a3)
 	bne.s	rd_set_new_current_dir_skip
-	lea	rd_error_text12(pc),a0
-	moveq	#rd_error_text12_end-rd_error_text12,d0
+	lea	rd_error_text11(pc),a0
+	moveq	#rd_error_text11_end-rd_error_text11,d0
 	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 rd_set_new_current_dir_quit
@@ -4842,8 +4928,8 @@ rd_check_prerunscript_path_loop
 	addq.b	#1,d0			; decrement counter
 	cmp.b	#adl_prerunscript_path_length-1,d0
 	blt.s	rd_check_prerunscript_path_skip2
-	lea	rd_error_text13(pc),a0
-	moveq	#rd_error_text13_end-rd_error_text13,d0
+	lea	rd_error_text12(pc),a0
+	moveq	#rd_error_text12_end-rd_error_text12,d0
 	bsr	rd_print_error_text
 	MOVEF.L	ERROR_INVALID_COMPONENT_NAME,d0
 	bra.s	rd_check_prerunscript_path_quit
@@ -4878,8 +4964,8 @@ rd_execute_prerunscript_loop
 	CALLDOS	SystemTagList
 	tst.l	d0
 	beq.s	rd_execute_prerunscript_ok
-	lea	rd_error_text14(pc),a0
-	moveq	#rd_error_text14_end-rd_error_text14,d0
+	lea	rd_error_text13(pc),a0
+	moveq	#rd_error_text13_end-rd_error_text13,d0
 	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 	bra.s	rd_execute_prerunscript_quit
@@ -4899,8 +4985,8 @@ rd_open_pal_screen
 	CALLINT OpenScreenTagList
 	move.l	d0,rd_pal_screen(a3)
 	bne.s	rd_open_pal_screen_ok
-	lea	rd_error_text15(pc),a0
-	moveq	#rd_error_text15_end-rd_error_text15,d0
+	lea	rd_error_text14(pc),a0
+	moveq	#rd_error_text14_end-rd_error_text14,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 rd_open_pal_screen_quit
@@ -4940,8 +5026,8 @@ rd_check_pal_screen_mode
 	CALLGRAF GetVPModeID
 	cmp.l	#PAL_MONITOR_ID|LORES_KEY,d0
 	beq.s	rd_check_pal_screen_mode_ok
-	lea	rd_error_text16(pc),a0
-	moveq	#rd_error_text16_end-rd_error_text16,d0
+	lea	rd_error_text15(pc),a0
+	moveq	#rd_error_text15_end-rd_error_text15,d0
 	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 rd_check_pal_screen_mode_quit
@@ -4958,13 +5044,13 @@ rd_check_pal_screen_mode_ok
 	CNOP 0,4
 rd_open_invisible_window
 	lea	rd_invisible_window_tags(pc),a1
-	move.l	rd_pal_screen(a3),wtl_WA_CustomScreen+ti_data(a1)
+	move.l	rd_pal_screen(a3),wtl_WA_CustomScreen+ti_Data(a1)
 	sub.l	a0,a0			; no NewWindow structure
 	CALLINT OpenWindowTagList
 	move.l	d0,rd_invisible_window(a3)
 	bne.s	rd_open_invisible_window_ok
-	lea	rd_error_text17(pc),a0
-	moveq	#rd_error_text17_end-rd_error_text17,d0
+	lea	rd_error_text16(pc),a0
+	moveq	#rd_error_text16_end-rd_error_text16,d0
 	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 rd_open_invisible_window_quit
@@ -5073,8 +5159,8 @@ rd_load_demofile
 	CALLDOS LoadSeg
 	move.l	d0,rd_demofile_seglist(a3)
 	bne.s	rd_load_demofile_ok
-	lea	rd_error_text18(pc),a0
-	moveq	#rd_error_text18_end-rd_error_text18,d0
+	lea	rd_error_text17(pc),a0
+	moveq	#rd_error_text17_end-rd_error_text17,d0
 	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 rd_load_demofile_quit
@@ -5134,8 +5220,8 @@ rd_check_tooltypes_loop1
 	CALLICON GetDiskObject
 	move.l	d0,whdl_disk_object(a3)
 	bne.s	rd_check_tooltypes_skip1
-	lea	rd_error_text19(pc),a0
-	moveq	#rd_error_text19_end-rd_error_text19,d0
+	lea	rd_error_text18(pc),a0
+	moveq	#rd_error_text18_end-rd_error_text18,d0
 	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 rd_check_tooltypes_quit
@@ -5273,8 +5359,8 @@ rd_set_playtimer
 	beq.s	rd_set_playtimer_ok
 	cmp.b	#SerErr_DevBusy,d0
 	bne.s	rd_set_playtimer_skip1
-	lea	rd_error_text20a(pc),a0
-	moveq	#rd_error_text20a_end-rd_error_text20a,d0
+	lea	rd_error_text19a(pc),a0
+	moveq	#rd_error_text19a_end-rd_error_text19a,d0
 	bsr	rd_print_error_text
 rd_set_playtimer_fail
 	moveq	#RETURN_FAIL,d0
@@ -5284,32 +5370,32 @@ rd_set_playtimer_quit
 rd_set_playtimer_skip1
 	cmp.b	#SerErr_BaudMismatch,d0
 	bne.s	rd_set_playtimer__skip2
-	lea	rd_error_text20b(pc),a0
-	moveq	#rd_error_text20b_end-rd_error_text20b,d0
+	lea	rd_error_text19b(pc),a0
+	moveq	#rd_error_text19b_end-rd_error_text19b,d0
 	bsr	rd_print_error_text
 	bra.s	rd_set_playtimer_fail
 	CNOP 0,4
 rd_set_playtimer__skip2
 	cmp.b	#SerErr_InvParam,d0
 	bne.s	rd_set_playtimer__skip3
-	lea	rd_error_text20c(pc),a0
-	moveq	#rd_error_text20c_end-rd_error_text20c,d0
+	lea	rd_error_text19c(pc),a0
+	moveq	#rd_error_text19c_end-rd_error_text19c,d0
 	bsr	rd_print_error_text
 	bra.s	rd_set_playtimer_fail
 	CNOP 0,4
 rd_set_playtimer__skip3
 	cmp.b	#SerErr_LineErr,d0
 	bne.s	rd_set_playtimer__skip4
-	lea	rd_error_text20d(pc),a0
-	moveq	#rd_error_text20d_end-rd_error_text20d,d0
+	lea	rd_error_text19d(pc),a0
+	moveq	#rd_error_text19d_end-rd_error_text19d,d0
 	bsr	rd_print_error_text
 	bra.s	rd_set_playtimer_fail
 	CNOP 0,4
 rd_set_playtimer__skip4
 	cmp.b	#SerErr_NoDSR,d0
 	bne.s	rd_set_playtimer_ok
-	lea	rd_error_text20e(pc),a0
-	moveq	#rd_error_text20e_end-rd_error_text20e,d0
+	lea	rd_error_text19e(pc),a0
+	moveq	#rd_error_text19e_end-rd_error_text19e,d0
 	bsr	rd_print_error_text
 	bra.s	rd_set_playtimer_fail
 	CNOP 0,4
@@ -5332,8 +5418,8 @@ rd_write_playtimer
 	CALLEXEC DoIO
 	move.b	io_Error(a2),d0
 	beq.s	rd_write_playtimer_ok
-	lea	rd_error_text21(pc),a0
-	moveq	#rd_error_text21_end-rd_error_text21,d0
+	lea	rd_error_text20(pc),a0
+	moveq	#rd_error_text20_end-rd_error_text20,d0
 	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 rd_write_playtimer_quit
@@ -5581,8 +5667,8 @@ rd_execute_whdload_slave
 	CALLDOS SystemTagList
 	tst.l	d0
 	beq.s	rd_execute_whdload_slave_skip
-	lea	rd_error_text22(pc),a0
-	moveq	#rd_error_text22_end-rd_error_text22,d0
+	lea	rd_error_text21(pc),a0
+	moveq	#rd_error_text21_end-rd_error_text21,d0
 	bsr	rd_print_error_text
 	moveq	#RETURN_FAIL,d0
 rd_execute_whdload_slave_quit
@@ -5944,7 +6030,7 @@ rd_restore_sprite_resolution
 	move.l	sc_ViewPort+vp_ColorMap(a2),a0
 	lea	rd_video_control_tags(pc),a1
 	move.l	#VTAG_SPRITERESN_SET,vctl_VTAG_SPRITERESN+ti_tag(a1)
-	move.l	rd_old_sprite_resolution(a3),vctl_VTAG_SPRITERESN+ti_data(a1)
+	move.l	rd_old_sprite_resolution(a3),vctl_VTAG_SPRITERESN+ti_Data(a1)
 	CALLGRAF VideoControl
 	move.l	a2,a0			; screen
 	CALLINT MakeScreen
@@ -6057,7 +6143,7 @@ rd_check_loop_mode_ok
 ; input
 ; result
 	CNOP 0,4
-rd_free_cleared_sprite_data
+rd_free_mouse_pointer_data
 	move.l	rd_mouse_pointer_data(a3),a1
 	moveq	#sprite_pointer_data_size,d0
 	CALLEXEC FreeMem
@@ -6085,18 +6171,9 @@ rd_close_serial_device
 ; input
 ; result
 	CNOP 0,4
-rd_delete_serial_message_port
-	move.l	rd_serial_message_port(a3),a0
+rd_delete_serial_msg_port
+	move.l	rd_serial_msg_port(a3),a0
 	CALLEXEC DeleteMsgPort
-	rts
-
-
-; input
-; result
-	CNOP 0,4
-rd_close_icon_library
-	move.l	_IconBase(pc),a1
-	CALLEXEC CloseLibrary
 	rts
 
 
@@ -6290,7 +6367,7 @@ rd_030_mmu_on
 rp_start
 	bra.s	rp_start_skip1		; skip ADL id
 	CNOP 0,4
-rp_start_id			DC.B "-DL-"
+rp_start_id			DC.L ~("ADL2")
 rp_start_skip1
 	movem.l d0-d7/a0-a6,-(a7)
 	move.l	#_CUSTOM,a5
@@ -7096,6 +7173,22 @@ adl_error_text5
 adl_error_text5_end
 	EVEN
 
+adl_error_text6
+	DC.B ASCII_LINE_FEED
+	DC.B "Couldn't open asl.library"
+	DC.B ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED
+adl_error_text6_end
+	EVEN
+
+adl_error_text7
+	DC.B ASCII_LINE_FEED
+	DC.B "Couldn't open icon.library"
+	DC.B ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED
+adl_error_text7_end
+	EVEN
+
 
 ; Demo Charger
 	CNOP 0,4
@@ -7276,7 +7369,7 @@ dc_error_text9_end
 
 dc_error_text10
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't open asl.library"
+	DC.B "Couldn't find program directory"
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 dc_error_text10_end
@@ -7284,54 +7377,46 @@ dc_error_text10_end
 
 dc_error_text11
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't find program directory"
-	DC.B ASCII_LINE_FEED
-	DC.B ASCII_LINE_FEED
+	DC.B "Couldn't get program directory name"
 dc_error_text11_end
 	EVEN
 
 dc_error_text12
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't get program directory name"
+	DC.B "Couldn't initialize file requester structure"
+	DC.B ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED
 dc_error_text12_end
 	EVEN
 
 dc_error_text13
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't initialize file requester structure"
-	DC.B ASCII_LINE_FEED
-	DC.B ASCII_LINE_FEED
+	DC.B "Directory not found"
 dc_error_text13_end
 	EVEN
 
 dc_error_text14
 	DC.B ASCII_LINE_FEED
-	DC.B "Directory not found"
+	DC.B "No demo file selected"
 dc_error_text14_end
 	EVEN
 
 dc_error_text15
 	DC.B ASCII_LINE_FEED
-	DC.B "No demo file selected"
+	DC.B "Demo filepath is longer than 123 characters"
 dc_error_text15_end
 	EVEN
 
 dc_error_text16
 	DC.B ASCII_LINE_FEED
-	DC.B "Demo filepath is longer than 123 characters"
+	DC.B "Demo file not found"
 dc_error_text16_end
 	EVEN
 
 dc_error_text17
 	DC.B ASCII_LINE_FEED
-	DC.B "Demo file not found"
-dc_error_text17_end
-	EVEN
-
-dc_error_text18
-	DC.B ASCII_LINE_FEED
 	DC.B "Couldn't allocate memory for resident program"
-dc_error_text18_end
+dc_error_text17_end
 	EVEN
 
 
@@ -7598,8 +7683,12 @@ rd_timer_io
 
 
 	CNOP 0,4
-rd_video_control_tags
-	DS.B video_control_tag_list_size
+rd_pal_screen_tags
+	DS.B screen_tag_list_size
+
+	CNOP 0,2
+rd_pal_screen_color_spec
+	DS.B cs2_SIZEOF*(pal_screen_colors_number+1)
 
 	CNOP 0,2
 rd_pal_screen_rgb4_colors
@@ -7607,11 +7696,13 @@ rd_pal_screen_rgb4_colors
 
 	CNOP 0,4
 rd_pal_screen_rgb32_colors
-	DS.B screen_02_colors_size
+	DS.L pal_screen_colors_number*3
+
 
 	CNOP 0,4
-rd_pal_screen_tags
-	DS.B screen_tag_list_size
+rd_video_control_tags
+	DS.B video_control_tag_list_size
+
 
 	CNOP 0,4
 rd_invisible_window_tags
@@ -7722,7 +7813,7 @@ rd_error_text2_end
 
 rd_error_text3
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't open timer.device"
+	DC.B "Couldn't create serial message port"
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text3_end
@@ -7730,7 +7821,7 @@ rd_error_text3_end
 
 rd_error_text4
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't open icon.library"
+	DC.B "Couldn't open serial.device"
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text4_end
@@ -7738,7 +7829,7 @@ rd_error_text4_end
 
 rd_error_text5
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't create serial message port"
+	DC.B "Couldn't open timer.device"
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text5_end
@@ -7746,59 +7837,59 @@ rd_error_text5_end
 
 rd_error_text6
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't open serial.device"
-	DC.B ASCII_LINE_FEED
-	DC.B ASCII_LINE_FEED
+	DC.B "Couldnt allocate sprite pointer data"
 rd_error_text6_end
 	EVEN
 
 rd_error_text7
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldnt allocate sprite data structure"
+	DC.B "Invalid monitor ID"
+	DC.B ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED
 rd_error_text7_end
 	EVEN
 
 rd_error_text8
-	DC.B ASCII_LINE_FEED
-	DC.B "Invalid monitor ID"
+	DC.B "Run mode AGA vanilla not supported on this config"
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text8_end
 	EVEN
 
 rd_error_text9
-	DC.B "Run mode AGA vanilla not supported on this config"
+	DC.B "Couldn't open demo file"
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text9_end
 	EVEN
 
 rd_error_text10
-	DC.B "Couldn't open demo file"
-	DC.B ASCII_LINE_FEED
-	DC.B ASCII_LINE_FEED
+	DC.B "No executable demo file"
 rd_error_text10_end
 	EVEN
 
 rd_error_text11
-	DC.B "No executable demo file"
+	DC.B "Couldn't find demo directory"
+	DC.B ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED
 rd_error_text11_end
 	EVEN
 
 rd_error_text12
-	DC.B "Couldn't find demo directory"
-	DC.B ASCII_LINE_FEED
-	DC.B ASCII_LINE_FEED
+	DC.B "Prerun script filepath is longer than 63 characters"
 rd_error_text12_end
 	EVEN
 
 rd_error_text13
-	DC.B "Prerun script filepath is longer than 63 characters"
+	DC.B "Couldn't execute prerun script file"
+	DC.B ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED
 rd_error_text13_end
 	EVEN
 
 rd_error_text14
-	DC.B "Couldn't execute prerun script file"
+	DC.B ASCII_LINE_FEED
+	DC.B "Couldn't open degrade screen"
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text14_end
@@ -7806,7 +7897,7 @@ rd_error_text14_end
 
 rd_error_text15
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't open degrade screen"
+	DC.B "Lores PAL screen not supported"
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text15_end
@@ -7814,87 +7905,79 @@ rd_error_text15_end
 
 rd_error_text16
 	DC.B ASCII_LINE_FEED
-	DC.B "Lores PAL screen not supported"
+	DC.B "Couldn't open invisible window"
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text16_end
 	EVEN
 
 rd_error_text17
-	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't open invisible window"
+	DC.B "Couldn't load demo file"
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text17_end
 	EVEN
 
 rd_error_text18
-	DC.B "Couldn't load demo file"
+	DC.B "Couldn't open WHDLoad .info file"
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text18_end
 	EVEN
 
-rd_error_text19
-	DC.B "Couldn't open WHDLoad .info file"
-	DC.B ASCII_LINE_FEED
-	DC.B ASCII_LINE_FEED
-rd_error_text19_end
-	EVEN
-
-rd_error_text20a
+rd_error_text19a
 	DC.B ASCII_LINE_FEED
 	DC.B "Serial device in use"
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
-rd_error_text20a_end
+rd_error_text19a_end
 	EVEN
 
-rd_error_text20b
+rd_error_text19b
 	DC.B ASCII_LINE_FEED
 	DC.B "Baud rate not supported by hardware"
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
-rd_error_text20b_end
+rd_error_text19b_end
 	EVEN
 
-rd_error_text20c
+rd_error_text19c
 	DC.B ASCII_LINE_FEED
 	DC.B "Bad parameter"
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
-rd_error_text20c_end
+rd_error_text19c_end
 	EVEN
 
-rd_error_text20d
+rd_error_text19d
 	DC.B ASCII_LINE_FEED
 	DC.B "Hardware data overrun"
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
-rd_error_text20d_end
+rd_error_text19d_end
 	EVEN
 
-rd_error_text20e
+rd_error_text19e
 	DC.B ASCII_LINE_FEED
 	DC.B "No data set ready"
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
-rd_error_text20e_end
+rd_error_text19e_end
 	EVEN
 
-rd_error_text21
+rd_error_text20
 	DC.B ASCII_LINE_FEED
 	DC.B "Write to serial port failed"
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
-rd_error_text21_end
+rd_error_text20_end
 	EVEN
 
-rd_error_text22
+rd_error_text21
 	DC.B "Couldn't execute WHDLoad slave file"
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
-rd_error_text22_end
+rd_error_text21_end
 	EVEN
 
 
@@ -7929,8 +8012,8 @@ whdl_slave_cmd_line_path
 
 	DC.B "$VER: "
 	DC.B "Amiga Demo Launcher "
-	DC.B "2.09 "
-	DC.B "(6.7.25) "
+	DC.B "2.10 "
+	DC.B "(27.7.25) "
 	DC.B "© 2025 by Resistance",0
 	EVEN
 

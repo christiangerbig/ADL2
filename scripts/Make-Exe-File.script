@@ -1,3 +1,6 @@
 CD ADL2:sources
-OMA ADL2.asm -o projects-exe-files:RSE-ADL2 -c c -m >RAM:make-output.txt
+OMA ADL2.asm -o projects-exe-files:RSE-ADL2 -c c -m >RAM:make-output1.txt
+OMA DetectADL2.asm -o projects-exe-files:DetectADL2 -c c -m >RAM:make-output2.txt
+OMA WinMax.asm -o projects-exe-files:WinMax -c c -m >RAM:make-output3.txt
+
 CD /

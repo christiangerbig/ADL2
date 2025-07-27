@@ -15,6 +15,9 @@
 ; - Check for minimum requirements Kickstart version removed
 ; - Code optimized
 
+; V.1.1
+; - Id "-DL-" changed to NOT("ADL2")
+
 
 	MC68000
 
@@ -75,27 +78,23 @@ init_variables
 ; d0.l	Return code
 	CNOP 0,4
 search_adl_id
-	move.l	#~("-DL-"),d4
+	move.l	#~("ADL2"),d4
 	move.l	_SysBase(pc),a6
-	move.w	#4*LONGWORD_SIZE,a1
+	move.w	#QUADWORD_SIZE*2,a1
 	move.l	MaxLocMem(a6),a2
 	move.l	a2,d7
 	lsr.l	#4,d7			; chip memory size in 16 steps
 	subq.l	#1,d7			; loopend at false
 search_adl_id_loop
 	sub.l	a1,a2
-	movem.l	(a2),d0-d3
-	not.l	d0
-	cmp.l	d4,d0
+	movem.l	(a2),d0-d3		; fetch 16 bytes
+	cmp.l	d4,d0                   ; id ?
 	beq.s	search_adl_id_ok
-	not.l	d1
-	cmp.l	d4,d1
+	cmp.l	d4,d1                   ; id ?
 	beq.s	search_adl_id_ok
-	not.l	d2
-	cmp.l	d4,d2
+	cmp.l	d4,d2                   ; id ?
 	beq.s	search_adl_id_ok
-	not.l	d3
-	cmp.l	d4,d3
+	cmp.l	d4,d3                   ; id ?
 	beq.s	search_adl_id_ok
 	subq.l	#1,d7
 	bpl.s	search_adl_id_loop
@@ -119,8 +118,8 @@ variables
 
 	DC.B "$VER: "
 	DC.B "DetectADL2 "
-	DC.B "1.0 "
-	DC.B "(7.7.25)",0
+	DC.B "1.1"
+	DC.B "(27.7.25)",0
 	EVEN
 
 	END
