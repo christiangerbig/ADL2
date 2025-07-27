@@ -1723,7 +1723,7 @@ adl_search_id_loop
 	subq.l	#1,d7
 	bpl.s	adl_search_id_loop
 ; No ADL2 id found
-	bsr	adl_init_values
+	bsr	adl_set_default_values
 adl_search_id_quit
 	rts
 	CNOP 0,4
