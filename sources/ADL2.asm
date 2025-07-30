@@ -152,6 +152,7 @@
 ; V.2.10
 ; - Identifier changed from "-DL-" to NOT("ADL2")
 ; - code cleared
+; - Cool Capture check improved
 
 
 ; OS2.x bugs which have an impact on the ADL
@@ -898,8 +899,8 @@ adl_quit
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 adl_init_variables
 
@@ -979,17 +980,20 @@ adl_init_variables
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 adl_init_structures
-	bsr.s	adl_init_cool_capture_request
 	bsr.s	adl_init_command_string
+	bsr.s	adl_init_cool_capture_request
+
 	bsr.s	dc_init_runmode_request
 	bsr	dc_init_file_request_tags
+
 	bsr	qh_init_get_visual_info_tags
 	bsr	qh_init_edit_window_tags
 	bsr	qh_init_gadgets
+
 	bsr	rd_init_pal_screen_tags
 	bsr	rd_init_pal_screen_color_spec
 	bsr	rd_init_pal_screen_rgb4_colors
@@ -1001,8 +1005,21 @@ adl_init_structures
 	rts
 
 
-; input
-; result
+; Input
+; Result
+	CNOP 0,4
+adl_init_command_string
+	lea	rp_command_string(pc),a0
+	move.b	#ASCII_LINE_FEED,cs_line_feed1(a0)
+	move.b	#ASCII_LINE_FEED,cs_line_feed2(a0)
+	move.b	#"#",cs_hash(a0)
+	move.b	#",",cs_separator(a0)
+	move.b	#ASCII_LINE_FEED,cs_line_feed3(a0)
+	rts
+
+
+; Input
+; Result
 	CNOP 0,4
 adl_init_cool_capture_request
 	lea	adl_cool_capture_request(pc),a0
@@ -1019,21 +1036,8 @@ adl_init_cool_capture_request
 	rts
 
 
-; input
-; result
-	CNOP 0,4
-adl_init_command_string
-	lea	rp_command_string(pc),a0
-	move.b	#ASCII_LINE_FEED,cs_line_feed1(a0)
-	move.b	#ASCII_LINE_FEED,cs_line_feed2(a0)
-	move.b	#"#",cs_hash(a0)
-	move.b	#",",cs_separator(a0)
-	move.b	#ASCII_LINE_FEED,cs_line_feed3(a0)
-	rts
-
-
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 dc_init_runmode_request
 	lea	dc_runmode_request(pc),a0
@@ -1049,8 +1053,8 @@ dc_init_runmode_request
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 dc_init_file_request_tags
 	lea	dc_file_request_tags(pc),a0
@@ -1093,8 +1097,8 @@ dc_init_file_request_tags
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 qh_init_get_visual_info_tags
 	lea	qh_get_visual_info_tags(pc),a0
@@ -1103,8 +1107,8 @@ qh_init_get_visual_info_tags
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 qh_init_edit_window_tags
 	lea	qh_edit_window_tags(pc),a0
@@ -1150,8 +1154,8 @@ qh_init_edit_window_tags
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 qh_init_gadgets
 ; CreateContext()
@@ -1302,8 +1306,8 @@ qh_init_mx_gadget
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_init_pal_screen_tags
 	lea	rd_pal_screen_tags(pc),a0
@@ -1366,25 +1370,25 @@ rd_init_pal_screen_tags
 
 ; Input
 ; Result
-		CNOP 0,4
+	CNOP 0,4
 rd_init_pal_screen_color_spec
-		lea	rd_pal_screen_color_spec(pc),a0 ; OS2.x
-		moveq	#0,d0		; black
-		moveq	#0,d1		; color index
-		MOVEF.W	pal_screen_colors_number-1,d7
+	lea	rd_pal_screen_color_spec(pc),a0
+	moveq	#0,d0			; black
+	moveq	#0,d1			; color index
+	MOVEF.W	pal_screen_colors_number-1,d7
 rd_init_pal_screen_color_spec_loop
-		move.w	d1,(a0)+	; color index
-		move.w	d0,(a0)+	; R4
-		move.w	d0,(a0)+	; G4
-		addq.w	#1,d1
-		move.w	d0,(a0)+	; B4
-		dbf	d7,rd_init_pal_screen_color_spec_loop
-		move.w	#-1,(a0)	; terminate array
-		rts
+	move.w	d1,(a0)+		; color index
+	move.w	d0,(a0)+		; R4
+	move.w	d0,(a0)+		; G4
+	addq.w	#1,d1
+	move.w	d0,(a0)+		; B4
+	dbf	d7,rd_init_pal_screen_color_spec_loop
+	move.w	#-1,(a0)		; terminate array
+	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_init_pal_screen_rgb4_colors
 	lea	rd_pal_screen_rgb4_colors(pc),a0 ; for LoadRGB4()
@@ -1396,13 +1400,13 @@ rd_init_pal_screen_rgb4_colors_loop
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_init_pal_screen_rgb32_colors
 	lea	rd_pal_screen_rgb32_colors(pc),a0 ; for LoadRGB32()
 	move.w	#pal_screen_colors_number,(a0)+
-	moveq	#0,d0
+	moveq	#$00000000,d0
 	move.w	d0,(a0)+		; start with COLOR00
 	MOVEF.W	pal_screen_colors_number-1,d7
 rd_init_pal_screen_rgb32_colors_loop
@@ -1414,8 +1418,8 @@ rd_init_pal_screen_rgb32_colors_loop
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_init_video_control_tags
 	lea	rd_video_control_tags(pc),a0
@@ -1424,8 +1428,8 @@ rd_init_video_control_tags
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_init_invisible_window_tags
 	lea	rd_invisible_window_tags(pc),a0
@@ -1475,8 +1479,8 @@ rd_init_invisible_window_tags
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_init_serial_io
 	lea	rd_serial_io(pc),a0
@@ -1488,8 +1492,8 @@ rd_init_serial_io
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_init_timer_io
 	lea	rd_timer_io(pc),a0
@@ -1501,8 +1505,8 @@ rd_init_timer_io
 	rts
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 adl_open_dos_library
@@ -1521,8 +1525,8 @@ adl_open_dos_library_ok
 	bra.s	adl_open_dos_library_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code/error code
 	CNOP 0,4
 adl_get_output
@@ -1538,22 +1542,8 @@ adl_get_output_ok
 	bra.s	adl_get_output_quit
 
 
-; input
-; result
-; d0.l	Screen structure active screen
-	CNOP 0,4
-rd_get_active_screen
-	moveq	#0,d0			; all locks
-	CALLINT LockIBase
-	move.l	d0,a0
-	move.l	ib_ActiveScreen(a6),a2
-	CALLLIBS UnlockIBase
-	move.l	a2,d0
-	rts
-
-
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 adl_check_system_props
@@ -1584,8 +1574,8 @@ adl_check_system_props_ok
 	bra.s	adl_check_system_props_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 adl_open_graphics_library
@@ -1607,8 +1597,8 @@ adl_open_graphics_library_ok
 	bra.s	adl_open_graphics_library_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 adl_open_intuition_library
@@ -1630,8 +1620,8 @@ adl_open_intuition_library_ok
 	bra.s	adl_open_intuition_library_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 adl_open_gadtools_library
@@ -1653,8 +1643,8 @@ adl_open_gadtools_library_ok
 	bra.s	adl_open_gadtools_library_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	.Return code
 	CNOP 0,4
 adl_open_asl_library
@@ -1676,8 +1666,8 @@ adl_open_asl_library_ok
 	bra.s	adl_open_asl_library_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 adl_open_icon_library
@@ -1699,8 +1689,8 @@ adl_open_icon_library_ok
 	bra.s	adl_open_icon_library_quit
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 adl_search_id
 	move.l	#~("ADL2"),d4		; encrypted id
@@ -1723,7 +1713,7 @@ adl_search_id_loop
 	subq.l	#1,d7
 	bpl.s	adl_search_id_loop
 ; No ADL2 id found
-	bsr	adl_set_default_values
+	bsr	adl_check_cool_capture
 adl_search_id_quit
 	rts
 	CNOP 0,4
@@ -1809,8 +1799,8 @@ adl_do_request
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 adl_update_values
 	GET_RESIDENT_ENTRIES_NUMBER_MAX
@@ -1828,8 +1818,31 @@ adl_update_values
 	rts
 
 
-; input
-; result
+; Input
+; Result
+	CNOP 0,4
+adl_check_cool_capture
+	move.l	_SysBase(pc),a6
+	move.l	CoolCapture(a6),d0
+	bne.s	adl_check_cool_capture_skip1
+adl_check_cool_capture_quit
+	rts
+	CNOP 0,4
+adl_check_cool_capture_skip1
+; Cool Capture already used
+	bsr.s	adl_do_request
+	cmp.l	#BOOL_TRUE,d0		; requester gadget "Proceed" clicked ?
+	beq.s	adl_check_cool_capture_skip2
+	clr.w	adl_abort(a3)
+	bra.s	adl_check_cool_capture_quit
+	CNOP 0,4
+adl_check_cool_capture_skip2
+	bsr.s	adl_set_default_values
+	bra.s	adl_check_cool_capture_quit
+
+
+; Input
+; Result
 	CNOP 0,4
 adl_set_default_values
 	moveq	#dc_entries_number_default_max,d2
@@ -1839,8 +1852,8 @@ adl_set_default_values
 	rts
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 adl_check_cmd_line
@@ -1863,8 +1876,8 @@ adl_check_cmd_line_ok
 	bra.s	adl_check_cmd_line_quit
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 adl_print_cmd_usage
 	lea	adl_cmd_usage_text(pc),a0
@@ -2110,8 +2123,8 @@ rd_check_arg_resetonerror
 	bra	adl_check_cmd_line_ok
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 adl_print_intro_message
 	tst.w	adl_reset_program_active(a3)
@@ -2130,8 +2143,8 @@ adl_print_intro_message_skip
 
 ; Demo Charger
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code/error code
 	CNOP 0,4
 dc_alloc_entries_buffer
@@ -2155,8 +2168,8 @@ dc_alloc_entries_buffer_ok
 	bra.s	dc_alloc_entries_buffer_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code/error code
 	CNOP 0,4
 dc_get_program_dir
@@ -2189,8 +2202,8 @@ dc_get_program_dir_ok
 	bra.s	dc_get_program_dir_quit
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 dc_display_remaining_files
 	lea	dc_file_request_remaining_files(pc),a0
@@ -2206,8 +2219,8 @@ dc_display_remaining_files_skip
 	rts
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 dc_make_file_request
@@ -2234,8 +2247,8 @@ dc_make_file_request_ok
 	bra.s	dc_make_file_request_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 dc_display_file_request
@@ -2253,8 +2266,8 @@ dc_display_file_request_ok
 	bra.s	dc_display_file_request_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 dc_get_demo_filepath
@@ -2292,10 +2305,10 @@ dc_get_demo_filepath_skip2
 	bra.s	dc_get_demo_filepath_quit
 
 
-; input
+; Input
 ; a0.l	File name
 ; a1.l	Directory name
-; result
+; Result
 ; d0.l	Return code/Error Code
 	CNOP 0,4
 dc_check_demo_filepath
@@ -2392,8 +2405,8 @@ dc_check_demo_filepath_skip6
 	bra	dc_check_demo_filepath_quit
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 dc_free_file_request
 	move.l	dc_file_request(a3),a0
@@ -2401,8 +2414,8 @@ dc_free_file_request
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 dc_display_runmode_request
 	sub.l	a0,a0			; requester on workbench/public screen
@@ -2425,8 +2438,8 @@ dc_display_runmode_request_loop
 	rts
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 dc_check_entries_number_max
@@ -2443,8 +2456,8 @@ dc_check_entries_number_max_ok
 	bra.s	dc_check_entries_number_max_quit
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 dc_print_entries_max_message
 	lea     dc_message_text(pc),a0
@@ -2453,8 +2466,8 @@ dc_print_entries_max_message
 	rts
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code/error code
 	CNOP 0,4
 dc_init_reset_program
@@ -2528,8 +2541,8 @@ dc_init_reset_program_skip3
 	bra	dc_init_reset_program_ok
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 dc_lock_playlist_file
@@ -2550,8 +2563,8 @@ dc_lock_playlist_file_ok
 	bra.s	dc_lock_playlist_file_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code/error code
 	CNOP 0,4
 dc_alloc_playlist_file_fib
@@ -2572,8 +2585,8 @@ dc_alloc_playlist_file_fib_ok
 	bra.s	dc_alloc_playlist_file_fib_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 dc_get_playlist_filelength
@@ -2596,8 +2609,8 @@ dc_get_playlist_filelength_ok
 	bra.s	dc_get_playlist_filelength_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code/error code
 	CNOP 0,4
 dc_alloc_playlist_filebuffer
@@ -2618,8 +2631,8 @@ dc_alloc_playlist_filebuffer_ok
 	bra.s	dc_alloc_playlist_filebuffer_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 dc_open_playlist_file
@@ -2640,8 +2653,8 @@ dc_open_playlist_file_ok
 	bra.s	dc_open_playlist_file_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 dc_read_playlist_file
@@ -2663,8 +2676,8 @@ dc_read_playlist_file_ok
 	bra.s	dc_read_playlist_file_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 dc_parse_playlist_file
@@ -2899,8 +2912,8 @@ dc_free_DosObject
 	bra	dc_parse_playlist_file_loop1
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 dc_parse_playlist_file_result
 	moveq	#0,d1
@@ -2920,9 +2933,9 @@ dc_parse_playlist_file_result
 	rts
 
 
-; input
+; Input
 ; a0.l	Entry in playback queue
-; result
+; Result
 	CNOP 0,4
 dc_parse_playlist_entry_error
 	bsr.s	dc_clear_playlist_entry
@@ -2930,9 +2943,9 @@ dc_parse_playlist_entry_error
 	rts
 
 
-; input
+; Input
 ; a0.l	Entry to delete
-; result
+; Result
 	CNOP 0,4
 dc_clear_playlist_entry
 	moveq	#0,d0
@@ -2943,8 +2956,8 @@ dc_clear_playlist_entry_loop
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 dc_parse_entry_syntax_error
 	moveq	#0,d1
@@ -2960,8 +2973,8 @@ dc_parse_entry_syntax_error
 	rts
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 dc_check_entries_number_min
@@ -2976,8 +2989,8 @@ dc_check_entries_number_min_ok
 	bra.s	dc_check_entries_number_min_quit
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 dc_close_playlist_file
 	move.l	dc_playlist_file_handle(a3),d1
@@ -2985,8 +2998,8 @@ dc_close_playlist_file
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 dc_free_playlist_file_buffer
 	move.l	dc_playlist_file_buffer(a3),a1
@@ -2995,8 +3008,8 @@ dc_free_playlist_file_buffer
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 dc_free_playlist_file_fib
 	move.l	dc_playlist_file_fib(a3),a1
@@ -3005,8 +3018,8 @@ dc_free_playlist_file_fib
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 dc_unlock_playlist_file
 	move.l dc_playlist_file_lock(a3),d1
@@ -3014,8 +3027,8 @@ dc_unlock_playlist_file
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 dc_free_entries_buffer
 	tst.w	adl_reset_program_active(a3)
@@ -3032,8 +3045,8 @@ dc_free_entries_buffer_skip
 
 
 ; Queue Handler
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 qh_show_queue
 	move.l	adl_entries_buffer(a3),a2
@@ -3078,9 +3091,9 @@ qh_show_queue_loop
 	bra.s	qh_show_queue_quit
 
 
-; input
+; Input
 ; a2.l	Entry in playback queue
-; result
+; Result
 	CNOP 0,4
 qh_get_entry_filename
 	moveq	#0,d0			; counter file name length
@@ -3128,8 +3141,8 @@ qh_print_entry_active_text2
 	bra.s	qh_get_entry_filename_quit
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 qh_edit_single_entry
 	bsr	qh_lock_workbench
@@ -3160,8 +3173,8 @@ qh_edit_entry_quit
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 qh_edit_queue
 	move.l	adl_entries_buffer(a3),a0
@@ -3203,8 +3216,8 @@ qh_edit_queue_cleanup_wb_lock
 	bra.s	qh_edit_queue_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return-Code
 	CNOP 0,4
 qh_lock_workbench
@@ -3224,8 +3237,8 @@ qh_lock_workbench_ok
 	bra.s	qh_lock_workbench_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return-Code
 	CNOP 0,4
 qh_get_screen_visual_info
@@ -3246,8 +3259,8 @@ qh_get_screen_visual_info_ok
 	bra.s	qh_get_screen_visual_info_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return-Code
 	CNOP 0,4
 qh_create_context_gadget
@@ -3267,8 +3280,8 @@ qh_create_context_gadget_ok
 	bra.s	qh_create_context_gadget_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return-Code
 	CNOP 0,4
 qh_create_gadgets
@@ -3571,9 +3584,9 @@ qh_create_negative_button
 	rts
 
 
-; input
+; Input
 ; a0.l	Entry in playback queue
-; result
+; Result
 ; d0.l	File name
 	CNOP 0,4
 qh_get_demofile_title
@@ -3592,8 +3605,8 @@ qh_get_demofile_title_skip
 	rts
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return-Code
 	CNOP 0,4
 qh_open_edit_window
@@ -3627,8 +3640,8 @@ qh_open_edit_window_skip2
 	bra.s	qh_open_edit_window_quit
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 qh_process_window_events
 	move.l	qh_edit_window(a3),a0
@@ -3784,10 +3797,10 @@ qh_process_window_events_ok
 	rts
 
 
-; input
+; Input
 ; a0.l	String
 ; d7.l	Number of digits to convert
-; result
+; Result
 ; d0.l	Decimal number
 	CNOP 0,4
 qh_ascii_to_dec
@@ -3797,7 +3810,7 @@ qh_ascii_to_dec
 qh_ascii_to_dec_skip
 	add.l	d7,a0			; end of string
 	lea	rp_dec_table(pc),a1
-	moveq	#0,d0			; result decimal number
+	moveq	#0,d0			; Result decimal number
 	subq.w	#1,d7			; loopend at false
 qh_ascii_to_dec_loop
 	move.l	(a1)+,d2                ; decimal digits value [1,10,..]
@@ -3810,9 +3823,9 @@ qh_ascii_to_dec_loop
 	rts
 
 
-; input
+; Input
 ; d0.l	Entry index number [1..n]
-; result
+; Result
 	CNOP 0,4
 qh_edit_fetch_entry
 	subq.w	#1,d0			; count starts at 0
@@ -3825,11 +3838,11 @@ qh_edit_fetch_entry
 	rts
 
 
-; input
+; Input
 ; d2.l	Entry index number [1..n]
 ; a2.l	file name
 ; a5.l	entry in playback queue
-; result
+; Result
 	CNOP 0,4
 qh_update_gadgets
 	move.l	qh_text_gadget(a3),a0
@@ -3905,8 +3918,8 @@ qh_update_gadgets_skip2
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 qh_close_edit_window
 	move.l	qh_edit_window(a3),a0
@@ -3914,8 +3927,8 @@ qh_close_edit_window
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 qh_free_gadgets
 	move.l	qh_gadget_list(pc),a0
@@ -3923,8 +3936,8 @@ qh_free_gadgets
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 qh_free_screen_visual_info
 	move.l	qh_screen_visual_info(a3),a0
@@ -3932,8 +3945,8 @@ qh_free_screen_visual_info
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 qh_unlock_workbench
 	sub.l	a0,a0			; no name
@@ -3942,8 +3955,8 @@ qh_unlock_workbench
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 qh_clear_queue
 	move.l	adl_entries_buffer(a3),a0
@@ -3978,8 +3991,8 @@ qh_clear_queue_skip
 	bra.s	qh_clear_queue_quit
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 qh_free_visual_info
 	move.l	qh_screen_visual_info(a3),a0
@@ -3987,8 +4000,8 @@ qh_free_visual_info
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 qh_reset_queue
 	cmp.w	#adl_entries_number_min,rd_entry_offset(a3)
@@ -4008,8 +4021,8 @@ qh_reset_queue_ok
 	bra.s	qh_reset_queue_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 qh_check_queue_empty
@@ -4027,8 +4040,8 @@ qh_check_queue_empty_ok
 
 ; Amiga Demo Launcher
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 adl_free_read_arguments
 	move.l	adl_read_arguments(a3),d1
@@ -4041,8 +4054,8 @@ adl_free_read_arguments_skip
 	bra.s	adl_free_read_arguments_quit
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 adl_print_io_error
 	move.l	adl_dos_return_code(a3),d1
@@ -4062,8 +4075,8 @@ adl_print_io_error_skip1
 	bra.s	adl_print_io_error_quit
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 adl_remove_reset_program
 	tst.w	adl_arg_remove_enabled(a3)
@@ -4093,8 +4106,8 @@ adl_remove_reset_program_skip2
 	bra.s	adl_remove_reset_program_quit
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 adl_close_icon_library
 	move.l	_IconBase(pc),a1
@@ -4102,8 +4115,8 @@ adl_close_icon_library
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 adl_close_asl_library
 	move.l	_ASLBase(pc),a1
@@ -4111,8 +4124,8 @@ adl_close_asl_library
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 adl_close_gadtools_library
 	move.l	_GadToolsBase(pc),a1
@@ -4120,8 +4133,8 @@ adl_close_gadtools_library
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 adl_close_intuition_library
 	move.l	_IntuitionBase(pc),a1
@@ -4129,8 +4142,8 @@ adl_close_intuition_library
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 adl_close_graphics_library
 	move.l	_GfxBase(pc),a1
@@ -4138,8 +4151,8 @@ adl_close_graphics_library
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 adl_close_dos_library
 	move.l	_DOSBase(pc),a1
@@ -4147,10 +4160,10 @@ adl_close_dos_library
 	rts
 
 
-; input
+; Input
 ; a0.l	text
 ; d0.l	Length of text
-; result
+; Result
 	CNOP 0,4
 adl_print_text
 	move.l	adl_output_handle(a3),d1
@@ -4278,11 +4291,15 @@ rd_play_loop
 
 	bsr	rd_clear_chips_registers
 	bsr	rd_restore_chips_registers
+
 	bsr	rd_get_tod_duration
+
 	IFEQ rd_yulquen74_code_enabled
 		bsr	rd_upgrade_cpu_clock
 	ENDC
+
 	bsr	rd_restore_custom_traps
+
 	bsr	rd_upgrade_cpu
 
 	bsr	rd_init_playtimer_stop
@@ -4333,14 +4350,13 @@ rd_cleanup_serial_device
 rd_cleanup_serial_msg_port
 	bsr	rd_delete_serial_msg_port
 
-rd_quit
 	bra	adl_cleanup_read_arguments
 
 
-; input
-; a0.l	error text
+; Input
+; a0.l	Error text
 ; d0.l	Text length
-; result
+; Result
 	CNOP 0,4
 rd_print_error_text
 	movem.l	d0/a0,-(a7)
@@ -4368,8 +4384,8 @@ rd_print_error_text_quit
 	rts
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 rd_open_ciaa_resource
@@ -4394,8 +4410,8 @@ rd_open_ciaa_resource_skip
 	bra.s	rd_open_ciaa_resource_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 rd_open_ciab_resource
@@ -4420,8 +4436,8 @@ rd_open_ciab_resource_skip
 	bra.s	rd_open_ciab_resource_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 rd_create_serial_msg_port
@@ -4440,8 +4456,8 @@ rd_create_serial_msg_port_ok
 	bra.s	rd_create_serial_msg_port_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 rd_open_serial_device
@@ -4465,8 +4481,8 @@ rd_open_serial_device_ok
 	bra.s	rd_open_serial_device_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 rd_open_timer_device
@@ -4489,8 +4505,8 @@ rd_open_timer_device_ok
 	bra.s	rd_open_timer_device_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code/error code
 	CNOP 0,4
 rd_alloc_mouse_pointer_data
@@ -4511,25 +4527,18 @@ rd_alloc_mouse_pointer_data_ok
 	bra.s	rd_alloc_mouse_pointer_data_quit
 
 
-; input
-; result
+; Input
+; Result
+; d0.l	Screen structure active screen
 	CNOP 0,4
-rd_get_sprite_resolution
-	move.l	rd_active_screen(a3),d0
-	bne.s	rd_get_sprite_resolution_skip
-rd_get_sprite_resolution_quit
-	rts
-	CNOP 0,4
-rd_get_sprite_resolution_skip
+rd_get_active_screen
+	moveq	#0,d0			; all locks
+	CALLINT LockIBase
 	move.l	d0,a0
-	move.l  sc_ViewPort+vp_ColorMap(a0),a0
-	lea	rd_video_control_tags(pc),a1
-	move.l	a1,a2
-	move.l	#VTAG_SPRITERESN_GET,vctl_VTAG_SPRITERESN+ti_tag(a1)
-	clr.l	vctl_VTAG_SPRITERESN+ti_Data(a1)
-	CALLGRAF VideoControl
-	move.l  vctl_VTAG_SPRITERESN+ti_Data(a2),rd_old_sprite_resolution(a3)
-	bra.s	rd_get_sprite_resolution_quit
+	move.l	ib_ActiveScreen(a6),a2
+	CALLLIBS UnlockIBase
+	move.l	a2,d0
+	rts
 
 
 ; Input
@@ -4548,8 +4557,8 @@ rd_get_first_window_skip
 		bra.s	rd_get_first_window_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 rd_check_screen_mode
@@ -4575,8 +4584,29 @@ rd_check_screen_mode_ok
 	bra.s	rd_check_screen_mode_quit
 
 
-; input
-; result
+; Input
+; Result
+	CNOP 0,4
+rd_get_sprite_resolution
+	move.l	rd_active_screen(a3),d0
+	bne.s	rd_get_sprite_resolution_skip
+rd_get_sprite_resolution_quit
+	rts
+	CNOP 0,4
+rd_get_sprite_resolution_skip
+	move.l	d0,a0
+	move.l  sc_ViewPort+vp_ColorMap(a0),a0
+	lea	rd_video_control_tags(pc),a1
+	move.l	a1,a2
+	move.l	#VTAG_SPRITERESN_GET,vctl_VTAG_SPRITERESN+ti_tag(a1)
+	clr.l	vctl_VTAG_SPRITERESN+ti_Data(a1)
+	CALLGRAF VideoControl
+	move.l  vctl_VTAG_SPRITERESN+ti_Data(a2),rd_old_sprite_resolution(a3)
+	bra.s	rd_get_sprite_resolution_quit
+
+
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 rd_check_queue
@@ -4606,8 +4636,8 @@ rd_check_queue_ok
 	bra.s	rd_check_queue_quit
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_deactivate_queue
 	MOVEF.L	playback_queue_entry_size,d1
@@ -4626,8 +4656,8 @@ rd_deactivate_queue_loop
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_get_new_entry_offset
 	tst.w	rd_arg_random_enabled(a3)
@@ -4654,9 +4684,9 @@ rd_get_random_entry_skip2
 	rts
 
 
-; input
+; Input
 ; d2.w	Number of entries
-; result
+; Result
 ; d0.l	Random offset
 	CNOP 0,4
 rd_get_random_entry
@@ -4675,8 +4705,8 @@ rd_get_random_entry
 	rts
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 rd_get_demo_filename
@@ -4710,8 +4740,8 @@ rd_get_demo_filename_skip3
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_print_demofile_start_message
 	lea	rd_demo_filename_header(pc),a0
@@ -4726,8 +4756,8 @@ rd_print_demofile_start_message
 	rts
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 rd_check_runmode
@@ -4752,8 +4782,8 @@ rd_check_runmode_skip
 	rts
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 rd_check_demofile_state
@@ -4772,8 +4802,8 @@ rd_check_demofile_state_ok
 	bra.s	rd_check_demofile_state_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 rd_open_demofile
@@ -4796,8 +4826,8 @@ rd_open_demofile_ok
 	bra.s	rd_open_demofile_quit
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_read_demofile_header
 	move.l	rd_demofile_handle(a3),d1
@@ -4808,8 +4838,8 @@ rd_read_demofile_header
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_close_demofile
 	move.l	rd_demofile_handle(a3),d1
@@ -4817,8 +4847,8 @@ rd_close_demofile
 	rts
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code/error code
 	CNOP 0,4
 rd_check_demofile_header
@@ -4836,8 +4866,8 @@ rd_check_demofile_header_ok
 	bra.s	rd_check_demofile_header_quit
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_get_demofile_dir_path
 	moveq	#adl_demofile_path_length-1,d7
@@ -4865,8 +4895,8 @@ rd_get_demofile_dir_path_loop2
         rts
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 rd_set_new_current_dir
 	lea	rd_demo_dir_path(pc),a0
@@ -4893,8 +4923,8 @@ rd_set_new_current_dir_skip
 	bra.s	rd_set_new_current_dir_quit
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_get_prerunscript_path
 	tst.w	rd_arg_prerunscript_enabled(a3)
@@ -4911,8 +4941,8 @@ rd_get_prerunscript_path_skip1
 	bra.s	rd_get_prerunscript_path_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code/error code
 	CNOP 0,4
 rd_check_prerunscript_path
@@ -4941,8 +4971,8 @@ rd_check_prerunscript_path_skip2
 	bra.s	rd_check_prerunscript_path_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 rd_execute_prerunscript
@@ -4975,8 +5005,8 @@ rd_execute_prerunscript_ok
 	bra.s	rd_execute_prerunscript_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 rd_open_pal_screen
@@ -4997,12 +5027,12 @@ rd_open_pal_screen_ok
 	bra.s	rd_open_pal_screen_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 rd_load_pal_screen_colors
-	cmp.w	#OS3_VERSION,adl_os_version(a3)
+	cmp.w	#OS2_VERSION,adl_os_version(a3)
 	blt.s   rd_load_pal_screen_colors_skip
 rd_load_pal_screen_colors_quit
 	rts
@@ -5016,8 +5046,8 @@ rd_load_pal_screen_colors_skip
 	bra.s	rd_load_pal_screen_colors_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 rd_check_pal_screen_mode
@@ -5038,8 +5068,8 @@ rd_check_pal_screen_mode_ok
 	bra.s	rd_check_pal_screen_mode_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 rd_open_invisible_window
@@ -5061,8 +5091,8 @@ rd_open_invisible_window_ok
 	bra.s	rd_open_invisible_window_quit
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_clear_mousepointer
 	move.l	rd_invisible_window(a3),a0
@@ -5075,15 +5105,15 @@ rd_clear_mousepointer
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_blank_display
 	sub.l	a1,a1			; no view
 	CALLGRAF LoadView
 	CALLLIBS WaitTOF
-	CALLLIBS WaitTOF		; wait for interlace screens with two copperlists
-	tst.l	gb_ActiView(a6)		; did another view appear in the meantime ?
+	CALLLIBS WaitTOF		; interlace screens with two copperlists
+	tst.l	gb_ActiView(a6)		; did a different view appear ?
 	bne.s	rd_blank_display
 	move.l	rd_demofile_path(a3),a0
 	cmp.b	#RUNMODE_OCS_VANILLA,pqe_runmode(a0)
@@ -5094,8 +5124,8 @@ rd_blank_display_quit
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_wait_monitor_switch
 	move.l	rd_active_screen_mode(a3),d0
@@ -5113,8 +5143,8 @@ rd_wait_monitor_switch_skip
 	bra.s	rd_wait_monitor_switch_quit
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_disable_fast_memory
 	move.l	rd_demofile_path(a3),a0
@@ -5150,8 +5180,8 @@ rd_disable_fast_memory_skip3
 	bra.s	rd_disable_fast_memory_loop
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 rd_load_demofile
@@ -5171,8 +5201,8 @@ rd_load_demofile_ok
 	bra.s	rd_load_demofile_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 rd_check_whdloadfile
@@ -5211,15 +5241,15 @@ rd_check_tooltypes
 	move.l	rd_demofile_path(a3),a0
 	lea	whdl_icon_path(pc),a1
 	moveq	#adl_demofile_path_length-1,d7
-rd_check_tooltypes_loop1
+rd_check_tooltypes_loop
 	move.b	(a0)+,(a1)+		; copy path
-	dbeq	d7,rd_check_tooltypes_loop1
+	dbeq	d7,rd_check_tooltypes_loop
 	subq.w	#7,a1			; skip suffix ".slave",0
 	clr.b	(a1)			; insert nullbyte
 	lea	whdl_icon_path(pc),a0
 	CALLICON GetDiskObject
 	move.l	d0,whdl_disk_object(a3)
-	bne.s	rd_check_tooltypes_skip1
+	bne.s	rd_check_tooltypes_skip
 	lea	rd_error_text18(pc),a0
 	moveq	#rd_error_text18_end-rd_error_text18,d0
 	bsr	rd_print_error_text
@@ -5227,14 +5257,27 @@ rd_check_tooltypes_loop1
 rd_check_tooltypes_quit
 	rts
 	CNOP 0,4
-rd_check_tooltypes_skip1
-	move.l	d0,a0
-	move.l	do_ToolTypes(a0),a0
-	move.l	a0,a4			; store tooltypes field
+rd_check_tooltypes_skip
+	move.l	d0,a4
+	move.l	do_ToolTypes(a4),a4
+	bsr.s	rd_check_arg_preload
+	bsr	rd_check_arg_preloadsize
+	bsr	rd_check_arg_quitkey
+	move.l	whdl_disk_object(a3),a0
+	CALLLIBS FreeDiskObject
+	moveq	#RETURN_OK,d0
+	bra.s	rd_check_tooltypes_quit
+
+; Input
+; a4.l	Tooltypes field
+; Result
+	CNOP 0,4
+rd_check_arg_preload
+	move.l	a4,a0			; tooltypes field
 	lea	whdl_tooltype_PRELOAD(pc),a1
 	CALLLIBS FindToolType
 	tst.l	d0			; tooltype: PRELOAD ?
-	beq.s	rd_check_tooltypes_skip2
+	beq.s	rd_check_arg_preload_quit
 	move.b	#" ",-BYTE_SIZE(a2)	; insert space character
 	move.b	#"P",(a2)+		; insert argument "Preload" in string
 	move.b	#"r",(a2)+
@@ -5244,12 +5287,19 @@ rd_check_tooltypes_skip1
 	move.b	#"a",(a2)+
 	move.b	#"d",(a2)+
 	clr.b	(a2)+			; insert nullbyte
-rd_check_tooltypes_skip2
+rd_check_arg_preload_quit
+	rts
+
+; Input
+; a4.l	Tooltypes field
+; Result
+	CNOP 0,4
+rd_check_arg_preloadsize
 	move.l	a4,a0			; tooltypes field
 	lea	whdl_tooltype_PRELOADSIZE(pc),a1
 	CALLLIBS FindToolType
 	tst.l	d0			; tooltype: PRELOADSIZE ?
-	beq.s	rd_check_tooltypes_skip3
+	beq.s	rd_check_arg_preloadsize_quit
 	move.b	#" ",-BYTE_SIZE(a2)	; insert space character
 	move.b	#"P",(a2)+		; insert argument "Preloadsize" in string
 	move.b	#"r",(a2)+
@@ -5264,15 +5314,22 @@ rd_check_tooltypes_skip2
 	move.b	#"e",(a2)+
 	move.b	#" ",(a2)+		; insert space character
 	move.l	d0,a0			; argument PRELOADSIZE value
-rd_check_tooltypes_loop2
-	move.b	(a0)+,(a2)+
-	bne.s	rd_check_tooltypes_loop2
-rd_check_tooltypes_skip3
+rd_check_arg_preloadsize_loop
+	move.b	(a0)+,(a2)+		; copy PRELOADSIZE value to command string
+	bne.s	rd_check_arg_preloadsize_loop
+rd_check_arg_preloadsize_quit
+	rts
+
+; Input
+; a4.l	Tooltypes field
+; Result
+	CNOP 0,4
+rd_check_arg_quitkey
 	move.l	a4,a0			; tooltypes field
 	lea	whdl_tooltype_QUITKEY(pc),a1
 	CALLLIBS FindToolType
 	tst.l	d0			; tooltype: QUITKEY ?
-	beq.s	rd_check_tooltypes_skip4
+	beq.s	rd_check_arg_quitkey_quit
 	move.b	#" ",-BYTE_SIZE(a2)	; insert space character
 	move.b	#"Q",(a2)+		; insert argument "Quitkey" in string
 	move.b	#"u",(a2)+
@@ -5283,18 +5340,15 @@ rd_check_tooltypes_skip3
 	move.b	#"y",(a2)+
 	move.b	#" ",(a2)+		; insert space character
 	move.l	d0,a0			; argument QUITKEY value
-rd_check_tooltypes_loop3
+rd_check_arg_quitkey_loop
 	move.b	(a0)+,(a2)+		; copy QUITKEY value to command string
-	bne.s	rd_check_tooltypes_loop3
-rd_check_tooltypes_skip4
-	move.l	whdl_disk_object(a3),a0
-	CALLLIBS FreeDiskObject
-	moveq	#RETURN_OK,d0
-	bra	rd_check_tooltypes_quit
+	bne.s	rd_check_arg_quitkey_loop
+rd_check_arg_quitkey_quit
+	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 adl_wait_drives_motor
 	MOVEF.L	drives_motor_delay,d1
@@ -5302,8 +5356,8 @@ adl_wait_drives_motor
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_init_playtimer_start
 	moveq	#0,d1
@@ -5323,8 +5377,8 @@ rd_init_playtimer_start_skip
 	bra.s	rd_init_playtimer_start_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 rd_start_playtimer
@@ -5342,8 +5396,8 @@ rd_start_playtimer_skip
 	bra.s	rd_start_playtimer_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 rd_set_playtimer
@@ -5404,8 +5458,8 @@ rd_set_playtimer_ok
 	bra.s	rd_set_playtimer_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 rd_write_playtimer
@@ -5430,8 +5484,8 @@ rd_write_playtimer_ok
 	bra.s	rd_write_playtimer_quit
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_get_system_time
 	lea	rd_timer_io(pc),a1
@@ -5440,8 +5494,8 @@ rd_get_system_time
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_save_custom_traps
 	GET_CUSTOM_TRAP_VECTORS
@@ -5449,8 +5503,8 @@ rd_save_custom_traps
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_downgrade_cpu
 	tst.b	adl_cpu_flags+BYTE_SIZE(a3) ; 680x0 ?
@@ -5517,8 +5571,8 @@ rd_downgrade_cpu_skip6
 
 
 	IFEQ rd_yulquen74_code_enabled
-; input
-; result
+; Input
+; Result
 		CNOP 0,4
 rd_downgrade_cpu_clock
 		btst	#AFB_68020,adl_cpu_flags+BYTE_SIZE(a3) ; 68020+ ?
@@ -5534,14 +5588,14 @@ rd_downgrade_cpu_clock_skip
 		move.w	(a0),d0
 		move.w	d0,rd_old_cfg0(a3)
 		and.w	#~(CFG0F_CLKSEL0|CFG0F_CLKSEL1),d0 ; clear SELx bits
-		or.w	#CFG0F_CLKSEL1,d0	; stock speed mode with 7 MHz
+		or.w	#CFG0F_CLKSEL1,d0	; speed mode with 7 MHz
 		move.w	d0,(a0)
 		bra.s	rd_downgrade_cpu_clock_quit
 	ENDC
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_get_tod_time
 	CALLEXEC Disable
@@ -5557,8 +5611,8 @@ rd_get_tod_time
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_save_chips_registers
 	CALLEXEC Disable
@@ -5633,8 +5687,8 @@ rd_save_chips_registers_skip4
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_run_dos_file
 	tst.w	whdl_slave_enabled(a3)
@@ -5654,8 +5708,8 @@ rd_run_dos_file_skip
 	bra.s	rd_run_dos_file_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 rd_execute_whdload_slave
@@ -5681,8 +5735,8 @@ rd_execute_whdload_slave_ok
 	bra.s	rd_execute_whdload_slave_quit
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_check_softreset
 	tst.w	rd_arg_softreset_enabled(a3)
@@ -5695,8 +5749,8 @@ rd_check_softreset_skip
 	bra.s	rd_check_softreset_quit
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_clear_chips_registers
 	CALLEXEC Disable
@@ -5708,7 +5762,7 @@ rd_clear_chips_registers
 	move.w	d0,ADKCON(a0)
 	moveq	#0,d0
 	move.w	d0,COPCON(a0)		; copper can't access blitter registers
-	move.w	d0,AUD0VOL(a0)		; channel volume off
+	move.w	d0,AUD0VOL(a0)		; channels volume off
 	move.w	d0,AUD1VOL(a0)
 	move.w	d0,AUD2VOL(a0)
 	move.w	d0,AUD3VOL(a0)
@@ -5724,8 +5778,8 @@ rd_clear_chips_registers
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_restore_chips_registers
 	CALLEXEC Disable
@@ -5790,13 +5844,13 @@ rd_restore_chips_registers_skip4
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_get_tod_duration
 	CALLEXEC Disable
 	move.l	#_CIAA,a4
-	move.l	rd_tod_time(a3),d0	; timer before start of entry
+	move.l	rd_tod_time(a3),d0	; entry start time
 	moveq	#0,d1
 	move.b	CIATODHI(a4),d1		; bits 16..23
 	swap	d1			; adjust bits
@@ -5807,11 +5861,11 @@ rd_get_tod_duration
 	bge.s	rd_get_tod_duration_skip1
 	move.l	#TOD_MAX,d2
 	sub.l	d0,d2			; difference until overflow
-	add.l	d2,d1			; add timer value
+	add.l	d2,d1			; adjust time
 	bra.s	rd_get_tod_duration_skip2
 	CNOP 0,4
 rd_get_tod_duration_skip1
-	sub.l	d0,d1			; normal difference
+	sub.l	d0,d1			; no TOD overflow
 rd_get_tod_duration_skip2
 	move.l	d1,rd_tod_time(a3)
 	CALLLIBS Enable
@@ -5819,8 +5873,8 @@ rd_get_tod_duration_skip2
 
 
 	IFEQ rd_yulquen74_code_enabled
-; input
-; result
+; Input
+; Result
 		CNOP 0,4
 rd_upgrade_cpu_clock
 		btst	#AFB_68020,adl_cpu_flags+BYTE_SIZE(a3) ; 68020+ ?
@@ -5837,8 +5891,8 @@ rd_upgrade_cpu_clock_skip
 	ENDC
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_restore_custom_traps
 	move.l	rd_old_vbr(a3),d0
@@ -5853,8 +5907,8 @@ rd_restore_custom_traps_skip
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_copy_custom_traps
 	move.l	rd_custom_traps(a3),a0
@@ -5865,8 +5919,8 @@ rd_copy_custom_traps_loop
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_upgrade_cpu
 	move.l	rd_demofile_path(a3),a0
@@ -5917,8 +5971,8 @@ rd_upgrade_cpu_skip4
 	bra	rd_upgrade_cpu_quit
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_init_playtimer_stop
 	tst.w	rd_playtimer_delay(a3)
@@ -5932,8 +5986,8 @@ rd_init_playtimer_stop_skip
 	bra.s	rd_init_playtimer_stop_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 rd_stop_playtimer
@@ -5951,8 +6005,8 @@ rd_stop_playtimer_skip
 	bra.s	rd_stop_playtimer_quit
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_update_system_time
 	tst.w	rd_arg_restoresystime_enabled(a3)
@@ -5962,24 +6016,24 @@ rd_update_system_time_quit
 	CNOP 0,4
 rd_update_system_time_skip
 	move.l	_SysBase(pc),a6
-	move.l	rd_tod_time(a3),d0	; period of disabled system
+	move.l	rd_tod_time(a3),d0	; time the system was disabled
 	moveq	#0,d1
 	move.b	VBlankFrequency(a6),d1
-	divu.w	d1,d0			; / vertical frequency (50Hz) = Unix seconds
+	divu.w	d1,d0			; / vertical frequency (50Hz) = Unix seconds, remainder Unix microseconds
 	lea	rd_timer_io(pc),a1
 	move.w	#TR_SETSYSTIME,IO_command(a1)
 	move.l	d0,d1
 	ext.l	d0
-	swap	d1			; remainder of division
 	add.l	d0,IO_size+TV_SECS(a1)
-	mulu.w	#10000,d1
+	swap	d1			; remainder
+	mulu.w	#10000,d1		; convert to micro second
 	add.l	d1,IO_size+TV_MICRO(a1)
 	CALLLIBS DoIO
 	bra.s	rd_update_system_time_quit
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_unload_demofile
 	move.l	rd_demofile_seglist(a3),d1
@@ -5992,8 +6046,8 @@ rd_unload_demofile_skip
 	bra.s	rd_unload_demofile_quit
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_enable_fast_memory
 	move.l	rd_demofile_path(a3),a0
@@ -6021,9 +6075,8 @@ rd_enable_fast_memory_skip2
 	bra.s	rd_enable_fast_memory_quit
 
 
-; input
-; result
-; d0.l	Return code
+; Input
+; Result
 	CNOP 0,4
 rd_restore_sprite_resolution
 	move.l	rd_pal_screen(a3),a2
@@ -6032,14 +6085,14 @@ rd_restore_sprite_resolution
 	move.l	#VTAG_SPRITERESN_SET,vctl_VTAG_SPRITERESN+ti_tag(a1)
 	move.l	rd_old_sprite_resolution(a3),vctl_VTAG_SPRITERESN+ti_Data(a1)
 	CALLGRAF VideoControl
-	move.l	a2,a0			; screen
+	move.l	a2,a0			; screen structure
 	CALLINT MakeScreen
 	CALLLIBS RethinkDisplay
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_close_invisible_window
 	move.l	rd_invisible_window(a3),a0
@@ -6047,8 +6100,8 @@ rd_close_invisible_window
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_close_pal_screen
 	move.l	rd_pal_screen(a3),a0
@@ -6071,8 +6124,8 @@ rd_activate_first_window_skip
 		bra.s	rd_activate_first_window_quit
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_restore_current_dir
 	move.l	rd_old_current_dir_lock(a3),d1
@@ -6082,8 +6135,8 @@ rd_restore_current_dir
 	rts
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 rd_check_user_break
@@ -6104,8 +6157,8 @@ rd_check_user_break_ok
 	bra.s	rd_check_user_break_quit
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_reset_demo_variables
 	tst.w	rd_arg_loop_enabled(a3)
@@ -6124,8 +6177,8 @@ rd_reset_demo_variables_skip2
 	bra.s	rd_reset_demo_variables_quit
 
 
-; input
-; result
+; Input
+; Result
 ; d0.l	Return code
 	CNOP 0,4
 rd_check_arg_loop_enabled
@@ -6140,8 +6193,8 @@ rd_check_loop_mode_ok
 	bra.s	rd_check_arg_loop_enabled_quit
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_free_mouse_pointer_data
 	move.l	rd_mouse_pointer_data(a3),a1
@@ -6150,8 +6203,8 @@ rd_free_mouse_pointer_data
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_close_timer_device
 	lea	rd_timer_io(pc),a1
@@ -6159,8 +6212,8 @@ rd_close_timer_device
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_close_serial_device
 	lea	rd_serial_io(pc),a1
@@ -6168,8 +6221,8 @@ rd_close_serial_device
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rd_delete_serial_msg_port
 	move.l	rd_serial_msg_port(a3),a0
@@ -6180,9 +6233,9 @@ rd_delete_serial_msg_port
 ; Exception routines
 
 	MC68020
-; input
+; Input
 ; d0.l	VBR new content
-; result
+; Result
 	CNOP 0,4
 rd_write_vbr
 	or.w	#SRF_I0|SRF_I1|SRF_I2,SR ; highest interrupt priority
@@ -6193,9 +6246,9 @@ rd_write_vbr
 
 
 	MC68040
-; input
+; Input
 ; d1.l	CACR new content
-; result
+; Result
 ; d0.l	CACR old content
 	CNOP 0,4
 rd_060_set_cacr
@@ -6211,10 +6264,10 @@ rd_060_set_cacr
 
 
 	MC68040
-; input
+; Input
 ; a1.l	Buffer for old values
 ; a3.l	Variables_base
-; result
+; Result
 	CNOP 0,4
 rd_040_060_mmu_off
 	move.l	#$0000c040,d1		; DTT0 cache inhibited, precise for $00000000-$00ffffff (Zorro II)
@@ -6264,9 +6317,9 @@ rd_040_060_mmu_off_skip
 
 
 	MC68030
-; input
+; Input
 ; a1.l	buffer for old values
-; result
+; Result
 	CNOP 0,4
 rd_030_mmu_off
 	lea	rd_clear_030_mmu_register(a3),a0
@@ -6290,9 +6343,9 @@ rd_030_mmu_off
 
 
 	MC68040
-; input
+; Input
 ; d1.l	PCR new content
-; result
+; Result
 ; d0.l	PCR old content
 	CNOP 0,4
 rd_060_set_pcr
@@ -6308,9 +6361,9 @@ rd_060_set_pcr
 
 
 	MC68040
-; input
+; Input
 ; a1.l	buffer for old values
-; result
+; Result
 	CNOP 0,4
 rd_040_060_mmu_on
 	or.w	#SRF_I0|SRF_I1|SRF_I2,SR ; highest interrupt priority
@@ -6341,9 +6394,9 @@ rd_040_060_mmu_on
 
 
 	MC68030
-; input
+; Input
 ; a1.l	buffer for old values
-; result
+; Result
 	CNOP 0,4
 rd_030_mmu_on
 	or.w	#SRF_I0|SRF_I1|SRF_I2,SR ; highest interrupt priority
@@ -6408,9 +6461,9 @@ rp_start_quit
 	rts
 
 
-; input
+; Input
 ; d7.l	Number of rasterlines to wait
-; result
+; Result
 	CNOP 0,4
 rp_wait_rasterline
 	move.l	#$0001ff00,d2		; mask V0..8
@@ -6431,9 +6484,9 @@ rp_wait_rasterline_loop2
 	rts
 
 
-; input
+; Input
 ; a6.l	Exec base
-; result
+; Result
 	CNOP 0,4
 rp_clear_cool_capture
 	moveq	#0,d0
@@ -6443,8 +6496,8 @@ rp_clear_cool_capture
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rp_clear_id
 	lea	rp_start_id(pc),a0
@@ -6452,8 +6505,8 @@ rp_clear_id
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rp_init_playtimer_stop
 	moveq	#RESET_DEVICE_STOP,d1
@@ -6461,8 +6514,8 @@ rp_init_playtimer_stop
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rp_stop_playtimer
 	bsr	rp_set_playtimer
@@ -6470,7 +6523,7 @@ rp_stop_playtimer
 	rts
 
 
-; input
+; Input
 ; d1.l	Timer value
 ; Result
 	CNOP 0,4
@@ -6502,18 +6555,18 @@ rp_create_command_string
 	rts
 
 
-; input
+; Input
 ; d1.l	Decimal number
-; result
+; Result
 ; d0.l	Hexadecimal number & $ff
 	CNOP 0,4
 rp_dec_to_hex
-	moveq	#0,d0			; result
+	moveq	#0,d0			; Result
 	moveq	#16,d3			; hexadecimal base
 	moveq	#0,d4			; first nibble shift value
 rp_dec_to_hex_loop
 	divu.w	d3,d1			; / hexadecimal base
-	move.l	d1,d2			; result
+	move.l	d1,d2			; Result
 	swap	d2			; remainder of division
 	lsl.w	d4,d2			; adjust nibble
 	addq.b	#4,d4			; next nibble shift value
@@ -6524,11 +6577,11 @@ rp_dec_to_hex_loop
 	rts
 
 
-; input
+; Input
 ; a0.l	string
 ; d1.l	Decimal number
 ; d7.l	Number of didits to convert
-; result
+; Result
 	CNOP 0,4
 rp_dec_to_ascii
 	lea	rp_dec_table(pc),a1
@@ -6550,11 +6603,11 @@ rp_dec_to_ascii_loop2
 	rts
 
 
-; input
+; Input
 ; a0.l	string
 ; d1.l	Hexadecimal number
 ; d7.l	Number of digits to convert
-; result
+; Result
 	CNOP 0,4
 rp_hex_to_ascii
 	add.l	d7,a0			; end of string
@@ -6573,10 +6626,10 @@ rp_hex_to_ascii_skip
 	rts
 
 
-; input
+; Input
 ; a0.l	string
 ; d7.l	Number of ascii characters
-; result
+; Result
 ; d0.l	Command checksum
 	CNOP 0,4
 rp_update_command_checksum
@@ -6591,8 +6644,8 @@ rp_update_command_checksum_loop
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rp_set_playtimer
 	CALLLIBS Disable
@@ -6604,8 +6657,8 @@ rp_set_playtimer
 	rts
 
 
-; input
-; result
+; Input
+; Result
 	CNOP 0,4
 rp_write_playtimer
 	CALLLIBS Disable
@@ -6628,9 +6681,9 @@ rp_write_playtimer_loop
 	rts
 
 
-; input
+; Input
 ; d3.w	RGB4 value
-; result
+; Result
 	CNOP 0,4
 rp_screen_colour_flash
 	moveq	#$0001,d2		; mask for V8
@@ -6648,9 +6701,9 @@ rp_screen_colour_flash_loop2
 	rts
 
 
-; input
+; Input
 ; a6.l	Exec base
-; result
+; Result
 	CNOP 0,4
 rp_restore_custom_cool_capture
 	move.l	rp_reset_program_memory(pc),CoolCapture(a6)
@@ -6659,9 +6712,9 @@ rp_restore_custom_cool_capture
 	rts
 
 
-; input
+; Input
 ; a6.l	Exec base
-; result
+; Result
 	CNOP 0,4
 rp_update_exec_checksum
 	moveq	#0,d0
@@ -6676,9 +6729,9 @@ rp_update_exec_checksum_loop
 	rts
 
 
-; input
+; Input
 ; a6.l	Exec base
-; result
+; Result
 	CNOP 0,4
 rp_init_custom_traps
 	sub.l	a0,a0			; vectors base = $000000
@@ -6730,9 +6783,9 @@ rp_init_custom_traps_skip
 	rts
 
 
-; input
+; Input
 ; a6.l	Exec base
-; result
+; Result
 	CNOP 0,4
 rp_restore_old_traps
 	sub.l	a1,a1			; vectors base = $000000
@@ -6753,9 +6806,9 @@ rp_restore_old_traps_skip2
 	rts
 
 
-; input
+; Input
 ; a1.l	Target: trap #0 vector
-; result
+; Result
 	CNOP 0,4
 rp_copy_old_trap_vectors
 	lea	rp_old_trap_0_vector(pc),a0
@@ -6769,8 +6822,8 @@ rd_copy_old_trap_vectors_loop
 ; Trap routines
 
 ; GET_RESIDENT_ENTRIES_NUMBER
-; input
-; result
+; Input
+; Result
 ; d0.l	variable
 	CNOP 0,4
 rp_trap_0_program
@@ -6781,8 +6834,8 @@ rp_trap_0_program
 
 
 ; GET_RESIDENT_ENTRIES_NUMBER_MAX
-; input
-; result
+; Input
+; Result
 ; d0.l	variable
 	CNOP 0,4
 rp_trap_1_program
@@ -6793,8 +6846,8 @@ rp_trap_1_program
 
 
 ; GET_RESIDENT_ENTRY_OFFSET
-; input
-; result
+; Input
+; Result
 ; d0.l	variable
 	CNOP 0,4
 rp_trap_2_program
@@ -6805,8 +6858,8 @@ rp_trap_2_program
 
 
 ; GET_RESIDENT_ENTRIES_BUFFER
-; input
-; result
+; Input
+; Result
 ; d0.l	variable
 	CNOP 0,4
 rp_trap_3_program
@@ -6817,8 +6870,8 @@ rp_trap_3_program
 
 
 ; GET_RESIDENT_ENDLESS_ENABLED
-; input
-; result
+; Input
+; Result
 ; d0.l	variable
 	CNOP 0,4
 rp_trap_4_program
@@ -6829,8 +6882,8 @@ rp_trap_4_program
 
 
 ; GET_RESIDENT_CUSTOM_VECTORS
-; input
-; result
+; Input
+; Result
 ; d0.l	own trap vectors
 	CNOP 0,4
 rp_trap_5_program
@@ -6841,8 +6894,8 @@ rp_trap_5_program
 
 
 ; REMOVE_RESET_PROGRAM
-; input
-; result
+; Input
+; Result
 ; d0.l	reset program
 	CNOP 0,4
 rp_trap_6_program
@@ -6858,8 +6911,8 @@ rp_trap_6_program
 
 
 	MC68020
-; input
-; result
+; Input
+; Result
 ; d0.l	VBR content
 	CNOP 0,4
 rp_read_vbr
@@ -8013,7 +8066,7 @@ whdl_slave_cmd_line_path
 	DC.B "$VER: "
 	DC.B "Amiga Demo Launcher "
 	DC.B "2.10 "
-	DC.B "(27.7.25) "
+	DC.B "(30.7.25) "
 	DC.B "© 2025 by Resistance",0
 	EVEN
 
