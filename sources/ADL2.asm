@@ -152,6 +152,7 @@
 ; V.2.10
 ; - code cleared
 ; - Cool Capture check improved
+; - Id check improved
 
 
 ; OS2.x bugs which have an impact on the ADL
@@ -968,6 +969,9 @@ adl_init_variables
 	move.w	d1,whdl_slave_enabled(a3)
 
 ; Reset Program
+	lea	rp_start_id(pc),a0
+	move.l	d0,(a0)
+
 	lea	rp_entries_number_max(pc),a0
 	move.w	#dc_entries_number_default_max,(a0)
 
@@ -2331,7 +2335,7 @@ dc_check_demo_filepath_skip1
 	lea	dc_error_text14(pc),a0
 	moveq	#dc_error_text14_end-dc_error_text14,d0
 	bsr	adl_print_text
-	MOVEF.L ERROR_OBJECT_NOT_FOUND,d0
+	moveq	#RETURN_FAIL,d0
 	bra.s	dc_check_demo_filepath_quit
 	CNOP 0,4
 dc_check_demo_filepath_skip2
@@ -2506,6 +2510,7 @@ dc_init_reset_program_skip1
 	bra.s	dc_init_reset_program_quit
 	CNOP 0,4
 dc_init_reset_program_skip2
+	bsr.s	dc_init_reset_program_id
 	lea	rp_start(pc),a0		; source
 	move.l	d0,a1			; destination
 	move.l	d0,a2			; store pointer reset program
@@ -2543,6 +2548,17 @@ dc_init_reset_program_skip3
 	move.l	d0,a0
 	move.w	adl_entries_number(a3),(a0)
 	bra	dc_init_reset_program_ok
+
+; Input
+; Result
+	CNOP 0,4
+dc_init_reset_program_id
+	lea	rp_start_id(pc),a0
+	move.b	#"-",(a0)+
+	move.b	#"D",(a0)+
+	move.b	#"L",(a0)+
+	move.b	#"-",(a0)
+	rts
 
 
 ; Input
@@ -6428,7 +6444,7 @@ rd_030_mmu_on
 rp_start
 	bra.s	rp_start_skip1		; skip ADL id
 	CNOP 0,4
-rp_start_id			DC.B "-DL-"
+rp_start_id			DS.B 4
 rp_start_skip1
 	movem.l d0-d7/a0-a6,-(a7)
 	move.l	#_CUSTOM,a5
@@ -6653,6 +6669,7 @@ rp_update_command_checksum_loop
 
 
 ; Input
+; a6.l	Exec base
 ; Result
 	CNOP 0,4
 rp_set_playtimer
@@ -6666,6 +6683,7 @@ rp_set_playtimer
 
 
 ; Input
+; a6.l	Exec base
 ; Result
 	CNOP 0,4
 rp_write_playtimer
@@ -6832,7 +6850,7 @@ rd_copy_old_trap_vectors_loop
 ; GET_RESIDENT_ENTRIES_NUMBER
 ; Input
 ; Result
-; d0.l	variable
+; d0.l	Variable
 	CNOP 0,4
 rp_trap_0_program
 	lea	rp_entries_number(pc),a0
@@ -6844,7 +6862,7 @@ rp_trap_0_program
 ; GET_RESIDENT_ENTRIES_NUMBER_MAX
 ; Input
 ; Result
-; d0.l	variable
+; d0.l	Variable
 	CNOP 0,4
 rp_trap_1_program
 	lea	rp_entries_number_max(pc),a0
@@ -6856,7 +6874,7 @@ rp_trap_1_program
 ; GET_RESIDENT_ENTRY_OFFSET
 ; Input
 ; Result
-; d0.l	variable
+; d0.l	Variable
 	CNOP 0,4
 rp_trap_2_program
 	lea	rp_entry_offset(pc),a0
@@ -6868,7 +6886,7 @@ rp_trap_2_program
 ; GET_RESIDENT_ENTRIES_BUFFER
 ; Input
 ; Result
-; d0.l	variable
+; d0.l	Variable
 	CNOP 0,4
 rp_trap_3_program
 	lea	rp_entries_buffer(pc),a0
@@ -6880,7 +6898,7 @@ rp_trap_3_program
 ; GET_RESIDENT_ENDLESS_ENABLED
 ; Input
 ; Result
-; d0.l	variable
+; d0.l	Variable
 	CNOP 0,4
 rp_trap_4_program
 	lea	rp_endless_enabled(pc),a0
@@ -6892,7 +6910,7 @@ rp_trap_4_program
 ; GET_RESIDENT_CUSTOM_VECTORS
 ; Input
 ; Result
-; d0.l	own trap vectors
+; d0.l	Own trap vectors
 	CNOP 0,4
 rp_trap_5_program
 	lea	rp_custom_trap_0_vector(pc),a0
@@ -6904,7 +6922,7 @@ rp_trap_5_program
 ; REMOVE_RESET_PROGRAM
 ; Input
 ; Result
-; d0.l	reset program
+; d0.l	Reset program
 	CNOP 0,4
 rp_trap_6_program
 	movem.l	a5-a6,-(a7)
@@ -7207,6 +7225,7 @@ adl_error_text2
 	DC.B ASCII_LINE_FEED
 	DC.B "PAL machine required"
 	DC.B ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED
 adl_error_text2_end
 	EVEN
 
@@ -7373,6 +7392,7 @@ dc_error_text2
 	DC.B ASCII_LINE_FEED
 	DC.B "Couldn't find playlist file"
 	DC.B ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED
 dc_error_text2_end
 	EVEN
 
@@ -7385,6 +7405,7 @@ dc_error_text3_end
 dc_error_text4
 	DC.B ASCII_LINE_FEED
 	DC.B "Couldn't examine playlist file"
+	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 dc_error_text4_end
 	EVEN
@@ -7399,6 +7420,7 @@ dc_error_text6
 	DC.B ASCII_LINE_FEED
 	DC.B "Couldn't open playlist file"
 	DC.B ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED
 dc_error_text6_end
 	EVEN
 
@@ -7406,12 +7428,14 @@ dc_error_text7
 	DC.B ASCII_LINE_FEED
 	DC.B "Playlist file read error"
 	DC.B ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED
 dc_error_text7_end
 	EVEN
 
 dc_error_text8
 	DC.B ASCII_LINE_FEED
 	DC.B "Couldn't allocate dos object"
+	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 dc_error_text8_end
 	EVEN
@@ -7422,7 +7446,6 @@ dc_error_text9
 dc_entries_string
 	DC.B "	"
 	DC.B "could not be transferred. Playlist arguments syntax error"
-	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 dc_error_text9_end
@@ -7459,6 +7482,8 @@ dc_error_text13_end
 dc_error_text14
 	DC.B ASCII_LINE_FEED
 	DC.B "No demo file selected"
+	DC.B ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED
 dc_error_text14_end
 	EVEN
 
