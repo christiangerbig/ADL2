@@ -152,7 +152,13 @@
 ; V.2.10
 ; - code cleared
 ; - Cool Capture check improved
-; - Id check improved
+; - Id check improved  and id expanded to 8 bytes "ADL2SYNC"
+; - Bugfix: With the execution of DetectADL2 the whole id was always in memory,
+;   because an interruot saved the data registers ..d4-d5.. to the stack
+;   This issue only appeared on unexpanded machines with chip memory,
+;   because the stack was not in fast memory.
+;   The solution was not to use consecutive data registers for the id check
+;   like d2/d4
 
 
 ; OS2.x bugs which have an impact on the ADL
@@ -970,6 +976,7 @@ adl_init_variables
 
 ; Reset Program
 	lea	rp_start_id(pc),a0
+	move.l	d0,(a0)+
 	move.l	d0,(a0)
 
 	lea	rp_entries_number_max(pc),a0
@@ -1696,51 +1703,36 @@ adl_open_icon_library_ok
 ; Result
 	CNOP 0,4
 adl_search_id
+	move.l	#"A"<<24,d2		; id "ADL2SYNC"
+	or.l	#"D"<<16,d2
+	move.w	#"L"<<8,d2
+	move.b	#"2",d2
+	move.l	#"S"<<24,d4
+	or.l	#"Y"<<16,d4
+	move.w	#"N"<<8,d4
+	move.b	#"C",d4
 	move.l	_SysBase(pc),a0
-	move.l	#~("-DL-"),d4
-	move.w	#QUADWORD_SIZE*2,a1
 	move.l	MaxLocMem(a0),a2
 	move.l	a2,d7
-	lsr.l	#4,d7			; chip memory size in 16 byte steps
+	lsr.l	#2,d7			; chip memory size in 4 byte steps
 	subq.l	#1,d7			; loopend at false
 adl_search_id_loop
-	sub.l	a1,a2
-	movem.l	(a2),d0-d3		; fetch 16 bytes
-	not.l	d0
-	cmp.l	d4,d0			; id ?
-	beq.s	adl_search_id_skip1
-	not.l	d1
-	cmp.l	d4,d1			; id ?
+	subq.w	#LONGWORD_SIZE,a2
+	movem.l	(a2),d0-d1		; fetch 8 bytes
+	cmp.l	d4,d1			; "SYNC" ?
 	beq.s	adl_search_id_skip2
-	not.l	d2
-	cmp.l	d4,d2			; id ?
-	beq.s	adl_search_id_skip3
-	not.l	d3
-	cmp.l	d4,d3			; id ?
-	beq.s	adl_search_id_skip4
-	subq.l	#1,d7			; id ?
+adl_search_id_skip1
+	subq.l	#1,d7
 	bpl.s	adl_search_id_loop
 ; No ADL2 id found
 	bsr	adl_check_cool_capture
 adl_search_id_quit
 	rts
 	CNOP 0,4
-adl_search_id_skip1
-	subq.w	#LONGWORD_SIZE,a2	; pointer reset program
-	bsr.s	adl_init_values
-	bra.s	adl_search_id_quit
-	CNOP 0,4
 adl_search_id_skip2
-	bsr.s	adl_init_values
-	bra.s	adl_search_id_quit
-	CNOP 0,4
-adl_search_id_skip3
-	addq.w	#LONGWORD_SIZE,a2	; pointer reset program
-	bsr.s	adl_init_values
-	bra.s	adl_search_id_quit
-	CNOP 0,4
-adl_search_id_skip4
-	add.w	#QUADWORD_SIZE,a2	; pointer reset program
+	cmp.l	d2,d0
+	bne.s	adl_search_id_skip1
+	subq.w	#LONGWORD_SIZE,a2	; pointer reset program
 	bsr.s	adl_init_values
 	bra.s	adl_search_id_quit
 
@@ -2554,10 +2546,14 @@ dc_init_reset_program_skip3
 	CNOP 0,4
 dc_init_reset_program_id
 	lea	rp_start_id(pc),a0
-	move.b	#"-",(a0)+
+	move.b	#"A",(a0)+
 	move.b	#"D",(a0)+
 	move.b	#"L",(a0)+
-	move.b	#"-",(a0)
+	move.b	#"2",(a0)+
+	move.b	#"S",(a0)+
+	move.b	#"Y",(a0)+
+	move.b	#"N",(a0)+
+	move.b	#"C",(a0)
 	rts
 
 
@@ -6444,7 +6440,7 @@ rd_030_mmu_on
 rp_start
 	bra.s	rp_start_skip1		; skip ADL id
 	CNOP 0,4
-rp_start_id			DS.B 4
+rp_start_id			DS.B 8
 rp_start_skip1
 	movem.l d0-d7/a0-a6,-(a7)
 	move.l	#_CUSTOM,a5
@@ -6525,6 +6521,7 @@ rp_clear_cool_capture
 	CNOP 0,4
 rp_clear_id
 	lea	rp_start_id(pc),a0
+	clr.l	(a0)+
 	clr.l	(a0)
 	rts
 

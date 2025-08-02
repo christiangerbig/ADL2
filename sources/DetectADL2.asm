@@ -75,35 +75,36 @@ init_variables
 ; d0.l	Return code
 	CNOP 0,4
 search_adl_id
-	move.l	#~("-DL-"),d4
-	move.l	_SysBase(pc),a6
-	move.w	#QUADWORD_SIZE*2,a1
-	move.l	MaxLocMem(a6),a2
+	move.l	#"A"<<24,d2		; id "ADL2SYNC"
+	or.l	#"D"<<16,d2
+	move.w	#"L"<<8,d2
+	move.b	#"2",d2
+	move.l	#"S"<<24,d4
+	or.l	#"Y"<<16,d4
+	move.w	#"N"<<8,d4
+	move.b	#"C",d4
+	move.l	_SysBase(pc),a0
+	move.l	MaxLocMem(a0),a2
 	move.l	a2,d7
-	lsr.l	#4,d7			; chip memory size in 16 steps
+	lsr.l	#2,d7			; chip memory size in 4 byte steps
 	subq.l	#1,d7			; loopend at false
 search_adl_id_loop
-	sub.l	a1,a2
-	movem.l	(a2),d0-d3		; fetch 16 bytes
-	not.l	d0
-	cmp.l	d4,d0                   ; id ?
-	beq.s	search_adl_id_ok
-	not.l	d1
-	cmp.l	d4,d1                   ; id ?
-	beq.s	search_adl_id_ok
-	not.l	d2
-	cmp.l	d4,d2                   ; id ?
-	beq.s	search_adl_id_ok
-	not.l	d3
-	cmp.l	d4,d3                   ; id ?
-	beq.s	search_adl_id_ok
+	subq.w	#LONGWORD_SIZE,a2
+	movem.l	(a2),d0-d1		; fetch 8 bytes
+	cmp.l	d4,d1                   ; "SYNC" ?
+	beq.s	search_adl_id_skip2
+search_adl_id_skip1
 	subq.l	#1,d7
 	bpl.s	search_adl_id_loop
 	moveq	#RETURN_OK,d0
 search_adl_id_quit
 	rts
 	CNOP 0,4
-search_adl_id_ok
+search_adl_id_skip2
+	cmp.l	d2,d0			; "ADL2" ?
+	bne.s	search_adl_id_skip1
+search_id_warn
+	wait_mouse
 	moveq	#RETURN_WARN,d0
 	bra.s	search_adl_id_quit
 
