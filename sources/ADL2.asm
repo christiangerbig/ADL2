@@ -379,6 +379,9 @@ rp_color_error			EQU $d74
 	INCLUDE "except-vectors.i"
 
 
+	INCLUDE "pointer-data.i"
+
+
 	INCLUDE "taglists.i"
 
 
@@ -504,18 +507,6 @@ ewtl_WA_Gadgets			RS.L 2
 ewtl_TAG_DONE			RS.L 1
 
 edit_window_tag_list_size	RS.B 0
-
-
-	RSRESET
-
-sprite_pointer_data		RS.B 0
-
-spd_control_word1		RS.W 1	; 1x bandwidth
-spd_control_word2		RS.W 1
-spd_color_descriptor		RS.W 2
-spd_end_of_data			RS.W 2
-
-sprite_pointer_data_size	RS.B 0
 
 
 	RSRESET
@@ -672,7 +663,7 @@ rd_active_screen_mode		RS.L 1
 rd_first_window			RS.L 1
 rd_pal_screen			RS.L 1
 rd_invisible_window		RS.L 1
-rd_mouse_pointer_data		RS.L 1
+rd_mouse_pointer		RS.L 1
 rd_old_sprite_resolution	RS.L 1
 
 rd_fast_memory_block		RS.L 1
@@ -1008,9 +999,11 @@ adl_init_structures
 	bsr	rd_init_pal_screen_tags
 	bsr	rd_init_pal_screen_color_spec
 	bsr	rd_init_pal_screen_rgb4_colors
-	bsr	rd_init_pal_screen_rgb32_colors
+
 	bsr	rd_init_video_control_tags
+
 	bsr	rd_init_invisible_window_tags
+
 	bsr	rd_init_serial_io
 	bsr	rd_init_timer_io
 	rts
@@ -1069,11 +1062,11 @@ dc_init_runmode_request
 	CNOP 0,4
 dc_init_file_request_tags
 	lea	dc_file_request_tags(pc),a0
-; window tags
+; Window tags
 	move.l	#ASLFR_Window,(a0)+
 	moveq	#0,d0
 	move.l	d0,(a0)+		; will be initializer later
-; text tags
+; Text tags
 	move.l	#ASLFR_TitleText,(a0)+
 	lea	dc_file_request_title(pc),a1
 	move.l	a1,(a0)+
@@ -1083,7 +1076,7 @@ dc_init_file_request_tags
 	move.l	#ASLFR_NegativeText,(a0)+
 	lea	dc_file_request_negative_text(pc),a1
 	move.l	a1,(a0)+
-; file requester tags
+; File requester tags
 	move.l	#ASLFR_InitialLeftEdge,(a0)+
 	moveq	#dc_file_request_left,d2
 	move.l	d2,(a0)+
@@ -1099,7 +1092,7 @@ dc_init_file_request_tags
 	move.l	a1,(a0)+
 	move.l	#ASLFR_InitialPattern,(a0)+
 	move.l	d0,(a0)+		; will be initialized later
-; option tags
+; Option tags
 	move.l	#ASLFR_Flags1,(a0)+
 	moveq	#FRF_DOPATTERNS|FRF_DOMULTISELECT,d2
 	move.l	d2,(a0)+
@@ -1112,7 +1105,7 @@ dc_init_file_request_tags
 ; Result
 	CNOP 0,4
 qh_init_get_visual_info_tags
-	lea	qh_get_visual_info_tags(pc),a0
+	lea	qh_get_visual_info_tags+ti_Data(pc),a0
 	moveq	#TAG_DONE,d2
 	move.l	d2,(a0)
 	rts
@@ -1169,10 +1162,10 @@ qh_init_edit_window_tags
 ; Result
 	CNOP 0,4
 qh_init_gadgets
-; CreateContext()
+; For CreateContext()
 	lea	qh_gadget_list(pc),a0
 	clr.l	(a0)
-; NewGadget()
+; For NewGadget()
 	lea	qh_topaz_80(pc),a0
 	lea	topaz_font_name(pc),a1
 	move.l	a1,ta_name(a0)
@@ -1347,8 +1340,8 @@ rd_init_pal_screen_tags
 	move.l	#SA_Title,(a0)+
 	lea	rd_pal_screen_name(pc),a1
 	move.l	a1,(a0)+
-	move.l	#SA_Colors32,(a0)+
-	lea	rd_pal_screen_rgb32_colors(pc),a1
+	move.l	#SA_Colors,(a0)+
+	lea	rd_pal_screen_color_spec(pc),a1
 	move.l	a1,(a0)+
 	move.l	#SA_VideoControl,(a0)+
 	lea	rd_video_control_tags(pc),a1
@@ -1401,29 +1394,11 @@ rd_init_pal_screen_color_spec_loop
 	CNOP 0,4
 rd_init_pal_screen_rgb4_colors
 	lea	rd_pal_screen_rgb4_colors(pc),a0 ; for LoadRGB4()
-	moveq	#$000,d0		; black
+	moveq	#$000,d0		; black RGB4
 	moveq	#pal_screen_colors_number-1,d7
 rd_init_pal_screen_rgb4_colors_loop
 	move.w	d0,(a0)+		; RGB4
         dbf	d7,rd_init_pal_screen_rgb4_colors_loop
-	rts
-
-
-; Input
-; Result
-	CNOP 0,4
-rd_init_pal_screen_rgb32_colors
-	lea	rd_pal_screen_rgb32_colors(pc),a0 ; for LoadRGB32()
-	move.w	#pal_screen_colors_number,(a0)+
-	moveq	#$00000000,d0
-	move.w	d0,(a0)+		; start with COLOR00
-	MOVEF.W	pal_screen_colors_number-1,d7
-rd_init_pal_screen_rgb32_colors_loop
-	move.l	d0,(a0)+		; R32
-	move.l	d0,(a0)+		; G32
-	move.l	d0,(a0)+		; B32
-	dbf	d7,rd_init_pal_screen_rgb32_colors_loop
-	move.l	d0,(a0)			; terminate list
 	rts
 
 
@@ -2212,7 +2187,7 @@ dc_display_remaining_files
 	sub.w	adl_entries_number(a3),d1 ; remaining number of free entries
 	cmp.w	#adl_entries_number_min,d1
 	bne.s	dc_display_remaining_files_skip
-	clr.b	dc_file_request_char_s-dc_file_request_remaining_files(a0) ; delete letter "s" of demos
+	clr.b	dc_file_request_char_s-dc_file_request_remaining_files(a0) ; delete letter "s" of string "demos"
 dc_display_remaining_files_skip
 	moveq	#2,d7			; number of digits to convert
 	bsr	rp_dec_to_ascii
@@ -2334,12 +2309,12 @@ dc_check_demo_filepath_skip2
 	move.w	adl_entries_number(a3),d0
 	mulu.w	#playback_queue_entry_size,d0
 	move.l	adl_entries_buffer(a3),a2
-	add.l   d0,a2			; pointer current entry in playback queue
+	add.l   d0,a2			; current entry in playback queue
 	move.l	a2,dc_current_entry(a3)
 	move.l	a0,-(a7)
-	move.l	a2,a0			; pointer current entry in playback queue
+	move.l	a2,a0			; current entry in playback queue
 	bsr	dc_clear_playlist_entry
-	move.l	(a7)+,a0		; pointer file name
+	move.l	(a7)+,a0		; file name
 dc_check_demo_filepath_loop1
 	tst.b	(a1)			; nullbyte ?
 	beq.s	dc_check_demo_filepath_loop2
@@ -2487,7 +2462,7 @@ dc_init_reset_program_skip1
 	move.w	d0,d7
 	move.w	adl_entries_number_max(a3),d1
 	mulu.w	#playback_queue_entry_size,d1 ; total playback queue size
-	add.l	d1,d0			; total size of reset program section with playback queue
+	add.l	d1,d0			; total size of reset program with playback queue
 	lea	rp_reset_program_size(pc),a0
 	move.l	d0,(a0)
 	move.l	#MEMF_CLEAR|MEMF_CHIP|MEMF_PUBLIC|MEMF_REVERSE,d1
@@ -2513,7 +2488,7 @@ dc_init_reset_program_loop1
 	dbf	d7,dc_init_reset_program_loop1
 	move.l	adl_entries_buffer(a3),a0 ; source
 	move.w	adl_entries_number_max(a3),d7
-	mulu.w	#playback_queue_entry_size,d7 ; total size of reset program section with playback queue
+	mulu.w	#playback_queue_entry_size,d7 ; total size of reset program with playback queue
 	subq.w	#1,d7			; loopend at false
 dc_init_reset_program_loop2
 	move.b	(a0)+,(a1)+
@@ -3130,7 +3105,7 @@ qh_get_entry_filename_skip1
 	subq.w	#BYTE_SIZE,a0		; previous character in file path
 	dbf	d6,qh_get_entry_filename_loop
 qh_get_entry_filename_skip2
-	subq.w	#1,d0			; substract "/" or ":"
+	subq.w	#1,d0			; skip "/" or ":"
 	addq.w	#1,a0			; skip "/" or ":"
 	cmp.w	#qh_show_entry_space_end-qh_show_entry_space-1,d0 ; output line length max ?
 	ble.s	qh_get_entry_filename_skip3
@@ -3826,7 +3801,7 @@ qh_ascii_to_dec
 qh_ascii_to_dec_skip
 	add.l	d7,a0			; end of string
 	lea	rp_dec_table(pc),a1
-	moveq	#0,d0			; Result decimal number
+	moveq	#0,d0			; result decimal number
 	subq.w	#1,d7			; loopend at false
 qh_ascii_to_dec_loop
 	move.l	(a1)+,d2                ; decimal digits value [1,10,..]
@@ -3892,7 +3867,7 @@ qh_update_gadgets_skip1
 	move.l	d2,ti_Data(a3)
  	CALLLIBS GT_SetGadgetAttrsA
 	move.l	(a7)+,a3
-; Forward button gadget
+
 	move.l	qh_foreward_button_gadget(a3),a0
 	move.l	qh_edit_window(a3),a1
 	sub.l	a2,a2			; no requester
@@ -3976,7 +3951,7 @@ qh_unlock_workbench
 	CNOP 0,4
 qh_clear_queue
 	move.l	adl_entries_buffer(a3),a0
-	tst.b	(a0)			; empty buffer ?
+	tst.b	(a0)			; buffer empty ?
 	bne.s   qh_clear_queue_ok
 	lea	qh_info_message_text4(pc),a0
 	moveq	#qh_info_message_text4_end-qh_info_message_text4,d0
@@ -4087,8 +4062,21 @@ adl_print_io_error_skip1
 	CALLDOS PrintFault
 	lea	adl_error_text_tail(pc),a0 ; error text
 	moveq	#adl_error_text_tail_end-adl_error_text_tail,d0 ; length of text
-	bsr	adl_print_text
+	bsr.s	adl_print_text
 	bra.s	adl_print_io_error_quit
+
+
+; Input
+; a0.l	text
+; d0.l	Length of text
+; Result
+	CNOP 0,4
+adl_print_text
+	move.l	adl_output_handle(a3),d1
+	move.l	a0,d2			; text
+	move.l	d0,d3			; number of characters to write
+	CALLDOS Write
+	rts
 
 
 ; Input
@@ -4112,8 +4100,10 @@ adl_remove_reset_program_skip2
 	REMOVE_RESET_PROGRAM
 	move.l	d0,a0
 	move.l	(a0)+,a1		; pointer reset program		
+	lea	rp_start_id-rp_start(a1),a2
 	moveq	#0,d0
-	move.l	d0,LONGWORD_SIZE(a1)	; clear ADL id
+	move.l	d0,(a2)+		; clear ADL2 id
+	move.l	d0,(a2)		
 	move.l	(a0),d0			; total size of reset program section including playback queue
 	CALLEXEC FreeMem
 	lea	adl_message_text1(pc),a0
@@ -4176,19 +4166,6 @@ adl_close_dos_library
 	rts
 
 
-; Input
-; a0.l	text
-; d0.l	Length of text
-; Result
-	CNOP 0,4
-adl_print_text
-	move.l	adl_output_handle(a3),d1
-	move.l	a0,d2			; text
-	move.l	d0,d3			; number of characters to write
-	CALLDOS Write
-	rts
-
-
 ; Run Demo
 	CNOP 0,4
 rd_start
@@ -4211,7 +4188,7 @@ rd_start
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_serial_device
 
-	bsr	rd_alloc_mouse_pointer_data
+	bsr	rd_alloc_pointer_data
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_timer_device
 
@@ -4221,13 +4198,13 @@ rd_start
 	move.l	d0,rd_first_window(a3)
 	bsr	rd_check_screen_mode
 	move.l	d0,adl_dos_return_code(a3)
-	bne	rd_cleanup_mouse_pointer_data
+	bne	rd_cleanup_pointer_data
 	bsr	rd_get_sprite_resolution
 
 rd_play_loop
 	bsr	rd_check_queue
 	move.l	d0,adl_dos_return_code(a3)
-	bne	rd_cleanup_mouse_pointer_data
+	bne	rd_cleanup_pointer_data
 	bsr	rd_get_new_entry_offset
 	bsr	rd_get_demo_filename
 	move.l	d0,adl_dos_return_code(a3)
@@ -4347,7 +4324,7 @@ rd_cleanup_io_error
 
 	bsr	rd_check_user_break
 	move.l	d0,adl_dos_return_code(a3)
-	bne.s	rd_cleanup_mouse_pointer_data
+	bne.s	rd_cleanup_pointer_data
 
 	bsr	rd_reset_demo_variables
 
@@ -4355,8 +4332,8 @@ rd_cleanup_io_error
 	tst.l	d0
 	beq	rd_play_loop
 
-rd_cleanup_mouse_pointer_data
-	bsr	rd_free_mouse_pointer_data
+rd_cleanup_pointer_data
+	bsr	rd_free_pointer_data
 
 rd_cleanup_timer_device
 	bsr	rd_close_timer_device
@@ -4405,7 +4382,7 @@ rd_print_error_text_quit
 ; d0.l	Return code
 	CNOP 0,4
 rd_open_ciaa_resource
-	lea	CIAA_resource_name(pc),a1
+	lea	ciaa_resource_name(pc),a1
 	CALLEXEC OpenResource
 	lea	_CIABase(pc),a0
 	move.l	d0,(a0)
@@ -4431,7 +4408,7 @@ rd_open_ciaa_resource_skip
 ; d0.l	Return code
 	CNOP 0,4
 rd_open_ciab_resource
-	lea	CIAB_resource_name(pc),a1
+	lea	ciab_resource_name(pc),a1
 	CALLEXEC OpenResource
 	lea	_CIABase(pc),a0
 	move.l	d0,(a0)
@@ -4525,22 +4502,22 @@ rd_open_timer_device_ok
 ; Result
 ; d0.l	Return code/error code
 	CNOP 0,4
-rd_alloc_mouse_pointer_data
-	moveq	#sprite_pointer_data_size,d0
+rd_alloc_pointer_data
+	moveq	#pointer_data_size,d0
 	move.l	#MEMF_CLEAR|MEMF_CHIP|MEMF_PUBLIC|MEMF_REVERSE,d1
 	CALLEXEC AllocMem
-	move.l	d0,rd_mouse_pointer_data(a3)
-	bne.s	rd_alloc_mouse_pointer_data_ok
+	move.l	d0,rd_mouse_pointer(a3)
+	bne.s	rd_alloc_pointer_data_ok
 	lea	rd_error_text6(pc),a0
 	moveq	#rd_error_text6_end-rd_error_text6,d0
 	bsr	adl_print_text
 	moveq	#ERROR_NO_FREE_STORE,d0
-rd_alloc_mouse_pointer_data_quit
+rd_alloc_pointer_data_quit
 	rts
 	CNOP 0,4
-rd_alloc_mouse_pointer_data_ok
+rd_alloc_pointer_data_ok
 	moveq	#RETURN_OK,d0
-	bra.s	rd_alloc_mouse_pointer_data_quit
+	bra.s	rd_alloc_pointer_data_quit
 
 
 ; Input
@@ -4747,7 +4724,7 @@ rd_get_demo_filename_skip2
 rd_get_demo_filename_skip3
 	addq.w	#BYTE_SIZE,a0		; skip "/" or ":"
 	move.l	a0,rd_demo_filename(a3)
-	subq.w	#BYTE_SIZE,d0		; substract length for "/" or ":"
+	subq.w	#BYTE_SIZE,d0		; substract length of "/" or ":"
 	move.l	d0,rd_demo_filename_length(a3)
 	addq.w	#1,rd_entry_offset(a3)
 	GET_RESIDENT_ENTRY_OFFSET
@@ -5116,7 +5093,7 @@ rd_open_invisible_window_ok
 	CNOP 0,4
 rd_clear_mouse_pointer
 	move.l	rd_invisible_window(a3),a0
-	move.l	rd_mouse_pointer_data(a3),a1
+	move.l	rd_mouse_pointer(a3),a1
 	moveq	#pointer_y_size,d0
 	moveq	#pointer_x_size,d1
 	moveq	#pointer_x_offset,d2
@@ -6131,17 +6108,17 @@ rd_close_pal_screen
 
 ; Input
 ; Result
-		CNOP 0,4
+	CNOP 0,4
 rd_activate_first_window
-		move.l	rd_first_window(a3),d0
-		bne.s	rd_activate_first_window_skip
+	move.l	rd_first_window(a3),d0
+	bne.s	rd_activate_first_window_skip
 rd_activate_first_window_quit
-		rts
-		CNOP 0,4
+	rts
+	CNOP 0,4
 rd_activate_first_window_skip
-		move.l	d0,a0
-		CALLINT ActivateWindow
-		bra.s	rd_activate_first_window_quit
+	move.l	d0,a0
+	CALLINT ActivateWindow
+	bra.s	rd_activate_first_window_quit
 
 
 ; Input
@@ -6216,9 +6193,9 @@ rd_check_loop_mode_ok
 ; Input
 ; Result
 	CNOP 0,4
-rd_free_mouse_pointer_data
-	move.l	rd_mouse_pointer_data(a3),a1
-	moveq	#sprite_pointer_data_size,d0
+rd_free_pointer_data
+	move.l	rd_mouse_pointer(a3),a1
+	moveq	#pointer_data_size,d0
 	CALLEXEC FreeMem
 	rts
 
@@ -6297,7 +6274,7 @@ rd_040_060_mmu_off
 	move.l	rd_demofile_path(a3),a0
 	cmp.b	#RUNMODE_OCS_VANILLA,pqe_runmode(a0)
 	bne.s	rd_040_060_mmu_off_skip
-	move.l	d1,d3			; ITT0=DTT0 cache inhibited, precise for $00000000-$00ffffff (Zorro II)
+	move.l	d1,d3			; ITT0 = DTT0 cache inhibited, precise for $00000000-$00ffffff (Zorro II)
 rd_040_060_mmu_off_skip
 	or.w	#SRF_I0|SRF_I1|SRF_I2,SR ; highest interrupt priority
 	nop
@@ -6438,7 +6415,7 @@ rd_030_mmu_on
 
 	CNOP 0,4
 rp_start
-	bra.s	rp_start_skip1		; skip ADL id
+	bra.s	rp_start_skip1		; skip ADL2 id
 	CNOP 0,4
 rp_start_id			DS.B 8
 rp_start_skip1
@@ -6521,8 +6498,9 @@ rp_clear_cool_capture
 	CNOP 0,4
 rp_clear_id
 	lea	rp_start_id(pc),a0
-	clr.l	(a0)+
-	clr.l	(a0)
+	moveq	#0,d0
+	move.l	d0,(a0)+
+	move.l	d0,(a0)
 	rts
 
 
@@ -6599,7 +6577,7 @@ rp_dec_to_hex_loop
 
 
 ; Input
-; a0.l	string
+; a0.l	String
 ; d1.l	Decimal number
 ; d7.l	Number of didits to convert
 ; Result
@@ -6625,7 +6603,7 @@ rp_dec_to_ascii_loop2
 
 
 ; Input
-; a0.l	string
+; a0.l	String
 ; d1.l	Hexadecimal number
 ; d7.l	Number of digits to convert
 ; Result
@@ -6648,7 +6626,7 @@ rp_hex_to_ascii_skip
 
 
 ; Input
-; a0.l	string
+; a0.l	String
 ; d7.l	Number of ascii characters
 ; Result
 ; d0.l	Command checksum
@@ -6947,6 +6925,7 @@ rp_read_vbr
 
 
 ; Reset program
+	CNOP 0,4
 rp_reset_program_memory		DC.L 0
 rp_reset_program_size		DC.L 0
 
@@ -7228,7 +7207,7 @@ adl_error_text2_end
 
 adl_error_text3
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldnt open graphics.library"
+	DC.B "Couldn't open graphics.library"
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 adl_error_text3_end
@@ -7777,10 +7756,6 @@ rd_pal_screen_color_spec
 rd_pal_screen_rgb4_colors
 	DS.W pal_screen_colors_number
 
-	CNOP 0,4
-rd_pal_screen_rgb32_colors
-	DS.L 1+(pal_screen_colors_number*3)+1
-
 
 	CNOP 0,4
 rd_video_control_tags
@@ -8101,4 +8076,3 @@ whdl_slave_cmd_line_path
 	EVEN
 
 	END
-

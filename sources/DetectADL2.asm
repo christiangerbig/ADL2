@@ -104,7 +104,6 @@ search_adl_id_skip2
 	cmp.l	d2,d0			; "ADL2" ?
 	bne.s	search_adl_id_skip1
 search_id_warn
-	wait_mouse
 	moveq	#RETURN_WARN,d0
 	bra.s	search_adl_id_quit
 
