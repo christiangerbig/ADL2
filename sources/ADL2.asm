@@ -150,7 +150,6 @@
 ; - Bugfix: Sprite degrader to lores
 
 ; V.2.10
-; - Identifier changed from "-DL-" to NOT("ADL2")
 ; - code cleared
 ; - Cool Capture check improved
 
@@ -707,6 +706,11 @@ adl_variables_size		RS.B 0
 	bsr	adl_get_output
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_dos_library
+
+	bsr	adl_check_system_props
+	move.l	d0,adl_dos_return_code(a3)
+	bne	adl_cleanup_dos_library
+
 	bsr	adl_open_graphics_library
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_dos_library
@@ -722,10 +726,6 @@ adl_variables_size		RS.B 0
 	bsr	adl_open_icon_library
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_asl_library
-
-	bsr	adl_check_system_props
-	move.l	d0,adl_dos_return_code(a3)
-	bne	adl_cleanup_icon_library
 
 	bsr	adl_search_id
 
@@ -1341,8 +1341,6 @@ rd_init_pal_screen_tags
 	move.l	a1,(a0)+
 	move.l	#SA_VideoControl,(a0)+
 	lea	rd_video_control_tags(pc),a1
-	move.l	#VTAG_SPRITERESN_SET,vctl_VTAG_SPRITERESN+ti_Tag(a1)
-	move.l	#SPRITERESN_140NS,vctl_VTAG_SPRITERESN+ti_Data(a1)
 	move.l	a1,(a0)+
 	move.l	#SA_Font,(a0)+
 	move.l	d0,(a0)+
@@ -1424,7 +1422,8 @@ rd_init_pal_screen_rgb32_colors_loop
 rd_init_video_control_tags
 	lea	rd_video_control_tags(pc),a0
 	moveq	#TAG_DONE,d2
-	move.l	d2,vctl_TAG_DONE(a0)
+	move.l	d2,vctl_VTAG_SPRITERESN+ti_Tag(a0)
+	move.l	d2,vctl_TAG_DONE+ti_Tag(a0)
 	rts
 
 
@@ -1693,24 +1692,29 @@ adl_open_icon_library_ok
 ; Result
 	CNOP 0,4
 adl_search_id
-	move.l	#~("ADL2"),d4		; encrypted id
+	move.l	_SysBase(pc),a0
+	move.l	#~("-DL-"),d4
 	move.w	#QUADWORD_SIZE*2,a1
-	move.l	MaxLocMem(a6),a2
+	move.l	MaxLocMem(a0),a2
 	move.l	a2,d7
 	lsr.l	#4,d7			; chip memory size in 16 byte steps
 	subq.l	#1,d7			; loopend at false
 adl_search_id_loop
 	sub.l	a1,a2
 	movem.l	(a2),d0-d3		; fetch 16 bytes
-	cmp.l	d4,d0
+	not.l	d0
+	cmp.l	d4,d0			; id ?
 	beq.s	adl_search_id_skip1
-	cmp.l	d4,d1
+	not.l	d1
+	cmp.l	d4,d1			; id ?
 	beq.s	adl_search_id_skip2
-	cmp.l	d4,d2
+	not.l	d2
+	cmp.l	d4,d2			; id ?
 	beq.s	adl_search_id_skip3
-	cmp.l	d4,d3
+	not.l	d3
+	cmp.l	d4,d3			; id ?
 	beq.s	adl_search_id_skip4
-	subq.l	#1,d7
+	subq.l	#1,d7			; id ?
 	bpl.s	adl_search_id_loop
 ; No ADL2 id found
 	bsr	adl_check_cool_capture
@@ -1822,8 +1826,8 @@ adl_update_values
 ; Result
 	CNOP 0,4
 adl_check_cool_capture
-	move.l	_SysBase(pc),a6
-	move.l	CoolCapture(a6),d0
+	move.l	_SysBase(pc),a0
+	move.l	CoolCapture(a0),d0
 	bne.s	adl_check_cool_capture_skip1
 adl_check_cool_capture_quit
 	rts
@@ -4254,7 +4258,7 @@ rd_play_loop
 	bsr	rd_open_invisible_window
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_pal_screen
-	bsr	rd_clear_mousepointer
+	bsr	rd_clear_mouse_pointer
 	bsr	rd_blank_display
 	bsr	rd_wait_monitor_switch
 
@@ -4599,7 +4603,8 @@ rd_get_sprite_resolution_skip
 	lea	rd_video_control_tags(pc),a1
 	move.l	a1,a2
 	move.l	#VTAG_SPRITERESN_GET,vctl_VTAG_SPRITERESN+ti_tag(a1)
-	clr.l	vctl_VTAG_SPRITERESN+ti_Data(a1)
+	moveq	#0,d0
+	move.l	d0,vctl_VTAG_SPRITERESN+ti_Data(a1)
 	CALLGRAF VideoControl
 	move.l  vctl_VTAG_SPRITERESN+ti_Data(a2),rd_old_sprite_resolution(a3)
 	bra.s	rd_get_sprite_resolution_quit
@@ -5010,6 +5015,9 @@ rd_execute_prerunscript_ok
 ; d0.l	Return code
 	CNOP 0,4
 rd_open_pal_screen
+	lea	rd_video_control_tags(pc),a0
+	move.l	#VTAG_SPRITERESN_SET,vctl_VTAG_SPRITERESN+ti_Tag(a0)
+	move.l	#SPRITERESN_140NS,vctl_VTAG_SPRITERESN+ti_Data(a0)
 	sub.l	a0,a0			; no NewScreen structure
 	lea	rd_pal_screen_tags(pc),a1
 	CALLINT OpenScreenTagList
@@ -5094,13 +5102,13 @@ rd_open_invisible_window_ok
 ; Input
 ; Result
 	CNOP 0,4
-rd_clear_mousepointer
+rd_clear_mouse_pointer
 	move.l	rd_invisible_window(a3),a0
 	move.l	rd_mouse_pointer_data(a3),a1
-	moveq	#cleared_sprite_y_size,d0
-	moveq	#cleared_sprite_x_size,d1
-	moveq	#cleared_sprite_x_offset,d2
-	moveq	#cleared_sprite_y_offset,d3
+	moveq	#pointer_y_size,d0
+	moveq	#pointer_x_size,d1
+	moveq	#pointer_x_offset,d2
+	moveq	#pointer_y_offset,d3
 	CALLINT SetPointer
 	rts
 
@@ -5562,7 +5570,7 @@ rd_downgrade_cpu_skip5
 	bra	rd_downgrade_cpu_quit
 	CNOP 0,4
 rd_downgrade_cpu_skip6
-	btst	#AFB_68030,AttnFlags+BYTE_SIZE(a6) ; 68030 ?
+	btst	#AFB_68030,adl_cpu_flags+BYTE_SIZE(a3) ; 68030 ?
 	beq	rd_downgrade_cpu_quit
 	lea	rd_old_mmu_registers(pc),a1
 	lea	rd_030_mmu_off(pc),a5
@@ -6420,7 +6428,7 @@ rd_030_mmu_on
 rp_start
 	bra.s	rp_start_skip1		; skip ADL id
 	CNOP 0,4
-rp_start_id			DC.L ~("ADL2")
+rp_start_id			DC.B "-DL-"
 rp_start_skip1
 	movem.l d0-d7/a0-a6,-(a7)
 	move.l	#_CUSTOM,a5
@@ -6735,7 +6743,7 @@ rp_update_exec_checksum_loop
 	CNOP 0,4
 rp_init_custom_traps
 	sub.l	a0,a0			; vectors base = $000000
-	tst.b	AttnFlags(a6)		; 680x0 ?
+	tst.b	adl_cpu_flags+BYTE_SIZE(a3) ; 680x0 ?
 	beq.s	rp_init_custom_traps_skip
 	lea	rp_read_vbr(pc),a5
 	CALLLIBS Supervisor
@@ -6789,7 +6797,7 @@ rp_init_custom_traps_skip
 	CNOP 0,4
 rp_restore_old_traps
 	sub.l	a1,a1			; vectors base = $000000
-	tst.b	AttnFlags(a6)		; 680x0 ?
+	tst.b	adl_cpu_flags+BYTE_SIZE(a3) ; 680x0 ?
 	beq.s   rp_restore_old_traps_skip1
 	lea	rp_read_vbr(pc),a5
 	CALLLIBS Supervisor
@@ -7749,7 +7757,7 @@ rd_pal_screen_rgb4_colors
 
 	CNOP 0,4
 rd_pal_screen_rgb32_colors
-	DS.L pal_screen_colors_number*3
+	DS.L 1+(pal_screen_colors_number*3)+1
 
 
 	CNOP 0,4
