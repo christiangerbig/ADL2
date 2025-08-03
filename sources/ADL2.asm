@@ -5007,6 +5007,7 @@ rd_open_pal_screen
 	lea	rd_video_control_tags(pc),a0
 	move.l	#VTAG_SPRITERESN_SET,vctl_VTAG_SPRITERESN+ti_Tag(a0)
 	move.l	#SPRITERESN_140NS,vctl_VTAG_SPRITERESN+ti_Data(a0)
+
 	sub.l	a0,a0			; no NewScreen structure
 	lea	rd_pal_screen_tags(pc),a1
 	CALLINT OpenScreenTagList
