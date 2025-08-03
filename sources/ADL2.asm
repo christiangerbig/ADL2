@@ -150,7 +150,6 @@
 ; - Bugfix: Sprite degrader to lores
 
 ; V.2.10
-; - code cleared
 ; - Cool Capture check improved
 ; - Id check improved  and id expanded to 8 bytes "ADL2SYNC"
 ; - Bugfix: With the execution of DetectADL2 the whole id was always in memory,
@@ -159,6 +158,7 @@
 ;   because the stack was not in fast memory.
 ;   The solution was not to use consecutive data registers for the id check
 ;   like d2/d4
+; - Code cleared
 
 
 ; OS2.x bugs which have an impact on the ADL
@@ -8072,7 +8072,7 @@ whdl_slave_cmd_line_path
 	DC.B "$VER: "
 	DC.B "Amiga Demo Launcher "
 	DC.B "2.10 "
-	DC.B "(30.7.25) "
+	DC.B "(3.8.25) "
 	DC.B "© 2025 by Resistance",0
 	EVEN
 
