@@ -160,6 +160,10 @@
 ;   like d2/d4
 ; - Code cleared
 
+; V.2.11
+; - Adl messages changed
+; - Now the user is informed, that the ADL is installed
+
 
 ; OS2.x bugs which have an impact on the ADL
 ; - DIWHIGH = $00ff (first copperlist) -> Blank screen with some old OCS intros,
@@ -739,7 +743,6 @@ adl_variables_size		RS.B 0
 	tst.w	adl_arg_remove_enabled(a3)
 	beq	adl_cleanup_read_arguments
 
-
 ; Queue Handler arguments
 	tst.w	qh_arg_showqueue_enabled(a3)
 	bne.s	qh_precheck_arg_editentry
@@ -774,7 +777,6 @@ qh_precheck_queue_empty
 	bsr	qh_check_queue_empty
 	tst.l	d0
 	bne.s	dc_start
-
 
 ; Demo Charger
 	tst.w	dc_arg_newentry_enabled(a3)
@@ -870,7 +872,6 @@ dc_cleanup_playlist_file_fib
 dc_cleanup_locked_playlist_file
 	bsr	dc_unlock_playlist_file
         bra	dc_cleanup_reset_program
-
 
 ; Amiga Demo-Launcher
 	CNOP 0,4
@@ -987,9 +988,10 @@ adl_init_variables
 	CNOP 0,4
 adl_init_structures
 	bsr.s	adl_init_command_string
-	bsr.s	adl_init_cool_capture_request
 
+	bsr.s	adl_init_cool_capture_request
 	bsr.s	dc_init_runmode_request
+
 	bsr	dc_init_file_request_tags
 
 	bsr	qh_init_get_visual_info_tags
@@ -1486,7 +1488,7 @@ rd_init_timer_io
 	move.b	d0,LN_Type(a0)
 	move.b	d0,LN_Pri(a0)
 	move.l	d0,LN_Name(a0)
-	move.l	d0,MN_ReplyPort(a0)
+	move.l	d0,MN_ReplyPort(a0)	; no message port
 	rts
 
 
@@ -1689,12 +1691,12 @@ adl_search_id
 	move.l	_SysBase(pc),a0
 	move.l	MaxLocMem(a0),a2
 	move.l	a2,d7
-	lsr.l	#2,d7			; chip memory size in 4 byte steps
+	lsr.l	#2,d7			; chip memory size in longword steps
 	subq.l	#1,d7			; loopend at false
 adl_search_id_loop
 	subq.w	#LONGWORD_SIZE,a2
 	movem.l	(a2),d0-d1		; fetch 8 bytes
-	cmp.l	d4,d1			; "SYNC" ?
+	cmp.l	d4,d1			; string "SYNC" ?
 	beq.s	adl_search_id_skip2
 adl_search_id_skip1
 	subq.l	#1,d7
@@ -1705,7 +1707,7 @@ adl_search_id_quit
 	rts
 	CNOP 0,4
 adl_search_id_skip2
-	cmp.l	d2,d0
+	cmp.l	d2,d0			; string "ADL2" ?
 	bne.s	adl_search_id_skip1
 	subq.w	#LONGWORD_SIZE,a2	; pointer reset program
 	bsr.s	adl_init_values
@@ -2021,7 +2023,7 @@ adl_check_arg_mins
 ; Result
 	CNOP 0,4
 adl_calculate_playtime
-	MULUF.W	adl_seconds_factor,d1,d2 ; conversion minutes to seconds
+	mulu.w	#adl_seconds_factor,d1	; conversion minutes to seconds
 	add.w	d0,d1			; total value in seconds
 	MULUF.W	rd_duration_shift,d1,d0
 	move.w	d1,rd_play_duration(a3)
@@ -2514,6 +2516,9 @@ dc_init_reset_program_skip3
 	GET_RESIDENT_ENTRIES_NUMBER
 	move.l	d0,a0
 	move.w	adl_entries_number(a3),(a0)
+	lea	adl_message_text1(pc),a0
+	moveq	#adl_message_text1_end-adl_message_text1,d0
+	bsr	adl_print_text
 	bra	dc_init_reset_program_ok
 
 ; Input
@@ -2743,7 +2748,7 @@ dc_parse_playlist_entry_skip
 	move.l	d6,a0			; entry in playback queue
 	bsr	dc_clear_playlist_entry
 
-; Playlist argument: demofile
+; Playlist argument demofile
 	move.l	pra_demofile(a5),d0
 	bne.s	dc_copy_demofile_path
 	move.l	d6,a0			; entry in playback queue
@@ -2769,13 +2774,13 @@ dc_copy_demofile_path_skip
 	move.l	d6,a1			; entry in playback queue
 	clr.b	pqe_runmode(a1)
 
-; Playlist argument: OCSVANILLA
+; Playlist argument OCSVANILLA
 	tst.l	pra_OCSVANILLA(a5)
 	beq.s	dc_check_arg_AGAVANILLA
 	move.b	#RUNMODE_OCS_VANILLA,pqe_runmode(a1)
 	bra.s	dc_check_entry_run_mode
 
-; Playlist argument: AGAVANILLA
+; Playlist argument AGAVANILLA
 	CNOP 0,4
 dc_check_arg_agavanilla
 	tst.l	pra_AGAVANILLA(a5)
@@ -2783,7 +2788,7 @@ dc_check_arg_agavanilla
 	move.b	#RUNMODE_AGA_VANILLA,pqe_runmode(a1)
 	bra.s	dc_check_entry_run_mode
 
-; Playlist argument: PLAINTURBO
+; Playlist argument PLAINTURBO
 	CNOP 0,4
 dc_check_arg_turbo
 	tst.l	pra_PLAINTURBO(a5)
@@ -2798,7 +2803,7 @@ dc_check_entry_run_mode
 	bsr	dc_parse_playlist_entry_error
 	bra	dc_free_custom_arguments
 
-; Playlist argument: SECS
+; Playlist argument SECS
 	CNOP 0,4
 dc_check_arg_secs
 	move.l	d6,a1			; entry in playback queue
@@ -2813,7 +2818,7 @@ dc_check_arg_secs
 	bsr	dc_parse_playlist_entry_error
 	bra	dc_free_custom_arguments
 
-; Playlist argument: MINS
+; Playlist argument MINS
 	CNOP 0,4
 dc_check_arg_mins
 	move.l	pra_MINS(a5),d1
@@ -2834,7 +2839,7 @@ dc_calculate_playtime
 	MULUF.W	rd_duration_shift,d1,d0
 	move.w	d1,pqe_playtime(a1)
 
-; Playlist argument: MULTIPART
+; Playlist argument MULTIPART
 	move.l	d6,a1			; entry in playback queue
 	move.l	pra_MULTIPART(a5),d0
 	beq.s	dc_check_arg_prerunscript
@@ -2863,7 +2868,7 @@ dc_check_arg_multipart_skip3
 	subq.b	#1,d0			; only values 1..15
 	or.b	d0,pqe_playtime+BYTE_SIZE(a1)
 
-; Playlist argument: PRERUNSCRIPT
+; Playlist argument PRERUNSCRIPT
 dc_check_arg_prerunscript
 	move.l	pra_PRERUNSCRIPT(a5),d0
 	beq.s	dc_foreward_transmitted_entry
@@ -3667,6 +3672,7 @@ qh_process_window_events_skip1
 	move.w	qh_edit_entry_offset(a3),d2
 	move.l	qh_edit_entry_demo_filename(a3),a2
 	move.l	qh_edit_entry(a3),a5
+
 	bsr	qh_update_gadgets
 	bra	qh_process_window_events_ok
 
@@ -4106,8 +4112,8 @@ adl_remove_reset_program_skip2
 	move.l	d0,(a2)		
 	move.l	(a0),d0			; total size of reset program section including playback queue
 	CALLEXEC FreeMem
-	lea	adl_message_text1(pc),a0
-	moveq	#adl_message_text1_end-adl_message_text1,d0
+	lea	adl_message_text3(pc),a0
+	moveq	#adl_message_text3_end-adl_message_text3,d0
 	bsr	adl_print_text
 	bra.s	adl_remove_reset_program_quit
 
@@ -4273,6 +4279,7 @@ rd_play_loop
 	IFEQ rd_yulquen74_code_enabled
 		bsr	rd_downgrade_cpu_clock
 	ENDC
+
 	bsr	rd_get_tod_time
 	bsr	rd_save_chips_registers
 
@@ -4312,7 +4319,6 @@ rd_cleanup_fast_memory
 	bsr	rd_close_invisible_window
 rd_cleanup_pal_screen
 	bsr	rd_close_pal_screen
-
 rd_cleanup_original_screen
 	bsr	rd_activate_first_window
 
@@ -4326,7 +4332,7 @@ rd_cleanup_io_error
 	move.l	d0,adl_dos_return_code(a3)
 	bne.s	rd_cleanup_pointer_data
 
-	bsr	rd_reset_demo_variables
+	bsr	rd_reset_entry_variables
 
 	bsr	rd_check_arg_loop_enabled
 	tst.l	d0
@@ -5950,7 +5956,7 @@ rd_upgrade_cpu_skip2
 	bra.s	rd_upgrade_cpu_quit
 	CNOP 0,4
 rd_upgrade_cpu_skip3
-	moveq	#-1,d0			; set all bits
+	moveq	#-1,d0			; consider all bits
 	move.l	rd_old_cacr(a3),d1	; 68020/030/040: CACR
 	CALLEXEC CacheControl
 	btst	#AFB_68040,adl_cpu_flags+BYTE_SIZE(a3) ; 68040 ?
@@ -6158,21 +6164,21 @@ rd_check_user_break_ok
 ; Input
 ; Result
 	CNOP 0,4
-rd_reset_demo_variables
+rd_reset_entry_variables
 	tst.w	rd_arg_loop_enabled(a3)
-        beq.s	rd_reset_demo_variables_skip1
-rd_reset_demo_variables_quit
+        beq.s	rd_reset_entry_variables_skip1
+rd_reset_entry_variables_quit
 	rts
 	CNOP 0,4
-rd_reset_demo_variables_skip1
+rd_reset_entry_variables_skip1
 	moveq	#0,d0
 	move.l	d0,rd_demofile_seglist(a3)
 	tst.w	rd_arg_prerunscript_enabled(a3)
-	beq.s	rd_reset_demo_variables_skip2
+	beq.s	rd_reset_entry_variables_skip2
 	move.l	d0,rd_prerunscript_path(a3)
-rd_reset_demo_variables_skip2
+rd_reset_entry_variables_skip2
 	move.w	#FALSE,whdl_slave_enabled(a3)
-	bra.s	rd_reset_demo_variables_quit
+	bra.s	rd_reset_entry_variables_quit
 
 
 ; Input
@@ -6264,7 +6270,7 @@ rd_060_set_cacr
 	MC68040
 ; Input
 ; a1.l	Buffer for old values
-; a3.l	Variables_base
+; a3.l	Variables base
 ; Result
 	CNOP 0,4
 rd_040_060_mmu_off
@@ -6360,7 +6366,7 @@ rd_060_set_pcr
 
 	MC68040
 ; Input
-; a1.l	buffer for old values
+; a1.l	Buffer for old values
 ; Result
 	CNOP 0,4
 rd_040_060_mmu_on
@@ -6393,7 +6399,7 @@ rd_040_060_mmu_on
 
 	MC68030
 ; Input
-; a1.l	buffer for old values
+; a1.l	Buffer for old values
 ; Result
 	CNOP 0,4
 rd_030_mmu_on
@@ -6826,7 +6832,7 @@ rd_copy_old_trap_vectors_loop
 ; GET_RESIDENT_ENTRIES_NUMBER
 ; Input
 ; Result
-; d0.l	Variable
+; d0.l	Variable value
 	CNOP 0,4
 rp_trap_0_program
 	lea	rp_entries_number(pc),a0
@@ -6838,7 +6844,7 @@ rp_trap_0_program
 ; GET_RESIDENT_ENTRIES_NUMBER_MAX
 ; Input
 ; Result
-; d0.l	Variable
+; d0.l	Variable  value
 	CNOP 0,4
 rp_trap_1_program
 	lea	rp_entries_number_max(pc),a0
@@ -6850,7 +6856,7 @@ rp_trap_1_program
 ; GET_RESIDENT_ENTRY_OFFSET
 ; Input
 ; Result
-; d0.l	Variable
+; d0.l	Variable value
 	CNOP 0,4
 rp_trap_2_program
 	lea	rp_entry_offset(pc),a0
@@ -6862,7 +6868,7 @@ rp_trap_2_program
 ; GET_RESIDENT_ENTRIES_BUFFER
 ; Input
 ; Result
-; d0.l	Variable
+; d0.l	Variable value
 	CNOP 0,4
 rp_trap_3_program
 	lea	rp_entries_buffer(pc),a0
@@ -6874,7 +6880,7 @@ rp_trap_3_program
 ; GET_RESIDENT_ENDLESS_ENABLED
 ; Input
 ; Result
-; d0.l	Variable
+; d0.l	Variable value
 	CNOP 0,4
 rp_trap_4_program
 	lea	rp_endless_enabled(pc),a0
@@ -6886,7 +6892,7 @@ rp_trap_4_program
 ; GET_RESIDENT_CUSTOM_VECTORS
 ; Input
 ; Result
-; d0.l	Own trap vectors
+; d0.l	Own trap vectors base
 	CNOP 0,4
 rp_trap_5_program
 	lea	rp_custom_trap_0_vector(pc),a0
@@ -7166,7 +7172,7 @@ adl_cmd_template
 
 adl_message_text1
 	DC.B ASCII_LINE_FEED
-	DC.B "Amiga Demo Launcher now removed from memory."
+	DC.B "Amiga Demo Launcher installed."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 adl_message_text1_end
@@ -7174,10 +7180,18 @@ adl_message_text1_end
 
 adl_message_text2
 	DC.B ASCII_LINE_FEED
-	DC.B "Amiga Demo Launcher not found in memory."
+	DC.B "Amiga Demo Launcher not found."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 adl_message_text2_end
+	EVEN
+
+adl_message_text3
+	DC.B ASCII_LINE_FEED
+	DC.B "Amiga Demo Launcher removed."
+	DC.B ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED
+adl_message_text3_end
 	EVEN
 
 
@@ -7192,7 +7206,7 @@ adl_error_text_tail_end
 
 adl_error_text1
 	DC.B ASCII_LINE_FEED
-	DC.B "OS 2.0 or better required"
+	DC.B "OS 2.0 or better required."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 adl_error_text1_end
@@ -7200,7 +7214,7 @@ adl_error_text1_end
 
 adl_error_text2
 	DC.B ASCII_LINE_FEED
-	DC.B "PAL machine required"
+	DC.B "PAL machine required."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 adl_error_text2_end
@@ -7208,7 +7222,7 @@ adl_error_text2_end
 
 adl_error_text3
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't open graphics.library"
+	DC.B "Couldn't open graphics.library."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 adl_error_text3_end
@@ -7216,7 +7230,7 @@ adl_error_text3_end
 
 adl_error_text4
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't open intuition.library"
+	DC.B "Couldn't open intuition.library."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 adl_error_text4_end
@@ -7224,7 +7238,7 @@ adl_error_text4_end
 
 adl_error_text5
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't open gadtools.library"
+	DC.B "Couldn't open gadtools.library."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 adl_error_text5_end
@@ -7232,7 +7246,7 @@ adl_error_text5_end
 
 adl_error_text6
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't open asl.library"
+	DC.B "Couldn't open asl.library."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 adl_error_text6_end
@@ -7240,7 +7254,7 @@ adl_error_text6_end
 
 adl_error_text7
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't open icon.library"
+	DC.B "Couldn't open icon.library."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 adl_error_text7_end
@@ -7289,7 +7303,7 @@ dc_transmitted_entries
 	DC.B "of "
 dc_playlist_entries
 	DC.B "   "
-	DC.B "entries successfully transferred to playback queue",ASCII_LINE_FEED
+	DC.B "entries successfully transferred to playback queue.",ASCII_LINE_FEED
 dc_parsing_result_text_end
 	EVEN
 
@@ -7361,13 +7375,13 @@ dc_message_text_end
 
 dc_error_text1
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't allocate entries/playback queue buffer"
+	DC.B "Couldn't allocate entries/playback queue buffer."
 dc_error_text1_end
 	EVEN
 
 dc_error_text2
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't find playlist file"
+	DC.B "Couldn't find playlist file."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 dc_error_text2_end
@@ -7375,13 +7389,13 @@ dc_error_text2_end
 
 dc_error_text3
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't allocate file info block structure"
+	DC.B "Couldn't allocate file info block structure."
 dc_error_text3_end
 	EVEN
 
 dc_error_text4
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't examine playlist file"
+	DC.B "Couldn't examine playlist file."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 dc_error_text4_end
@@ -7389,13 +7403,13 @@ dc_error_text4_end
 
 dc_error_text5
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't allocate memory for playlist file"
+	DC.B "Couldn't allocate memory for playlist file."
 dc_error_text5_end
 	EVEN
 
 dc_error_text6
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't open playlist file"
+	DC.B "Couldn't open playlist file."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 dc_error_text6_end
@@ -7403,7 +7417,7 @@ dc_error_text6_end
 
 dc_error_text7
 	DC.B ASCII_LINE_FEED
-	DC.B "Playlist file read error"
+	DC.B "Playlist file read error."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 dc_error_text7_end
@@ -7411,7 +7425,7 @@ dc_error_text7_end
 
 dc_error_text8
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't allocate dos object"
+	DC.B "Couldn't allocate dos object."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 dc_error_text8_end
@@ -7422,7 +7436,7 @@ dc_error_text9
 	DC.B "Entry "
 dc_entries_string
 	DC.B "	"
-	DC.B "could not be transferred. Playlist arguments syntax error"
+	DC.B "could not be transferred. Playlist arguments syntax error."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 dc_error_text9_end
@@ -7430,7 +7444,7 @@ dc_error_text9_end
 
 dc_error_text10
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't find program directory"
+	DC.B "Couldn't find program directory."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 dc_error_text10_end
@@ -7438,13 +7452,13 @@ dc_error_text10_end
 
 dc_error_text11
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't get program directory name"
+	DC.B "Couldn't get program directory name."
 dc_error_text11_end
 	EVEN
 
 dc_error_text12
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't initialize file requester structure"
+	DC.B "Couldn't initialize file requester structure."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 dc_error_text12_end
@@ -7452,13 +7466,13 @@ dc_error_text12_end
 
 dc_error_text13
 	DC.B ASCII_LINE_FEED
-	DC.B "Directory not found"
+	DC.B "Directory not found."
 dc_error_text13_end
 	EVEN
 
 dc_error_text14
 	DC.B ASCII_LINE_FEED
-	DC.B "No demo file selected"
+	DC.B "No demo file selected."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 dc_error_text14_end
@@ -7466,19 +7480,19 @@ dc_error_text14_end
 
 dc_error_text15
 	DC.B ASCII_LINE_FEED
-	DC.B "Demo filepath is longer than 123 characters"
+	DC.B "Demo filepath is longer than 123 characters."
 dc_error_text15_end
 	EVEN
 
 dc_error_text16
 	DC.B ASCII_LINE_FEED
-	DC.B "Demo file not found"
+	DC.B "Demo file not found."
 dc_error_text16_end
 	EVEN
 
 dc_error_text17
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't allocate memory for resident program"
+	DC.B "Couldn't allocate memory for resident program."
 dc_error_text17_end
 	EVEN
 
@@ -7700,35 +7714,35 @@ qh_info_message_text7_end
 
 qh_error_text1
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't lock workbench"
+	DC.B "Couldn't lock workbench."
 	DC.B ASCII_LINE_FEED
 qh_error_text1_end
 	EVEN
 
 qh_error_text2
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't get workbench visuals"
+	DC.B "Couldn't get workbench visuals."
 	DC.B ASCII_LINE_FEED
 qh_error_text2_end
 	EVEN
 
 qh_error_text3
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't create context gadget"
+	DC.B "Couldn't create context gadget."
 	DC.B ASCII_LINE_FEED
 qh_error_text3_end
 	EVEN
 
 qh_error_text4
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't create gadget"
+	DC.B "Couldn't create gadget."
 	DC.B ASCII_LINE_FEED
 qh_error_text4_end
 	EVEN
 
 qh_error_text5
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't open edit window"
+	DC.B "Couldn't open edit window."
 	DC.B ASCII_LINE_FEED
 qh_error_text5_end
 	EVEN
@@ -7823,7 +7837,7 @@ rd_shell_no_op_cmd_line_end
 
 rd_info_message_text1
 	DC.B ASCII_LINE_FEED
-	DC.B "End of playback queue reached"
+	DC.B "End of playback queue reached."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_info_message_text1_end
@@ -7831,7 +7845,7 @@ rd_info_message_text1_end
 
 rd_info_message_text2
 	DC.B ASCII_LINE_FEED
-	DC.B "Entry already played"
+	DC.B "Entry already played."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_info_message_text2_end
@@ -7839,7 +7853,7 @@ rd_info_message_text2_end
 
 rd_info_message_text3
 	DC.B ASCII_LINE_FEED
-	DC.B "Replay loop stopped"
+	DC.B "Replay loop stopped."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_info_message_text3_end
@@ -7856,7 +7870,7 @@ rd_error_text_header_end
 
 rd_error_text1
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't open ciaa.resource"
+	DC.B "Couldn't open ciaa.resource."
 	DC.W ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text1_end
@@ -7864,7 +7878,7 @@ rd_error_text1_end
 
 rd_error_text2
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't open ciab.resource"
+	DC.B "Couldn't open ciab.resource."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text2_end
@@ -7872,7 +7886,7 @@ rd_error_text2_end
 
 rd_error_text3
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't create serial message port"
+	DC.B "Couldn't create serial message port."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text3_end
@@ -7880,7 +7894,7 @@ rd_error_text3_end
 
 rd_error_text4
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't open serial.device"
+	DC.B "Couldn't open serial.device."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text4_end
@@ -7888,7 +7902,7 @@ rd_error_text4_end
 
 rd_error_text5
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't open timer.device"
+	DC.B "Couldn't open timer.device."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text5_end
@@ -7896,51 +7910,51 @@ rd_error_text5_end
 
 rd_error_text6
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldnt allocate sprite pointer data"
+	DC.B "Couldnt allocate sprite pointer data."
 rd_error_text6_end
 	EVEN
 
 rd_error_text7
 	DC.B ASCII_LINE_FEED
-	DC.B "Invalid monitor ID"
+	DC.B "Invalid monitor ID."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text7_end
 	EVEN
 
 rd_error_text8
-	DC.B "Run mode AGA vanilla not supported on this config"
+	DC.B "Run mode AGA vanilla not supported on this config."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text8_end
 	EVEN
 
 rd_error_text9
-	DC.B "Couldn't open demo file"
+	DC.B "Couldn't open demo file."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text9_end
 	EVEN
 
 rd_error_text10
-	DC.B "No executable demo file"
+	DC.B "No executable demo file."
 rd_error_text10_end
 	EVEN
 
 rd_error_text11
-	DC.B "Couldn't find demo directory"
+	DC.B "Couldn't find demo directory."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text11_end
 	EVEN
 
 rd_error_text12
-	DC.B "Prerun script filepath is longer than 63 characters"
+	DC.B "Prerun script filepath is longer than 63 characters."
 rd_error_text12_end
 	EVEN
 
 rd_error_text13
-	DC.B "Couldn't execute prerun script file"
+	DC.B "Couldn't execute prerun script file."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text13_end
@@ -7948,7 +7962,7 @@ rd_error_text13_end
 
 rd_error_text14
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't open degrade screen"
+	DC.B "Couldn't open degrade screen."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text14_end
@@ -7956,7 +7970,7 @@ rd_error_text14_end
 
 rd_error_text15
 	DC.B ASCII_LINE_FEED
-	DC.B "Lores PAL screen not supported"
+	DC.B "Lores PAL screen not supported."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text15_end
@@ -7964,21 +7978,21 @@ rd_error_text15_end
 
 rd_error_text16
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't open invisible window"
+	DC.B "Couldn't open invisible window."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text16_end
 	EVEN
 
 rd_error_text17
-	DC.B "Couldn't load demo file"
+	DC.B "Couldn't load demo file."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text17_end
 	EVEN
 
 rd_error_text18
-	DC.B "Couldn't open WHDLoad .info file"
+	DC.B "Couldn't open WHDLoad .info file."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text18_end
@@ -7986,7 +8000,7 @@ rd_error_text18_end
 
 rd_error_text19a
 	DC.B ASCII_LINE_FEED
-	DC.B "Serial device in use"
+	DC.B "Serial device in use."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text19a_end
@@ -7994,7 +8008,7 @@ rd_error_text19a_end
 
 rd_error_text19b
 	DC.B ASCII_LINE_FEED
-	DC.B "Baud rate not supported by hardware"
+	DC.B "Baud rate not supported by hardware."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text19b_end
@@ -8002,7 +8016,7 @@ rd_error_text19b_end
 
 rd_error_text19c
 	DC.B ASCII_LINE_FEED
-	DC.B "Bad parameter"
+	DC.B "Bad parameter."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text19c_end
@@ -8010,7 +8024,7 @@ rd_error_text19c_end
 
 rd_error_text19d
 	DC.B ASCII_LINE_FEED
-	DC.B "Hardware data overrun"
+	DC.B "Hardware data overrun."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text19d_end
@@ -8018,7 +8032,7 @@ rd_error_text19d_end
 
 rd_error_text19e
 	DC.B ASCII_LINE_FEED
-	DC.B "No data set ready"
+	DC.B "No data set ready."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text19e_end
@@ -8026,14 +8040,14 @@ rd_error_text19e_end
 
 rd_error_text20
 	DC.B ASCII_LINE_FEED
-	DC.B "Write to serial port failed"
+	DC.B "Write to serial port failed."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text20_end
 	EVEN
 
 rd_error_text21
-	DC.B "Couldn't execute WHDLoad slave file"
+	DC.B "Couldn't execute WHDLoad slave file."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 rd_error_text21_end

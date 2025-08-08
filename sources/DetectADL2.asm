@@ -86,12 +86,12 @@ search_adl_id
 	move.l	_SysBase(pc),a0
 	move.l	MaxLocMem(a0),a2
 	move.l	a2,d7
-	lsr.l	#2,d7			; chip memory size in 4 byte steps
+	lsr.l	#2,d7			; chip memory size in longword steps
 	subq.l	#1,d7			; loopend at false
 search_adl_id_loop
 	subq.w	#LONGWORD_SIZE,a2
 	movem.l	(a2),d0-d1		; fetch 8 bytes
-	cmp.l	d4,d1                   ; "SYNC" ?
+	cmp.l	d4,d1                   ; string "SYNC" ?
 	beq.s	search_adl_id_skip2
 search_adl_id_skip1
 	subq.l	#1,d7
@@ -101,7 +101,7 @@ search_adl_id_quit
 	rts
 	CNOP 0,4
 search_adl_id_skip2
-	cmp.l	d2,d0			; "ADL2" ?
+	cmp.l	d2,d0			; string "ADL2" ?
 	bne.s	search_adl_id_skip1
 search_id_warn
 	moveq	#RETURN_WARN,d0
