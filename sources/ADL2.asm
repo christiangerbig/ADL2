@@ -739,7 +739,7 @@ adl_variables_size		RS.B 0
 	bne	adl_cleanup_read_arguments
 
 	tst.w	adl_arg_help_enabled(a3)
-	beq     adl_cleanup_read_arguments
+	beq	adl_cleanup_read_arguments
 	tst.w	adl_arg_remove_enabled(a3)
 	beq	adl_cleanup_read_arguments
 
@@ -2437,9 +2437,9 @@ dc_check_entries_number_max_ok
 ; Result
 	CNOP 0,4
 dc_print_entries_max_message
-	lea     dc_message_text(pc),a0
+	lea	dc_message_text(pc),a0
 	moveq   #dc_message_text_end-dc_message_text,d0
-	bsr     adl_print_text
+	bsr	adl_print_text
 	rts
 
 
@@ -3071,7 +3071,7 @@ qh_show_queue_loop
 	lea	qh_show_entry_current_number(pc),a0
 	moveq	#qh_show_entry_current_number_end-qh_show_entry_current_number,d0
 	bsr	adl_print_text
-	bsr.s   qh_get_entry_filename
+	bsr.s		qh_get_entry_filename
 	ADDF.W	playback_queue_entry_size,a2 ; next entry
 	addq.w	#1,d5			; increase order number
 	dbf	d7,qh_show_queue_loop
@@ -4238,7 +4238,7 @@ rd_play_loop
 	bsr	rd_get_prerunscript_path
 	bsr	rd_check_prerunscript_path
 	move.l	d0,adl_dos_return_code(a3)
-	bne     rd_cleanup_current_dir
+	bne	rd_cleanup_current_dir
 	bsr	rd_execute_prerunscript
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_current_dir
@@ -5540,7 +5540,7 @@ rd_downgrade_cpu_skip3
 	lea	rd_060_set_cacr(pc),a5
 	CALLLIBS Supervisor
 	move.l	d0,rd_old_cacr(a3)
-	lea     rd_old_mmu_registers(pc),a1
+	lea	rd_old_mmu_registers(pc),a1
 	lea	rd_040_060_mmu_off(pc),a5
 	CALLLIBS Supervisor
 	moveq	#0,d1			; 68060: clear all bits in PCR
@@ -5986,7 +5986,7 @@ rd_init_playtimer_stop_quit
 	CNOP 0,4
 rd_init_playtimer_stop_skip
 	moveq	#RESET_DEVICE_STOP,d1
-	bsr     rp_create_command_string
+	bsr	rp_create_command_string
 	bra.s	rd_init_playtimer_stop_quit
 
 
