@@ -343,7 +343,7 @@ Terminal_Rx		;Receive Command Strings from the Serial Terminal / EUSART
 				movlw		HIGH bnkRX_BUF_1	;-
 				movwf		FSR0H				;-
 				movlw		LOW bnkRX_BUF_1		;-
-				movwf		FSR0L				;-Init Digit Byte Pointer
+				movwf		FSR0L				;-Init Digit Byte 
 				
 												Terminal_Rx_30										
 				movlw		"0"					;-
@@ -354,7 +354,7 @@ Terminal_Rx		;Receive Command Strings from the Serial Terminal / EUSART
 				sublw		"9"					;-
 				btfss		STATUS,C			;-Is current Character Digit above ASCII 9?
 				bsf		bitERROR0			;Yes, set Error flag
-				addfsr		FSR0,d'1'			;Increment Digit Byte Pointer
+				addfsr		FSR0,d'1'			;Increment Digit Byte 
 				decfsz		acsSCRATCH,F		;Decrement Digit Counter. Has it reached Zero?
 				goto		Terminal_Rx_30		;No, repeat loop
 				

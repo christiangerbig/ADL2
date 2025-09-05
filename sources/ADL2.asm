@@ -790,7 +790,7 @@ qh_precheck_queue_empty
 dc_start
 	tst.w	dc_arg_quiet_enabled(a3)
 	beq.s	dc_start_skip
-	bsr	adl_print_intro_message
+	bsr	adl_printro_message
 dc_start_skip
 	bsr	dc_check_entries_number_max
 	move.l	d0,adl_dos_return_code(a3)
@@ -877,7 +877,7 @@ dc_cleanup_locked_playlist_file
 	CNOP 0,4
 adl_cleanup_read_arguments
 	bsr	adl_free_read_arguments
-	bsr	adl_print_io_error
+	bsr	adl_prio_error
 adl_cleanup_reset_program
 	bsr	adl_remove_reset_program
 adl_cleanup_icon_library
@@ -1542,7 +1542,7 @@ adl_check_system_props
 	bge.s	adl_check_system_props_skip
 	lea	adl_error_text1(pc),a0
 	moveq	#adl_error_text1_end-adl_error_text1,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 adl_check_system_props_fail
 	moveq	#RETURN_FAIL,d0
 adl_check_system_props_quit
@@ -1553,7 +1553,7 @@ adl_check_system_props_skip
 	beq.s	adl_check_system_props_ok
 	lea	adl_error_text2(pc),a0
 	move.l	#adl_error_text2_end-adl_error_text2,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	bra.s	adl_check_system_props_fail
 	CNOP 0,4
 adl_check_system_props_ok
@@ -1574,7 +1574,7 @@ adl_open_graphics_library
 	bne.s	adl_open_graphics_library_ok
 	lea	adl_error_text3(pc),a0
 	moveq	#adl_error_text3_end-adl_error_text3,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#RETURN_FAIL,d0
 adl_open_graphics_library_quit
 	rts
@@ -1597,7 +1597,7 @@ adl_open_intuition_library
 	bne.s	adl_open_intuition_library_ok
 	lea	adl_error_text4(pc),a0
 	moveq	#adl_error_text4_end-adl_error_text4,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#RETURN_FAIL,d0
 adl_open_intuition_library_quit
 	rts
@@ -1620,7 +1620,7 @@ adl_open_gadtools_library
 	bne.s	adl_open_gadtools_library_ok
 	lea	adl_error_text5(pc),a0
 	moveq	#adl_error_text5_end-adl_error_text5,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#RETURN_FAIL,d0
 adl_open_gadtools_library_quit
 	rts
@@ -1643,7 +1643,7 @@ adl_open_asl_library
 	bne.s	adl_open_asl_library_ok
 	lea	adl_error_text6(pc),a0
 	moveq	#adl_error_text6_end-adl_error_text6,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#RETURN_FAIL,d0
 adl_open_asl_library_quit
 	rts
@@ -1666,7 +1666,7 @@ adl_open_icon_library
 	bne.s	adl_open_icon_library_ok
 	lea	adl_error_text7(pc),a0
 	moveq	#adl_error_text7_end-adl_error_text7,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#RETURN_FAIL,d0
 adl_open_icon_library_quit
 	rts
@@ -1715,7 +1715,7 @@ adl_search_id_skip2
 
 
 ; Input
-; a2.l	Pointer reset program in memory
+; a2.l	 reset program in memory
 ; Result
 	CNOP 0,4
 adl_init_values
@@ -1750,7 +1750,7 @@ adl_init_values_skip3
 
 
 ; Input
-; a2.l	Pointer reset program in memory
+; a2.l	 reset program in memory
 ; a6.l	Exec base
 ; Result
 	CNOP 0,4
@@ -1843,7 +1843,7 @@ adl_check_cmd_line
 	move.l	d0,adl_read_arguments(a3)
 	bne.s   adl_check_arg_help
 adl_check_cmd_line_fail
-	bsr.s	adl_print_cmd_usage
+	bsr.s	adl_prcmd_usage
 	moveq	#RETURN_FAIL,d0
 adl_check_cmd_line_quit
 	rts
@@ -1856,10 +1856,10 @@ adl_check_cmd_line_ok
 ; Input
 ; Result
 	CNOP 0,4
-adl_print_cmd_usage
+adl_prcmd_usage
 	lea	adl_cmd_usage_text(pc),a0
 	move.l	#adl_cmd_usage_text_end-adl_cmd_usage_text,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	rts
 
 
@@ -1869,7 +1869,7 @@ adl_check_arg_help
 	move.l	cra_HELP(a2),d0
 	beq.s	adl_check_arg_remove
 	clr.w	adl_arg_help_enabled(a3)
-	bsr.s	adl_print_cmd_usage
+	bsr.s	adl_prcmd_usage
 	bra.s	adl_check_cmd_line_ok
 
 ; ADL argument REMOVE
@@ -2103,19 +2103,19 @@ rd_check_arg_resetonerror
 ; Input
 ; Result
 	CNOP 0,4
-adl_print_intro_message
+adl_printro_message
 	tst.w	adl_reset_program_active(a3)
-	bne.s	adl_print_intro_message_skip
-adl_print_intro_message_quit
+	bne.s	adl_printro_message_skip
+adl_printro_message_quit
 	rts
 	CNOP 0,4
-adl_print_intro_message_skip
+adl_printro_message_skip
 	tst.w	dc_arg_playlist_enabled(a3)
-	beq.s	adl_print_intro_message_quit
+	beq.s	adl_printro_message_quit
 	lea	adl_intro_message_text(pc),a0
 	move.l	#adl_intro_message_text_end-adl_intro_message_text,d0
-	bsr	adl_print_text
-	bra.s	adl_print_intro_message_quit
+	bsr	adl_prtext
+	bra.s	adl_printro_message_quit
 
 
 ; Demo Charger
@@ -2135,7 +2135,7 @@ dc_alloc_entries_buffer
 	bne.s	dc_alloc_entries_buffer_ok
 	lea	dc_error_text1(pc),a0
 	moveq	#dc_error_text1_end-dc_error_text1,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	MOVEF.L	ERROR_NO_FREE_STORE,d0
 dc_alloc_entries_buffer_quit
 	rts
@@ -2155,7 +2155,7 @@ dc_get_program_dir
 	bne.s	dc_get_program_dir_skip
 	lea	dc_error_text10(pc),a0
 	moveq	#dc_error_text10_end-dc_error_text10,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#RETURN_FAIL,d0
 dc_get_program_dir_quit
 	rts
@@ -2170,7 +2170,7 @@ dc_get_program_dir_skip
 	bne.s	dc_get_program_dir_ok
 	lea	dc_error_text11(pc),a0
 	moveq	#dc_error_text11_end-dc_error_text11,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	MOVEF.L	ERROR_DIR_NOT_FOUND,d0
 	bra.s	dc_get_program_dir_quit
 	CNOP 0,4
@@ -2214,7 +2214,7 @@ dc_make_file_request_skip
 	bne.s	dc_make_file_request_ok
 	lea	dc_error_text12(pc),a0
 	moveq	#dc_error_text12_end-dc_error_text12,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#RETURN_FAIL,d0
 dc_make_file_request_quit
 	rts
@@ -2293,7 +2293,7 @@ dc_check_demo_filepath
 	bne.s	dc_check_demo_filepath_skip1
 	lea	dc_error_text13(pc),a0
 	moveq	#dc_error_text13_end-dc_error_text13,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	MOVEF.L ERROR_DIR_NOT_FOUND,d0
 dc_check_demo_filepath_quit
 	rts
@@ -2303,7 +2303,7 @@ dc_check_demo_filepath_skip1
 	bne.s	dc_check_demo_filepath_skip2
 	lea	dc_error_text14(pc),a0
 	moveq	#dc_error_text14_end-dc_error_text14,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#RETURN_FAIL,d0
 	bra.s	dc_check_demo_filepath_quit
 	CNOP 0,4
@@ -2336,7 +2336,7 @@ dc_check_demo_filepath_loop2
 	bsr	dc_clear_playlist_entry
 	lea	dc_error_text15(pc),a0
 	moveq	#dc_error_text15_end-dc_error_text15,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	MOVEF.L ERROR_INVALID_COMPONENT_NAME,d0
 	bra	dc_check_demo_filepath_quit
 	CNOP 0,4
@@ -2359,7 +2359,7 @@ dc_check_demo_filepath_loop3
 	bsr	dc_clear_playlist_entry
 	lea	dc_error_text15(pc),a0
 	moveq	#dc_error_text15_end-dc_error_text15,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	MOVEF.L ERROR_INVALID_COMPONENT_NAME,d0
 	bra	dc_check_demo_filepath_quit
 	CNOP 0,4
@@ -2369,7 +2369,7 @@ dc_check_demo_filepath_skip5
 	bne.s	dc_check_demo_filepath_skip6
 	lea	dc_error_text16(pc),a0
 	moveq	#dc_error_text16_end-dc_error_text16,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	MOVEF.L ERROR_OBJECT_NOT_FOUND,d0
 	bra	dc_check_demo_filepath_quit
 	CNOP 0,4
@@ -2423,7 +2423,7 @@ dc_check_entries_number_max
 	move.w  adl_entries_number(a3),d0
 	cmp.w   adl_entries_number_max(a3),d0
 	bne.s	dc_check_entries_number_max_ok
-	bsr.s	dc_print_entries_max_message
+	bsr.s	dc_prentries_max_message
 	moveq   #RETURN_WARN,d0
 dc_check_entries_number_max_quit
 	rts
@@ -2436,10 +2436,10 @@ dc_check_entries_number_max_ok
 ; Input
 ; Result
 	CNOP 0,4
-dc_print_entries_max_message
+dc_prentries_max_message
 	lea	dc_message_text(pc),a0
 	moveq   #dc_message_text_end-dc_message_text,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	rts
 
 
@@ -2474,7 +2474,7 @@ dc_init_reset_program_skip1
 	bne.s	dc_init_reset_program_skip2
 	lea	dc_error_text17(pc),a0
 	moveq	#dc_error_text17_end-dc_error_text17,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#ERROR_NO_FREE_STORE,d0
 	bra.s	dc_init_reset_program_quit
 	CNOP 0,4
@@ -2518,7 +2518,7 @@ dc_init_reset_program_skip3
 	move.w	adl_entries_number(a3),(a0)
 	lea	adl_message_text1(pc),a0
 	moveq	#adl_message_text1_end-adl_message_text1,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	bra	dc_init_reset_program_ok
 
 ; Input
@@ -2549,7 +2549,7 @@ dc_lock_playlist_file
 	bne.s	dc_lock_playlist_file_ok
 	lea	dc_error_text2(pc),a0
 	moveq	#dc_error_text2_end-dc_error_text2,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#RETURN_FAIL,d0
 dc_lock_playlist_file_quit
 	rts
@@ -2571,7 +2571,7 @@ dc_alloc_playlist_file_fib
 	bne.s	dc_alloc_playlist_file_fib_ok
 	lea	dc_error_text3(pc),a0
 	moveq	#dc_error_text3_end-dc_error_text3,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	MOVEF.L	ERROR_NO_FREE_STORE,d0
 dc_alloc_playlist_file_fib_quit
 	rts
@@ -2594,7 +2594,7 @@ dc_get_playlist_filelength
 	bne.s	dc_get_playlist_filelength_ok
 	lea	dc_error_text4(pc),a0
 	moveq	#dc_error_text4_end-dc_error_text4,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#RETURN_FAIL,d0
 dc_get_playlist_filelength_quit
 	rts
@@ -2617,7 +2617,7 @@ dc_alloc_playlist_filebuffer
 	bne.s	dc_alloc_playlist_filebuffer_ok
 	lea	dc_error_text5(pc),a0
 	moveq	#dc_error_text5_end-dc_error_text5,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	MOVEF.L	ERROR_NO_FREE_STORE,d0
 dc_alloc_playlist_filebuffer_quit
 	rts
@@ -2639,7 +2639,7 @@ dc_open_playlist_file
 	bne.s	dc_open_playlist_file_ok
 	lea	dc_error_text6(pc),a0
 	moveq	#dc_error_text6_end-dc_error_text6,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#RETURN_FAIL,d0
 dc_open_playlist_file_quit
 	rts
@@ -2662,7 +2662,7 @@ dc_read_playlist_file
 	bne.s	dc_read_playlist_file_ok
 	lea	dc_error_text7(pc),a0
 	moveq	#dc_error_text7_end-dc_error_text7,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#RETURN_FAIL,d0
 dc_read_playlist_file_quit
 	rts
@@ -2679,7 +2679,7 @@ dc_read_playlist_file_ok
 dc_parse_playlist_file
 	lea	dc_parsing_begin_text(pc),a0
 	moveq	#dc_parsing_begin_text_end-dc_parsing_begin_text,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	move.w	adl_entries_number(a3),d0
 	mulu.w	#playback_queue_entry_size,d0
 	move.l	adl_entries_buffer(a3),a0
@@ -2704,7 +2704,7 @@ dc_parse_playlist_file_skip1
 	bne.s	dc_parse_playlist_file_skip2
 	lea	dc_error_text8(pc),a0
 	moveq	#dc_error_text8_end-dc_error_text8,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#RETURN_FAIL,d0
 	bra.s	dc_parse_playlist_file_quit
 	CNOP 0,4
@@ -2894,7 +2894,7 @@ dc_foreward_transmitted_entry
 	cmp.w	adl_entries_number(a3),d0
 	bne.s	dc_foreward_playlist_cmd_line
 	bsr.s	dc_parse_playlist_file_result
-	bra	dc_print_entries_max_message
+	bra	dc_prentries_max_message
 	CNOP 0,4
 dc_foreward_playlist_cmd_line
 	add.l	#playback_queue_entry_size,d6 ; next entry
@@ -2924,7 +2924,7 @@ dc_parse_playlist_file_result
 	bsr	rp_dec_to_ascii
 	lea	dc_parsing_result_text(pc),a0
 	move.l	#dc_parsing_result_text_end-dc_parsing_result_text,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	bsr	qh_show_queue
 	rts
 
@@ -2965,7 +2965,7 @@ dc_parse_entry_syntax_error
 	move.w	(a7)+,d7
 	lea	dc_error_text9(pc),a0
 	moveq	#dc_error_text9_end-dc_error_text9,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	rts
 
 
@@ -3050,7 +3050,7 @@ qh_show_queue
 	bne.s	qh_show_queue_skip
         lea	qh_info_message_text1(pc),a0
 	moveq	#qh_info_message_text1_end-qh_info_message_text1,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 qh_show_queue_quit
 	rts
 	CNOP 0,4
@@ -3061,7 +3061,7 @@ qh_show_queue_skip
 qh_show_queue_loop
 	lea	qh_show_entry_header(pc),a0
 	moveq	#qh_show_entry_current_number-qh_show_entry_header,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	move.l	d5,d1			; decimal number
 	lea	qh_show_entry_current_number(pc),a0 ; string
 	move.w	d7,-(a7)
@@ -3070,7 +3070,7 @@ qh_show_queue_loop
 	move.w	(a7)+,d7
 	lea	qh_show_entry_current_number(pc),a0
 	moveq	#qh_show_entry_current_number_end-qh_show_entry_current_number,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	bsr.s		qh_get_entry_filename
 	ADDF.W	playback_queue_entry_size,a2 ; next entry
 	addq.w	#1,d5			; increase order number
@@ -3083,7 +3083,7 @@ qh_show_queue_loop
 	bsr	rp_dec_to_ascii
 	lea	qh_info_message_text2(pc),a0
 	moveq	#qh_info_message_text2_end-qh_info_message_text2,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	bra.s	qh_show_queue_quit
 
 
@@ -3117,23 +3117,23 @@ qh_get_entry_filename_skip2
 	moveq	#qh_show_entry_space_end-qh_show_entry_space-1,d0
 qh_get_entry_filename_skip3
 	move.w	d0,d4			; file name length
-	bsr	adl_print_text
+	bsr	adl_prtext
 	lea	qh_show_entry_space(pc),a0 ; output string
 	moveq	#qh_show_entry_space_end-qh_show_entry_space-1,d0 ; length output line
 	sub.w	d4,d0			; substract file name length
-	bsr	adl_print_text
+	bsr	adl_prtext
 	tst.b	pqe_entry_active(a2)
-	bne.s	qh_print_entry_active_text2
+	bne.s	qh_prentry_active_text2
 	lea	qh_entry_active_text1(pc),a0
 	moveq	#qh_entry_active_text1_end-qh_entry_active_text1,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 qh_get_entry_filename_quit
 	rts
 	CNOP 0,4
-qh_print_entry_active_text2
+qh_prentry_active_text2
 	lea	qh_entry_active_text2(pc),a0
 	moveq	#qh_entry_active_text2_end-qh_entry_active_text2,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	bra.s	qh_get_entry_filename_quit
 
 
@@ -3178,7 +3178,7 @@ qh_edit_queue
 	bne.s	qh_edit_queue_skip
         lea	qh_info_message_text1(pc),a0
 	moveq	#qh_info_message_text1_end-qh_info_message_text1,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#RETURN_FAIL,d0
 	move.l	d0,adl_dos_return_code(a3)
 qh_edit_queue_quit
@@ -3223,7 +3223,7 @@ qh_lock_workbench
 	bne.s	qh_lock_workbench_ok
 	lea	qh_error_text1(pc),a0
 	moveq	#qh_error_text1_end-qh_error_text1,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#RETURN_FAIL,d0
 qh_lock_workbench_quit
 	rts
@@ -3245,7 +3245,7 @@ qh_get_screen_visual_info
 	bne.s	qh_get_screen_visual_info_ok
 	lea	qh_error_text2(pc),a0
 	moveq	#qh_error_text2_end-qh_error_text2,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#RETURN_FAIL,d0
 qh_get_screen_visual_info_quit
 	rts
@@ -3266,7 +3266,7 @@ qh_create_context_gadget
 	bne.s	qh_create_context_gadget_ok
 	lea	qh_error_text3(pc),a0
 	moveq	#qh_error_text3_end-qh_error_text3,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#RETURN_FAIL,d0
 qh_create_context_gadget_quit
 	rts
@@ -3311,7 +3311,7 @@ qh_create_gadgets_skip
 	bne.s	qh_create_gadgets_ok
 	lea	qh_error_text4(pc),a0
 	moveq	#qh_error_text4_end-qh_error_text4,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#RETURN_FAIL,d0
 qh_create_gadgets_quit
 	rts
@@ -3614,7 +3614,7 @@ qh_open_edit_window
 	bne.s	qh_open_edit_window_skip1
 	lea	qh_error_text5(pc),a0
 	moveq	#qh_error_text5_end-qh_error_text5,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#RETURN_FAIL,d0
 qh_open_edit_window_quit
 	rts
@@ -3961,7 +3961,7 @@ qh_clear_queue
 	bne.s   qh_clear_queue_ok
 	lea	qh_info_message_text4(pc),a0
 	moveq	#qh_info_message_text4_end-qh_info_message_text4,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 qh_clear_queue_quit
 	rts
 	CNOP 0,4
@@ -3984,7 +3984,7 @@ qh_clear_queue_loop
 qh_clear_queue_skip
 	lea	qh_info_message_text5(pc),a0
 	moveq	#qh_info_message_text5_end-qh_info_message_text5,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	bra.s	qh_clear_queue_quit
 
 
@@ -4005,7 +4005,7 @@ qh_reset_queue
         bne.s	qh_reset_queue_ok
 	lea	qh_info_message_text6(pc),a0
 	moveq	#qh_info_message_text6_end-qh_info_message_text6,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 qh_reset_queue_quit
 	rts
 	CNOP 0,4
@@ -4014,7 +4014,7 @@ qh_reset_queue_ok
 	bsr	rd_deactivate_queue
 	lea	qh_info_message_text7(pc),a0
 	moveq	#qh_info_message_text7_end-qh_info_message_text7,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	bra.s	qh_reset_queue_quit
 
 
@@ -4054,22 +4054,22 @@ adl_free_read_arguments_skip
 ; Input
 ; Result
 	CNOP 0,4
-adl_print_io_error
+adl_prio_error
 	move.l	adl_dos_return_code(a3),d1
 	moveq	#ERROR_NO_FREE_STORE,d0
 	cmp.l	d0,d1
-	bge.s	adl_print_io_error_skip1
-adl_print_io_error_quit
+	bge.s	adl_prio_error_skip1
+adl_prio_error_quit
 	rts
 	CNOP 0,4
-adl_print_io_error_skip1
+adl_prio_error_skip1
 	lea	adl_error_text_header(pc),a0
 	move.l	a0,d2                   ; header error message
 	CALLDOS PrintFault
 	lea	adl_error_text_tail(pc),a0 ; error text
 	moveq	#adl_error_text_tail_end-adl_error_text_tail,d0 ; length of text
-	bsr.s	adl_print_text
-	bra.s	adl_print_io_error_quit
+	bsr.s	adl_prtext
+	bra.s	adl_prio_error_quit
 
 
 ; Input
@@ -4077,7 +4077,7 @@ adl_print_io_error_skip1
 ; d0.l	Length of text
 ; Result
 	CNOP 0,4
-adl_print_text
+adl_prtext
 	move.l	adl_output_handle(a3),d1
 	move.l	a0,d2			; text
 	move.l	d0,d3			; number of characters to write
@@ -4098,7 +4098,7 @@ adl_remove_reset_program_skip1
 	beq.s	adl_remove_reset_program_skip2
 	lea	adl_message_text2(pc),a0
 	moveq	#adl_message_text2_end-adl_message_text2,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 adl_remove_reset_program_quit
 	rts
 	CNOP 0,4
@@ -4114,7 +4114,7 @@ adl_remove_reset_program_skip2
 	CALLEXEC FreeMem
 	lea	adl_message_text3(pc),a0
 	moveq	#adl_message_text3_end-adl_message_text3,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	bra.s	adl_remove_reset_program_quit
 
 
@@ -4215,7 +4215,7 @@ rd_play_loop
 	bsr	rd_get_demo_filename
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_io_error
-	bsr	rd_print_demofile_start_message
+	bsr	rd_prdemofile_start_message
 	bsr	rd_check_runmode
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_io_error
@@ -4326,7 +4326,7 @@ rd_cleanup_current_dir
 	bsr	rd_restore_current_dir
 
 rd_cleanup_io_error
-	bsr	adl_print_io_error
+	bsr	adl_prio_error
 
 	bsr	rd_check_user_break
 	move.l	d0,adl_dos_return_code(a3)
@@ -4357,7 +4357,7 @@ rd_cleanup_serial_msg_port
 ; d0.l	Text length
 ; Result
 	CNOP 0,4
-rd_print_error_text
+rd_prerror_text
 	movem.l	d0/a0,-(a7)
 	lea	rd_error_text_header_index(pc),a0
 	move.w	rd_entry_offset(a3),d1
@@ -4375,11 +4375,11 @@ rd_print_error_text
 	move.l	d0,d3			; number of characters to write
 	CALLLIBS Write
 	tst.w	rd_arg_resetonerror_enabled(a3)
-	bne.s	rd_print_error_text_quit
+	bne.s	rd_prerror_text_quit
 	MOVEF.L	rd_error_message_delay,d1
 	CALLLIBS Delay
 	CALLEXEC ColdReboot
-rd_print_error_text_quit
+rd_prerror_text_quit
 	rts
 
 
@@ -4395,7 +4395,7 @@ rd_open_ciaa_resource
 	bne.s	rd_open_ciaa_resource_skip
 	lea	rd_error_text1(pc),a0
 	moveq	#rd_error_text1_end-rd_error_text1,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#RETURN_FAIL,d0
 rd_open_ciaa_resource_quit
 	rts
@@ -4421,7 +4421,7 @@ rd_open_ciab_resource
 	bne.s	rd_open_ciab_resource_skip
 	lea	rd_error_text2(pc),a0
 	moveq	#rd_error_text2_end-rd_error_text2,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#RETURN_FAIL,d0
 rd_open_ciab_resource_quit
 	rts
@@ -4445,7 +4445,7 @@ rd_create_serial_msg_port
 	bne.s	rd_create_serial_msg_port_ok
 	lea	rd_error_text3(pc),a0
 	moveq	#rd_error_text3_end-rd_error_text3,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#RETURN_FAIL,d0
 rd_create_serial_msg_port_quit
 	rts
@@ -4470,7 +4470,7 @@ rd_open_serial_device
 	beq.s	rd_open_serial_device_ok
 	lea	rd_error_text4(pc),a0
 	moveq	#rd_error_text4_end-rd_error_text4,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#RETURN_FAIL,d0
 rd_open_serial_device_quit
 	rts
@@ -4494,7 +4494,7 @@ rd_open_timer_device
 	beq.s	rd_open_timer_device_ok
 	lea	rd_error_text5(pc),a0
 	moveq	#rd_error_text5_end-rd_error_text5,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#RETURN_FAIL,d0
 rd_open_timer_device_quit
 	rts
@@ -4516,7 +4516,7 @@ rd_alloc_pointer_data
 	bne.s	rd_alloc_pointer_data_ok
 	lea	rd_error_text6(pc),a0
 	moveq	#rd_error_text6_end-rd_error_text6,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#ERROR_NO_FREE_STORE,d0
 rd_alloc_pointer_data_quit
 	rts
@@ -4570,7 +4570,7 @@ rd_check_screen_mode
 	bne.s	rd_check_screen_mode_skip
 	lea	rd_error_text7(pc),a0
 	moveq	#rd_error_text7_end-rd_error_text7,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#RETURN_FAIL,d0
 rd_check_screen_mode_quit
 	rts
@@ -4624,7 +4624,7 @@ rd_check_queue_loop
 	beq.s   rd_check_queue_skip
 	lea	rd_info_message_text1(pc),a0
 	moveq	#rd_info_message_text1_end-rd_info_message_text1,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#RETURN_WARN,d0
 rd_check_queue_quit
 	rts
@@ -4743,16 +4743,16 @@ rd_get_demo_filename_skip3
 ; Input
 ; Result
 	CNOP 0,4
-rd_print_demofile_start_message
+rd_prdemofile_start_message
 	lea	rd_demo_filename_header(pc),a0
 	moveq	#rd_demo_filename_header_end-rd_demo_filename_header,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	move.l	rd_demo_filename(a3),a0
 	move.l	rd_demo_filename_length(a3),d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	lea	rd_demo_filename_tail(pc),a0
 	moveq	#rd_demo_filename_tail_end-rd_demo_filename_tail,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	rts
 
 
@@ -4776,7 +4776,7 @@ rd_check_runmode_skip
 	move.b	#FALSE,pqe_entry_active(a0) ; entry state: played
 	lea	rd_error_text8(pc),a0
 	moveq	#rd_error_text8_end-rd_error_text8,d0
-	bsr	rd_print_error_text
+	bsr	rd_prerror_text
 	moveq	#RETURN_FAIL,d0
 	bsr.s	rd_check_runmode_quit
 	rts
@@ -4792,7 +4792,7 @@ rd_check_demofile_state
 	beq.s   rd_check_demofile_state_ok
 	lea	rd_info_message_text2(pc),a0
 	moveq	#rd_info_message_text2_end-rd_info_message_text2,d0
-	bsr	rd_print_error_text
+	bsr	rd_prerror_text
 	moveq	#RETURN_WARN,d0
 rd_check_demofile_state_quit
 	rts
@@ -4816,7 +4816,7 @@ rd_open_demofile
 	bne.s	rd_open_demofile_ok
 	lea	rd_error_text9(pc),a0
 	moveq	#rd_error_text9_end-rd_error_text9,d0
-	bsr	rd_print_error_text
+	bsr	rd_prerror_text
 	moveq	#RETURN_FAIL,d0
 rd_open_demofile_quit
 	rts
@@ -4856,7 +4856,7 @@ rd_check_demofile_header
 	beq.s	rd_check_demofile_header_ok
 	lea	rd_error_text10(pc),a0
 	moveq	#rd_error_text10_end-rd_error_text10,d0
-	bsr	rd_print_error_text
+	bsr	rd_prerror_text
 	MOVEF.L ERROR_FILE_NOT_OBJECT,d0
 rd_check_demofile_header_quit
 	rts
@@ -4907,7 +4907,7 @@ rd_set_new_current_dir
 	bne.s	rd_set_new_current_dir_skip
 	lea	rd_error_text11(pc),a0
 	moveq	#rd_error_text11_end-rd_error_text11,d0
-	bsr	rd_print_error_text
+	bsr	rd_prerror_text
 	moveq	#RETURN_FAIL,d0
 rd_set_new_current_dir_quit
 	rts
@@ -4960,7 +4960,7 @@ rd_check_prerunscript_path_loop
 	blt.s	rd_check_prerunscript_path_skip2
 	lea	rd_error_text12(pc),a0
 	moveq	#rd_error_text12_end-rd_error_text12,d0
-	bsr	rd_print_error_text
+	bsr	rd_prerror_text
 	MOVEF.L	ERROR_INVALID_COMPONENT_NAME,d0
 	bra.s	rd_check_prerunscript_path_quit
         CNOP 0,4
@@ -4996,7 +4996,7 @@ rd_execute_prerunscript_loop
 	beq.s	rd_execute_prerunscript_ok
 	lea	rd_error_text13(pc),a0
 	moveq	#rd_error_text13_end-rd_error_text13,d0
-	bsr	rd_print_error_text
+	bsr	rd_prerror_text
 	moveq	#RETURN_FAIL,d0
 	bra.s	rd_execute_prerunscript_quit
 	CNOP 0,4
@@ -5021,7 +5021,7 @@ rd_open_pal_screen
 	bne.s	rd_open_pal_screen_ok
 	lea	rd_error_text14(pc),a0
 	moveq	#rd_error_text14_end-rd_error_text14,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#RETURN_FAIL,d0
 rd_open_pal_screen_quit
 	rts
@@ -5062,7 +5062,7 @@ rd_check_pal_screen_mode
 	beq.s	rd_check_pal_screen_mode_ok
 	lea	rd_error_text15(pc),a0
 	moveq	#rd_error_text15_end-rd_error_text15,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#RETURN_FAIL,d0
 rd_check_pal_screen_mode_quit
 	rts
@@ -5085,7 +5085,7 @@ rd_open_invisible_window
 	bne.s	rd_open_invisible_window_ok
 	lea	rd_error_text16(pc),a0
 	moveq	#rd_error_text16_end-rd_error_text16,d0
-	bsr	rd_print_error_text
+	bsr	rd_prerror_text
 	moveq	#RETURN_FAIL,d0
 rd_open_invisible_window_quit
 	rts
@@ -5105,7 +5105,7 @@ rd_clear_mouse_pointer
 	moveq	#pointer_x_size,d1
 	moveq	#pointer_x_offset,d2
 	moveq	#pointer_y_offset,d3
-	CALLINT SetPointer
+	CALLINT Set
 	rts
 
 
@@ -5195,7 +5195,7 @@ rd_load_demofile
 	bne.s	rd_load_demofile_ok
 	lea	rd_error_text17(pc),a0
 	moveq	#rd_error_text17_end-rd_error_text17,d0
-	bsr	rd_print_error_text
+	bsr	rd_prerror_text
 	moveq	#RETURN_FAIL,d0
 rd_load_demofile_quit
 	rts
@@ -5256,7 +5256,7 @@ rd_check_tooltypes_loop
 	bne.s	rd_check_tooltypes_skip
 	lea	rd_error_text18(pc),a0
 	moveq	#rd_error_text18_end-rd_error_text18,d0
-	bsr	rd_print_error_text
+	bsr	rd_prerror_text
 	moveq	#RETURN_FAIL,d0
 rd_check_tooltypes_quit
 	rts
@@ -5419,7 +5419,7 @@ rd_set_playtimer
 	bne.s	rd_set_playtimer_skip1
 	lea	rd_error_text19a(pc),a0
 	moveq	#rd_error_text19a_end-rd_error_text19a,d0
-	bsr	rd_print_error_text
+	bsr	rd_prerror_text
 rd_set_playtimer_fail
 	moveq	#RETURN_FAIL,d0
 rd_set_playtimer_quit
@@ -5430,7 +5430,7 @@ rd_set_playtimer_skip1
 	bne.s	rd_set_playtimer__skip2
 	lea	rd_error_text19b(pc),a0
 	moveq	#rd_error_text19b_end-rd_error_text19b,d0
-	bsr	rd_print_error_text
+	bsr	rd_prerror_text
 	bra.s	rd_set_playtimer_fail
 	CNOP 0,4
 rd_set_playtimer__skip2
@@ -5438,7 +5438,7 @@ rd_set_playtimer__skip2
 	bne.s	rd_set_playtimer__skip3
 	lea	rd_error_text19c(pc),a0
 	moveq	#rd_error_text19c_end-rd_error_text19c,d0
-	bsr	rd_print_error_text
+	bsr	rd_prerror_text
 	bra.s	rd_set_playtimer_fail
 	CNOP 0,4
 rd_set_playtimer__skip3
@@ -5446,7 +5446,7 @@ rd_set_playtimer__skip3
 	bne.s	rd_set_playtimer__skip4
 	lea	rd_error_text19d(pc),a0
 	moveq	#rd_error_text19d_end-rd_error_text19d,d0
-	bsr	rd_print_error_text
+	bsr	rd_prerror_text
 	bra.s	rd_set_playtimer_fail
 	CNOP 0,4
 rd_set_playtimer__skip4
@@ -5454,7 +5454,7 @@ rd_set_playtimer__skip4
 	bne.s	rd_set_playtimer_ok
 	lea	rd_error_text19e(pc),a0
 	moveq	#rd_error_text19e_end-rd_error_text19e,d0
-	bsr	rd_print_error_text
+	bsr	rd_prerror_text
 	bra.s	rd_set_playtimer_fail
 	CNOP 0,4
 rd_set_playtimer_ok
@@ -5478,7 +5478,7 @@ rd_write_playtimer
 	beq.s	rd_write_playtimer_ok
 	lea	rd_error_text20(pc),a0
 	moveq	#rd_error_text20_end-rd_error_text20,d0
-	bsr	rd_print_error_text
+	bsr	rd_prerror_text
 	moveq	#RETURN_FAIL,d0
 rd_write_playtimer_quit
 	rts
@@ -5727,7 +5727,7 @@ rd_execute_whdload_slave
 	beq.s	rd_execute_whdload_slave_skip
 	lea	rd_error_text21(pc),a0
 	moveq	#rd_error_text21_end-rd_error_text21,d0
-	bsr	rd_print_error_text
+	bsr	rd_prerror_text
 	moveq	#RETURN_FAIL,d0
 rd_execute_whdload_slave_quit
 	rts
@@ -6151,7 +6151,7 @@ rd_check_user_break
 	beq.s	rd_check_user_break_ok
 	lea	rd_info_message_text3(pc),a0
 	moveq	#rd_info_message_text3_end-rd_info_message_text3,d0
-	bsr	adl_print_text
+	bsr	adl_prtext
 	moveq	#RETURN_FAIL,d0
 rd_check_user_break_quit
 	rts
