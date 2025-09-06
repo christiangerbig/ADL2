@@ -68,7 +68,7 @@ variables_size			RS.B 0
 	move.l	d0,dos_return_code(a3)
 	bne.s	cleanup_dos_library
 
-        bsr	get_active_screen
+	bsr	get_active_screen
 	move.l	d0,active_screen(a3)
 	bsr	get_first_window
 	move.l	d0,first_window(a3)
@@ -107,7 +107,7 @@ open_dos_library
 	bne.s	open_dos_library_ok
 	moveq	#RETURN_FAIL,d0
 open_dos_library_quit
-        rts
+	rts
 	CNOP 0,4
 open_dos_library_ok
 	moveq	#RETURN_OK,d0
@@ -148,7 +148,7 @@ open_intuition_library
 	bsr.s	prtext
 	moveq	#RETURN_FAIL,d0
 open_intuition_library_quit
-        rts
+	rts
 	CNOP 0,4
 open_intuition_library_ok
 	moveq	#RETURN_OK,d0
@@ -189,7 +189,7 @@ get_first_window_skip
 ; Result
 	CNOP 0,4
 change_window_size
-        move.l	first_window(a3),d0
+	move.l	first_window(a3),d0
 	beq.s	change_window_size_quit
 	move.l	d0,a0
 	move.l	active_screen(a3),d0

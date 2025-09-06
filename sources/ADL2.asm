@@ -136,7 +136,7 @@
 
 ; V.2.08
 ; - argument RESETONERROR: error output with subsequent reset now after 4 seconds
-;                          if no LOOP argument was given
+;   if no LOOP argument was given
 ; - on 68000: Runmode-Check, if Runmode "AGA vanilla" on 68000-Config,
 ;   then error output with subsequent reset after 4 seconds if no LOOP
 ;   argument and argument RESETONERROR was given
@@ -519,10 +519,10 @@ old_mmu_registers		RS.B 0
 
 omr_tt0				RS.L 1
 omr_tt1				RS.L 1
-omr_dtt0                        RS.L 1
-omr_dtt1                        RS.L 1
-omr_itt0                        RS.L 1
-omr_itt1                        RS.L 1
+omr_dtt0			RS.L 1
+omr_dtt1			RS.L 1
+omr_itt0			RS.L 1
+omr_itt1			RS.L 1
 omr_tc				RS.L 1
 
 old_mmu_registers_size		RS.B 0
@@ -604,7 +604,7 @@ dc_transmitted_entries_number	RS.W 1
 qh_arg_showqueue_enabled	RS.W 1
 qh_arg_editentry_enabled	RS.W 1
 qh_arg_editqueue_enabled	RS.W 1
-qh_arg_clearqueue_enabled       RS.W 1
+qh_arg_clearqueue_enabled	RS.W 1
 qh_arg_resetqueue_enabled	RS.W 1
 
 	RS_ALIGN_LONGWORD
@@ -769,7 +769,7 @@ qh_precheck_arg_clearqueue
 	CNOP 0,4
 qh_precheck_arg_resetqueue
 	tst.w	qh_arg_resetqueue_enabled(a3)
-        bne.s	qh_precheck_queue_empty
+	bne.s	qh_precheck_queue_empty
 	bsr	qh_reset_queue
 	bra	adl_cleanup_read_arguments
 	CNOP 0,4
@@ -820,7 +820,7 @@ dc_demo_charge_loop
 	bne.s	dc_cleanup_file_request
 	bsr	dc_free_file_request
 	bsr	dc_display_runmode_request
-        bsr	dc_check_entries_number_max
+	bsr	dc_check_entries_number_max
 	move.l	d0,adl_dos_return_code(a3)
 	beq.s	dc_demo_charge_loop
 
@@ -859,7 +859,7 @@ dc_check_playlist
 	bne	dc_cleanup_playlist_file
 	bsr	dc_parse_playlist_file
 	move.l	d0,adl_dos_return_code(a3)
-        bne.s   dc_cleanup_playlist_file
+	bne.s   dc_cleanup_playlist_file
 	bsr	dc_check_entries_number_min
 	move.l	d0,adl_dos_return_code(a3)
 
@@ -871,7 +871,7 @@ dc_cleanup_playlist_file_fib
 	bsr	dc_free_playlist_file_fib
 dc_cleanup_locked_playlist_file
 	bsr	dc_unlock_playlist_file
-        bra	dc_cleanup_reset_program
+	bra	dc_cleanup_reset_program
 
 ; Amiga Demo-Launcher
 	CNOP 0,4
@@ -1400,7 +1400,7 @@ rd_init_pal_screen_rgb4_colors
 	moveq	#pal_screen_colors_number-1,d7
 rd_init_pal_screen_rgb4_colors_loop
 	move.w	d0,(a0)+		; RGB4
-        dbf	d7,rd_init_pal_screen_rgb4_colors_loop
+	dbf	d7,rd_init_pal_screen_rgb4_colors_loop
 	rts
 
 
@@ -2402,7 +2402,7 @@ dc_display_runmode_request
 	move.l	a0,a3			; no arguments list
 	CALLINT EasyRequestArgs
 	move.l	(a7)+,a3
-	addq.b  #1,d0                   ; adjust result
+	addq.b  #1,d0			; adjust result
 	MOVEF.L playback_queue_entry_size,d1
 	move.l	dc_current_entry(a3),a0
 	ADDF.W	pqe_runmode,a0
@@ -3048,7 +3048,7 @@ qh_show_queue
 	move.l	adl_entries_buffer(a3),a2
 	tst.b	(a2)			; buffer empty ?
 	bne.s	qh_show_queue_skip
-        lea	qh_info_message_text1(pc),a0
+	lea	qh_info_message_text1(pc),a0
 	moveq	#qh_info_message_text1_end-qh_info_message_text1,d0
 	bsr	adl_prtext
 qh_show_queue_quit
@@ -3176,7 +3176,7 @@ qh_edit_queue
 	move.l	adl_entries_buffer(a3),a0
 	tst.b	(a0)			; buffer empty ?
 	bne.s	qh_edit_queue_skip
-        lea	qh_info_message_text1(pc),a0
+	lea	qh_info_message_text1(pc),a0
 	moveq	#qh_info_message_text1_end-qh_info_message_text1,d0
 	bsr	adl_prtext
 	moveq	#RETURN_FAIL,d0
@@ -3337,7 +3337,7 @@ qh_create_text_gadget
 	move.w	#qh_text_gadget_y_size,gng_Height(a1)
 	moveq	#0,d0
 	move.l  d0,gng_GadgetText(a1)
-        move.w	d0,gng_GadgetID(a1)
+	move.w	d0,gng_GadgetID(a1)
 	move.l	d0,gng_Flags(a1)
 	move.l	qh_screen_visual_info(a3),gng_VisualInfo(a1)
 	move.w	qh_edit_entry_offset(a3),d0
@@ -3373,12 +3373,12 @@ qh_create_backward_button
 	move.w	#qh_backward_button_y_size,gng_Height(a1)
 	lea	qh_backward_button_text(pc),a0
 	move.l  a0,gng_GadgetText(a1)
-        move.w	#qh_backward_button_id,gng_GadgetID(a1)
+	move.w	#qh_backward_button_id,gng_GadgetID(a1)
 	moveq	#0,d0
 	move.l	d0,gng_Flags(a1)
 	moveq	#BOOL_FALSE,d0		; gadget state: active
 	cmp.w	#adl_entries_number_min,qh_edit_entry_offset(a3)
-        bne.s	qh_create_backward_button_skip
+	bne.s	qh_create_backward_button_skip
 	moveq	#BOOL_TRUE,d0		; gadget state: inactive
 qh_create_backward_button_skip
 	move.l	a4,a0			; previous gadget
@@ -3406,7 +3406,7 @@ qh_create_integer_gadget
 	move.w	#qh_integer_gadget_y_size,gng_Height(a1)
 	moveq	#0,d0
 	move.l  d0,gng_GadgetText(a1)
-        move.w	#qh_integer_gadget_id,gng_GadgetID(a1)
+	move.w	#qh_integer_gadget_id,gng_GadgetID(a1)
 	move.l	d0,gng_Flags(a1)
 	move.l	a4,a0			; previous gadget
 	lea	qh_integer_gadget_tags(pc),a2
@@ -3432,13 +3432,13 @@ qh_create_forward_button
 	move.w	#qh_foreward_button_y_size,gng_Height(a1)
 	lea	qh_foreward_button_text(pc),a0
 	move.l  a0,gng_GadgetText(a1)
-        move.w	#qh_foreward_button_id,gng_GadgetID(a1)
+	move.w	#qh_foreward_button_id,gng_GadgetID(a1)
 	moveq	#0,d0
 	move.l	d0,gng_Flags(a1)
 	moveq	#BOOL_FALSE,d0		; gadget state: active
 	move.w	qh_edit_entry_offset(a3),d1
 	cmp.w	adl_entries_number(a3),d1
-        blt.s	qh_create_forward_button_skip
+	blt.s	qh_create_forward_button_skip
 	moveq	#BOOL_TRUE,d0		; gadget state: inactive
 qh_create_forward_button_skip
 	move.l	a4,a0			; previous gadget
@@ -3508,7 +3508,7 @@ qh_create_mx_gadget_skip
 	move.w	d0,gng_TopEdge(a1)
 	moveq	#0,d0
 	move.l  d0,gng_GadgetText(a1)
-        move.w	#qh_mx_gadget_id,gng_GadgetID(a1)
+	move.w	#qh_mx_gadget_id,gng_GadgetID(a1)
 	moveq	#PLACETEXT_RIGHT,d0
 	move.l	d0,gng_Flags(a1)
 	move.w	qh_edit_entry_offset(a3),d0
@@ -3518,7 +3518,7 @@ qh_create_mx_gadget_skip
 	add.l	d0,a0			; entry in playback queue
 	moveq	#0,d0
 	move.b	pqe_entry_active(a0),d0
-        neg.b	d0			; order number selection text
+	neg.b	d0			; order number selection text
 	move.l	a4,a0			; previous gadget
 	lea	qh_mx_gadget_tags(pc),a2
 	move.l	d0,(1*ti_SIZEOF)+ti_Data(a2) ; order number selection text
@@ -3544,7 +3544,7 @@ qh_create_positive_button
 	move.w	#qh_positive_button_y_size,gng_Height(a1)
 	lea	qh_positive_button_text(pc),a0
 	move.l  a0,gng_GadgetText(a1)
-        move.w	#qh_positive_button_id,gng_GadgetID(a1)
+	move.w	#qh_positive_button_id,gng_GadgetID(a1)
 	moveq	#0,d0
 	move.l	d0,gng_Flags(a1)
 	move.l	a4,a0			; previous gadget
@@ -3570,7 +3570,7 @@ qh_create_negative_button
 	move.w	#qh_negative_button_y_size,gng_Height(a1)
 	lea	qh_negative_button_text(pc),a0
 	move.l  a0,gng_GadgetText(a1)
-        move.w	#qh_negative_button_id,gng_GadgetID(a1)
+	move.w	#qh_negative_button_id,gng_GadgetID(a1)
 	moveq	#0,d0
 	move.l	d0,gng_Flags(a1)
 	move.l	a4,a0			; previous gadget
@@ -3624,7 +3624,7 @@ qh_open_edit_window_skip1
 	move.l	d0,a0			; window structure
 	sub.l	a1,a1			; no requester
 	CALLGADTOOLS GT_RefreshWindow
-        move.l	a2,a0			; window structure
+	move.l	a2,a0			; window structure
 	lea	qh_edit_window_name1(pc),a1 ; new window title
 	tst.w	qh_arg_editentry_enabled(a3)
 	beq.s	qh_open_edit_window_skip2
@@ -3643,7 +3643,7 @@ qh_process_window_events
 	move.l	qh_edit_window(a3),a0
 	move.l	wd_UserPort(a0),a2
 	moveq	#0,d0
-        move.b	MP_SigBit(a2),d1
+	move.b	MP_SigBit(a2),d1
 	bset	d1,d0			; signal number
 	move.l	a2,a0			; port
 	CALLEXEC Wait
@@ -3662,7 +3662,7 @@ qh_process_window_events
 	move.w	qh_edit_entry_offset(a3),d0
 	cmp.w	#adl_entries_number_min,d0
 	beq.s   qh_process_window_events_skip1
-        subq.w	#1,d0			; previous entry
+	subq.w	#1,d0			; previous entry
 qh_process_window_events_skip1
 	move.w	d0,qh_edit_entry_offset(a3)
 	moveq	#0,d0
@@ -3716,7 +3716,7 @@ qh_process_window_events_skip5
 	move.w	qh_edit_entry_offset(a3),d0
 	cmp.w	adl_entries_number(a3),d0
 	beq.s   qh_process_window_events_skip6
-        addq.w	#1,d0			; next entry
+	addq.w	#1,d0			; next entry
 qh_process_window_events_skip6
 	move.w	d0,qh_edit_entry_offset(a3)
 	moveq	#0,d0
@@ -3772,7 +3772,7 @@ qh_process_window_events_skip11
 	cmp.l	#IDCMP_CLOSEWINDOW,d0
 	bne.s	qh_process_window_events_skip12
 	move.w	#FALSE,qh_check_window_events_active(a3)
-      	bra.s	qh_process_window_events_ok
+	bra.s	qh_process_window_events_ok
 
 	CNOP 0,4
 qh_process_window_events_skip12
@@ -3810,7 +3810,7 @@ qh_ascii_to_dec_skip
 	moveq	#0,d0			; result decimal number
 	subq.w	#1,d7			; loopend at false
 qh_ascii_to_dec_loop
-	move.l	(a1)+,d2                ; decimal digits value [1,10,..]
+	move.l	(a1)+,d2		; decimal digits value [1,10,..]
 	moveq	#0,d3
 	move.b	-(a0),d3		; ascii value
 	sub.b	#"0",d3			; substract ascii value "0" = 0..9
@@ -3828,7 +3828,7 @@ qh_edit_fetch_entry
 	subq.w	#1,d0			; count starts at 0
 	mulu.w	#playback_queue_entry_size,d0
 	move.l	adl_entries_buffer(a3),a0
-	add.l	d0,a0                   ; entry in playback queue
+	add.l	d0,a0			; entry in playback queue
 	move.l	a0,qh_edit_entry(a3)
 	bsr	qh_get_demofile_title
 	move.l	d0,qh_edit_entry_demo_filename(a3)
@@ -3856,7 +3856,7 @@ qh_update_gadgets
 	sub.l	a2,a2			; no requester
 	moveq	#BOOL_FALSE,d0		; gadget state: active
 	cmp.w	#adl_entries_number_min,qh_edit_entry_offset(a3)
-        bne.s	qh_update_gadgets_skip1
+	bne.s	qh_update_gadgets_skip1
 	moveq	#BOOL_TRUE,d0		; gadget state: inactive
 qh_update_gadgets_skip1
 	move.l	a3,-(a7)
@@ -3880,7 +3880,7 @@ qh_update_gadgets_skip1
 	moveq	#BOOL_FALSE,d0		; gadget state: active
 	move.w	qh_edit_entry_offset(a3),d1
 	cmp.w	adl_entries_number(a3),d1
-        blt.s	qh_update_gadgets_skip2
+	blt.s	qh_update_gadgets_skip2
 	moveq	#BOOL_TRUE,d0		; gadget state: inactive
 qh_update_gadgets_skip2
 	move.l	a3,-(a7)
@@ -4002,7 +4002,7 @@ qh_free_visual_info
 	CNOP 0,4
 qh_reset_queue
 	cmp.w	#adl_entries_number_min,rd_entry_offset(a3)
-        bne.s	qh_reset_queue_ok
+	bne.s	qh_reset_queue_ok
 	lea	qh_info_message_text6(pc),a0
 	moveq	#qh_info_message_text6_end-qh_info_message_text6,d0
 	bsr	adl_prtext
@@ -4064,7 +4064,7 @@ adl_prio_error_quit
 	CNOP 0,4
 adl_prio_error_skip1
 	lea	adl_error_text_header(pc),a0
-	move.l	a0,d2                   ; header error message
+	move.l	a0,d2			; header error message
 	CALLDOS PrintFault
 	lea	adl_error_text_tail(pc),a0 ; error text
 	moveq	#adl_error_text_tail_end-adl_error_text_tail,d0 ; length of text
@@ -4362,7 +4362,7 @@ rd_prerror_text
 	lea	rd_error_text_header_index(pc),a0
 	move.w	rd_entry_offset(a3),d1
 	subq.w	#1,d1			; count starts at 0
-        moveq	#2,d7
+	moveq	#2,d7
 	bsr	rp_dec_to_ascii
 	move.l	adl_output_handle(a3),d1
 	lea	rd_error_text_header(pc),a0
@@ -4892,7 +4892,7 @@ rd_get_demofile_dir_path_skip2
 rd_get_demofile_dir_path_loop2
 	move.b	-(a0),-(a1)
 	dbf	d7,rd_get_demofile_dir_path_loop2
-        rts
+	rts
 
 
 ; Input
@@ -4963,7 +4963,7 @@ rd_check_prerunscript_path_loop
 	bsr	rd_prerror_text
 	MOVEF.L	ERROR_INVALID_COMPONENT_NAME,d0
 	bra.s	rd_check_prerunscript_path_quit
-        CNOP 0,4
+	CNOP 0,4
 rd_check_prerunscript_path_skip2
 	tst.b	(a0)+			; nullbyte ?
 	bne.s	rd_check_prerunscript_path_loop
@@ -5105,7 +5105,7 @@ rd_clear_mouse_pointer
 	moveq	#pointer_x_size,d1
 	moveq	#pointer_x_offset,d2
 	moveq	#pointer_y_offset,d3
-	CALLINT Set
+	CALLINT SetPointer
 	rts
 
 
@@ -6166,7 +6166,7 @@ rd_check_user_break_ok
 	CNOP 0,4
 rd_reset_entry_variables
 	tst.w	rd_arg_loop_enabled(a3)
-        beq.s	rd_reset_entry_variables_skip1
+	beq.s	rd_reset_entry_variables_skip1
 rd_reset_entry_variables_quit
 	rts
 	CNOP 0,4
@@ -6546,7 +6546,7 @@ rp_create_command_string
 	bsr.s	rp_dec_to_hex
 	move.l	d0,d1			; return value hexadecimal number
 	moveq	#rd_r_size,d7		; number of digits to convert
-	lea	cs_parts(a2),a0         ; string
+	lea	cs_parts(a2),a0		; string
 	bsr.s	rp_hex_to_ascii
 
 	moveq	#cs_checksum-cs_hash,d7 ; number of characters for checksum
@@ -6556,7 +6556,7 @@ rp_create_command_string
 	bsr.s	rp_dec_to_hex
 	move.l	d0,d1			; return value hexadecimal number
 	moveq	#2,d7			; number of digits to convert
-	lea	cs_checksum(a2),a0      ; string
+	lea	cs_checksum(a2),a0	; string
 	bsr.s	rp_hex_to_ascii
 	rts
 
