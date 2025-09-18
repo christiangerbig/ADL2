@@ -145,7 +145,7 @@ open_intuition_library
 	bne.s	open_intuition_library_ok
 	lea	error_message1(pc),a0
 	moveq	#error_message1_end-error_message1,d0
-	bsr.s	prtext
+	bsr.s	print_text
 	moveq	#RETURN_FAIL,d0
 open_intuition_library_quit
 	rts
@@ -227,7 +227,7 @@ close_dos_library
 ; d0.l	Error text length
 ; Result
 	CNOP 0,4
-prtext
+print_text
 	move.l	output_handle(a3),d1
 	move.l	a0,d2			; error text
 	move.l	d0,d3			; number of characters

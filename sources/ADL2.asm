@@ -2,6 +2,7 @@
 ; 68000+
 ; OCS/ECS PAL+
 ; 2.0+
+; 1 MB chip memory
 
 
 ; History/changes
@@ -561,6 +562,9 @@ old_chips_registers_size	RS.B 0
 	RSRESET
 
 ; Amiga Demo Launcher
+adl_active_screen		RS.L 1
+adl_first_window		RS.L 1
+
 adl_os_version			RS.W 1
 adl_cpu_flags			RS.W 1
 
@@ -662,9 +666,7 @@ rd_demofile_dir_lock		RS.L 1
 
 rd_prerunscript_path		RS.L 1
 
-rd_active_screen		RS.L 1
 rd_active_screen_mode		RS.L 1
-rd_first_window			RS.L 1
 rd_pal_screen			RS.L 1
 rd_invisible_window		RS.L 1
 rd_mouse_pointer		RS.L 1
@@ -728,6 +730,11 @@ adl_variables_size		RS.B 0
 	bsr	adl_open_icon_library
 	move.l	d0,adl_dos_return_code(a3)
 	bne	adl_cleanup_asl_library
+
+	bsr	adl_get_active_screen
+	move.l	d0,adl_active_screen(a3)
+	bsr	adl_get_first_window
+	move.l	d0,adl_first_window(a3)
 
 	bsr	adl_search_id
 
@@ -1539,21 +1546,29 @@ adl_check_system_props
 	move.w	Lib_Version(a0),d0
 	move.w	d0,adl_os_version(a3)
 	cmp.w	#OS2_VERSION,d0
-	bge.s	adl_check_system_props_skip
+	bge.s	adl_check_system_props_skip1
 	lea	adl_error_text1(pc),a0
 	moveq	#adl_error_text1_end-adl_error_text1,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 adl_check_system_props_fail
 	moveq	#RETURN_FAIL,d0
 adl_check_system_props_quit
 	rts
 	CNOP 0,4
-adl_check_system_props_skip
+adl_check_system_props_skip1
 	cmp.b	#PAL_FPS,VBlankFrequency(a0) ; OS1.3+
-	beq.s	adl_check_system_props_ok
+	beq.s	adl_check_system_props_skip2
 	lea	adl_error_text2(pc),a0
 	move.l	#adl_error_text2_end-adl_error_text2,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
+	bra.s	adl_check_system_props_fail
+	CNOP 0,4
+adl_check_system_props_skip2
+	move.l	MaxLocMem(a0),d0
+	cmp.l	#CHIP_MEMORY_MIN,d0
+	bge.s	adl_check_system_props_ok
+	move.l	#adl_error_text3_end-adl_error_text3,d0
+	bsr	adl_print_text
 	bra.s	adl_check_system_props_fail
 	CNOP 0,4
 adl_check_system_props_ok
@@ -1572,9 +1587,9 @@ adl_open_graphics_library
 	lea	_GfxBase(pc),a0
 	move.l	d0,(a0)
 	bne.s	adl_open_graphics_library_ok
-	lea	adl_error_text3(pc),a0
-	moveq	#adl_error_text3_end-adl_error_text3,d0
-	bsr	adl_prtext
+	lea	adl_error_text4(pc),a0
+	moveq	#adl_error_text4_end-adl_error_text4,d0
+	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 adl_open_graphics_library_quit
 	rts
@@ -1595,9 +1610,9 @@ adl_open_intuition_library
 	lea	_IntuitionBase(pc),a0
 	move.l	d0,(a0)
 	bne.s	adl_open_intuition_library_ok
-	lea	adl_error_text4(pc),a0
-	moveq	#adl_error_text4_end-adl_error_text4,d0
-	bsr	adl_prtext
+	lea	adl_error_text5(pc),a0
+	moveq	#adl_error_text5_end-adl_error_text5,d0
+	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 adl_open_intuition_library_quit
 	rts
@@ -1618,9 +1633,9 @@ adl_open_gadtools_library
 	lea	_GadToolsBase(pc),a0
 	move.l	d0,(a0)
 	bne.s	adl_open_gadtools_library_ok
-	lea	adl_error_text5(pc),a0
-	moveq	#adl_error_text5_end-adl_error_text5,d0
-	bsr	adl_prtext
+	lea	adl_error_text6(pc),a0
+	moveq	#adl_error_text6_end-adl_error_text6,d0
+	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 adl_open_gadtools_library_quit
 	rts
@@ -1641,9 +1656,9 @@ adl_open_asl_library
 	lea	_ASLBase(pc),a0
 	move.l	d0,(a0)
 	bne.s	adl_open_asl_library_ok
-	lea	adl_error_text6(pc),a0
-	moveq	#adl_error_text6_end-adl_error_text6,d0
-	bsr	adl_prtext
+	lea	adl_error_text7(pc),a0
+	moveq	#adl_error_text7_end-adl_error_text7,d0
+	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 adl_open_asl_library_quit
 	rts
@@ -1664,9 +1679,9 @@ adl_open_icon_library
 	lea	_IconBase(pc),a0
 	move.l	d0,(a0)
 	bne.s	adl_open_icon_library_ok
-	lea	adl_error_text7(pc),a0
-	moveq	#adl_error_text7_end-adl_error_text7,d0
-	bsr	adl_prtext
+	lea	adl_error_text8(pc),a0
+	moveq	#adl_error_text8_end-adl_error_text8,d0
+	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 adl_open_icon_library_quit
 	rts
@@ -1674,6 +1689,36 @@ adl_open_icon_library_quit
 adl_open_icon_library_ok
 	moveq	#RETURN_OK,d0
 	bra.s	adl_open_icon_library_quit
+
+
+; Input
+; Result
+; d0.l	Screen structure active screen
+	CNOP 0,4
+adl_get_active_screen
+	moveq	#0,d0			; all locks
+	CALLINT LockIBase
+	move.l	d0,a0
+	move.l	ib_ActiveScreen(a6),a2
+	CALLLIBS UnlockIBase
+	move.l	a2,d0
+	rts
+
+
+; Input
+; Result
+; d0.l  Window structure first window
+		CNOP 0,4
+adl_get_first_window
+		move.l	adl_active_screen(a3),d0
+		bne.s	adl_get_first_window_skip
+adl_get_first_window_quit
+		rts
+		CNOP 0,4
+adl_get_first_window_skip
+		move.l	d0,a0
+		move.l	sc_FirstWindow(a0),d0
+		bra.s	adl_get_first_window_quit
 
 
 ; Input
@@ -1859,7 +1904,7 @@ adl_check_cmd_line_ok
 adl_prcmd_usage
 	lea	adl_cmd_usage_text(pc),a0
 	move.l	#adl_cmd_usage_text_end-adl_cmd_usage_text,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	rts
 
 
@@ -2114,7 +2159,7 @@ adl_printro_message_skip
 	beq.s	adl_printro_message_quit
 	lea	adl_intro_message_text(pc),a0
 	move.l	#adl_intro_message_text_end-adl_intro_message_text,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	bra.s	adl_printro_message_quit
 
 
@@ -2135,7 +2180,7 @@ dc_alloc_entries_buffer
 	bne.s	dc_alloc_entries_buffer_ok
 	lea	dc_error_text1(pc),a0
 	moveq	#dc_error_text1_end-dc_error_text1,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	MOVEF.L	ERROR_NO_FREE_STORE,d0
 dc_alloc_entries_buffer_quit
 	rts
@@ -2155,7 +2200,7 @@ dc_get_program_dir
 	bne.s	dc_get_program_dir_skip
 	lea	dc_error_text10(pc),a0
 	moveq	#dc_error_text10_end-dc_error_text10,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 dc_get_program_dir_quit
 	rts
@@ -2170,7 +2215,7 @@ dc_get_program_dir_skip
 	bne.s	dc_get_program_dir_ok
 	lea	dc_error_text11(pc),a0
 	moveq	#dc_error_text11_end-dc_error_text11,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	MOVEF.L	ERROR_DIR_NOT_FOUND,d0
 	bra.s	dc_get_program_dir_quit
 	CNOP 0,4
@@ -2214,7 +2259,7 @@ dc_make_file_request_skip
 	bne.s	dc_make_file_request_ok
 	lea	dc_error_text12(pc),a0
 	moveq	#dc_error_text12_end-dc_error_text12,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 dc_make_file_request_quit
 	rts
@@ -2293,7 +2338,7 @@ dc_check_demo_filepath
 	bne.s	dc_check_demo_filepath_skip1
 	lea	dc_error_text13(pc),a0
 	moveq	#dc_error_text13_end-dc_error_text13,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	MOVEF.L ERROR_DIR_NOT_FOUND,d0
 dc_check_demo_filepath_quit
 	rts
@@ -2303,7 +2348,7 @@ dc_check_demo_filepath_skip1
 	bne.s	dc_check_demo_filepath_skip2
 	lea	dc_error_text14(pc),a0
 	moveq	#dc_error_text14_end-dc_error_text14,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	bra.s	dc_check_demo_filepath_quit
 	CNOP 0,4
@@ -2336,7 +2381,7 @@ dc_check_demo_filepath_loop2
 	bsr	dc_clear_playlist_entry
 	lea	dc_error_text15(pc),a0
 	moveq	#dc_error_text15_end-dc_error_text15,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	MOVEF.L ERROR_INVALID_COMPONENT_NAME,d0
 	bra	dc_check_demo_filepath_quit
 	CNOP 0,4
@@ -2359,7 +2404,7 @@ dc_check_demo_filepath_loop3
 	bsr	dc_clear_playlist_entry
 	lea	dc_error_text15(pc),a0
 	moveq	#dc_error_text15_end-dc_error_text15,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	MOVEF.L ERROR_INVALID_COMPONENT_NAME,d0
 	bra	dc_check_demo_filepath_quit
 	CNOP 0,4
@@ -2369,7 +2414,7 @@ dc_check_demo_filepath_skip5
 	bne.s	dc_check_demo_filepath_skip6
 	lea	dc_error_text16(pc),a0
 	moveq	#dc_error_text16_end-dc_error_text16,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	MOVEF.L ERROR_OBJECT_NOT_FOUND,d0
 	bra	dc_check_demo_filepath_quit
 	CNOP 0,4
@@ -2439,7 +2484,7 @@ dc_check_entries_number_max_ok
 dc_prentries_max_message
 	lea	dc_message_text(pc),a0
 	moveq   #dc_message_text_end-dc_message_text,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	rts
 
 
@@ -2474,7 +2519,7 @@ dc_init_reset_program_skip1
 	bne.s	dc_init_reset_program_skip2
 	lea	dc_error_text17(pc),a0
 	moveq	#dc_error_text17_end-dc_error_text17,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	moveq	#ERROR_NO_FREE_STORE,d0
 	bra.s	dc_init_reset_program_quit
 	CNOP 0,4
@@ -2518,7 +2563,7 @@ dc_init_reset_program_skip3
 	move.w	adl_entries_number(a3),(a0)
 	lea	adl_message_text1(pc),a0
 	moveq	#adl_message_text1_end-adl_message_text1,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	bra	dc_init_reset_program_ok
 
 ; Input
@@ -2549,7 +2594,7 @@ dc_lock_playlist_file
 	bne.s	dc_lock_playlist_file_ok
 	lea	dc_error_text2(pc),a0
 	moveq	#dc_error_text2_end-dc_error_text2,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 dc_lock_playlist_file_quit
 	rts
@@ -2571,7 +2616,7 @@ dc_alloc_playlist_file_fib
 	bne.s	dc_alloc_playlist_file_fib_ok
 	lea	dc_error_text3(pc),a0
 	moveq	#dc_error_text3_end-dc_error_text3,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	MOVEF.L	ERROR_NO_FREE_STORE,d0
 dc_alloc_playlist_file_fib_quit
 	rts
@@ -2594,7 +2639,7 @@ dc_get_playlist_filelength
 	bne.s	dc_get_playlist_filelength_ok
 	lea	dc_error_text4(pc),a0
 	moveq	#dc_error_text4_end-dc_error_text4,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 dc_get_playlist_filelength_quit
 	rts
@@ -2617,7 +2662,7 @@ dc_alloc_playlist_filebuffer
 	bne.s	dc_alloc_playlist_filebuffer_ok
 	lea	dc_error_text5(pc),a0
 	moveq	#dc_error_text5_end-dc_error_text5,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	MOVEF.L	ERROR_NO_FREE_STORE,d0
 dc_alloc_playlist_filebuffer_quit
 	rts
@@ -2639,7 +2684,7 @@ dc_open_playlist_file
 	bne.s	dc_open_playlist_file_ok
 	lea	dc_error_text6(pc),a0
 	moveq	#dc_error_text6_end-dc_error_text6,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 dc_open_playlist_file_quit
 	rts
@@ -2662,7 +2707,7 @@ dc_read_playlist_file
 	bne.s	dc_read_playlist_file_ok
 	lea	dc_error_text7(pc),a0
 	moveq	#dc_error_text7_end-dc_error_text7,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 dc_read_playlist_file_quit
 	rts
@@ -2679,7 +2724,7 @@ dc_read_playlist_file_ok
 dc_parse_playlist_file
 	lea	dc_parsing_begin_text(pc),a0
 	moveq	#dc_parsing_begin_text_end-dc_parsing_begin_text,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	move.w	adl_entries_number(a3),d0
 	mulu.w	#playback_queue_entry_size,d0
 	move.l	adl_entries_buffer(a3),a0
@@ -2704,7 +2749,7 @@ dc_parse_playlist_file_skip1
 	bne.s	dc_parse_playlist_file_skip2
 	lea	dc_error_text8(pc),a0
 	moveq	#dc_error_text8_end-dc_error_text8,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	bra.s	dc_parse_playlist_file_quit
 	CNOP 0,4
@@ -2924,7 +2969,7 @@ dc_parse_playlist_file_result
 	bsr	rp_dec_to_ascii
 	lea	dc_parsing_result_text(pc),a0
 	move.l	#dc_parsing_result_text_end-dc_parsing_result_text,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	bsr	qh_show_queue
 	rts
 
@@ -2965,7 +3010,7 @@ dc_parse_entry_syntax_error
 	move.w	(a7)+,d7
 	lea	dc_error_text9(pc),a0
 	moveq	#dc_error_text9_end-dc_error_text9,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	rts
 
 
@@ -3050,7 +3095,7 @@ qh_show_queue
 	bne.s	qh_show_queue_skip
 	lea	qh_info_message_text1(pc),a0
 	moveq	#qh_info_message_text1_end-qh_info_message_text1,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 qh_show_queue_quit
 	rts
 	CNOP 0,4
@@ -3061,7 +3106,7 @@ qh_show_queue_skip
 qh_show_queue_loop
 	lea	qh_show_entry_header(pc),a0
 	moveq	#qh_show_entry_current_number-qh_show_entry_header,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	move.l	d5,d1			; decimal number
 	lea	qh_show_entry_current_number(pc),a0 ; string
 	move.w	d7,-(a7)
@@ -3070,8 +3115,8 @@ qh_show_queue_loop
 	move.w	(a7)+,d7
 	lea	qh_show_entry_current_number(pc),a0
 	moveq	#qh_show_entry_current_number_end-qh_show_entry_current_number,d0
-	bsr	adl_prtext
-	bsr.s		qh_get_entry_filename
+	bsr	adl_print_text
+	bsr.s	qh_get_entry_filename
 	ADDF.W	playback_queue_entry_size,a2 ; next entry
 	addq.w	#1,d5			; increase order number
 	dbf	d7,qh_show_queue_loop
@@ -3083,7 +3128,7 @@ qh_show_queue_loop
 	bsr	rp_dec_to_ascii
 	lea	qh_info_message_text2(pc),a0
 	moveq	#qh_info_message_text2_end-qh_info_message_text2,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	bra.s	qh_show_queue_quit
 
 
@@ -3117,23 +3162,23 @@ qh_get_entry_filename_skip2
 	moveq	#qh_show_entry_space_end-qh_show_entry_space-1,d0
 qh_get_entry_filename_skip3
 	move.w	d0,d4			; file name length
-	bsr	adl_prtext
+	bsr	adl_print_text
 	lea	qh_show_entry_space(pc),a0 ; output string
 	moveq	#qh_show_entry_space_end-qh_show_entry_space-1,d0 ; length output line
 	sub.w	d4,d0			; substract file name length
-	bsr	adl_prtext
+	bsr	adl_print_text
 	tst.b	pqe_entry_active(a2)
 	bne.s	qh_prentry_active_text2
 	lea	qh_entry_active_text1(pc),a0
 	moveq	#qh_entry_active_text1_end-qh_entry_active_text1,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 qh_get_entry_filename_quit
 	rts
 	CNOP 0,4
 qh_prentry_active_text2
 	lea	qh_entry_active_text2(pc),a0
 	moveq	#qh_entry_active_text2_end-qh_entry_active_text2,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	bra.s	qh_get_entry_filename_quit
 
 
@@ -3178,7 +3223,7 @@ qh_edit_queue
 	bne.s	qh_edit_queue_skip
 	lea	qh_info_message_text1(pc),a0
 	moveq	#qh_info_message_text1_end-qh_info_message_text1,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 	move.l	d0,adl_dos_return_code(a3)
 qh_edit_queue_quit
@@ -3223,7 +3268,7 @@ qh_lock_workbench
 	bne.s	qh_lock_workbench_ok
 	lea	qh_error_text1(pc),a0
 	moveq	#qh_error_text1_end-qh_error_text1,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 qh_lock_workbench_quit
 	rts
@@ -3245,7 +3290,7 @@ qh_get_screen_visual_info
 	bne.s	qh_get_screen_visual_info_ok
 	lea	qh_error_text2(pc),a0
 	moveq	#qh_error_text2_end-qh_error_text2,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 qh_get_screen_visual_info_quit
 	rts
@@ -3266,7 +3311,7 @@ qh_create_context_gadget
 	bne.s	qh_create_context_gadget_ok
 	lea	qh_error_text3(pc),a0
 	moveq	#qh_error_text3_end-qh_error_text3,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 qh_create_context_gadget_quit
 	rts
@@ -3311,7 +3356,7 @@ qh_create_gadgets_skip
 	bne.s	qh_create_gadgets_ok
 	lea	qh_error_text4(pc),a0
 	moveq	#qh_error_text4_end-qh_error_text4,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 qh_create_gadgets_quit
 	rts
@@ -3614,7 +3659,7 @@ qh_open_edit_window
 	bne.s	qh_open_edit_window_skip1
 	lea	qh_error_text5(pc),a0
 	moveq	#qh_error_text5_end-qh_error_text5,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 qh_open_edit_window_quit
 	rts
@@ -3961,7 +4006,7 @@ qh_clear_queue
 	bne.s   qh_clear_queue_ok
 	lea	qh_info_message_text4(pc),a0
 	moveq	#qh_info_message_text4_end-qh_info_message_text4,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 qh_clear_queue_quit
 	rts
 	CNOP 0,4
@@ -3984,7 +4029,7 @@ qh_clear_queue_loop
 qh_clear_queue_skip
 	lea	qh_info_message_text5(pc),a0
 	moveq	#qh_info_message_text5_end-qh_info_message_text5,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	bra.s	qh_clear_queue_quit
 
 
@@ -4005,7 +4050,7 @@ qh_reset_queue
 	bne.s	qh_reset_queue_ok
 	lea	qh_info_message_text6(pc),a0
 	moveq	#qh_info_message_text6_end-qh_info_message_text6,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 qh_reset_queue_quit
 	rts
 	CNOP 0,4
@@ -4014,7 +4059,7 @@ qh_reset_queue_ok
 	bsr	rd_deactivate_queue
 	lea	qh_info_message_text7(pc),a0
 	moveq	#qh_info_message_text7_end-qh_info_message_text7,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	bra.s	qh_reset_queue_quit
 
 
@@ -4068,7 +4113,7 @@ adl_prio_error_skip1
 	CALLDOS PrintFault
 	lea	adl_error_text_tail(pc),a0 ; error text
 	moveq	#adl_error_text_tail_end-adl_error_text_tail,d0 ; length of text
-	bsr.s	adl_prtext
+	bsr.s	adl_print_text
 	bra.s	adl_prio_error_quit
 
 
@@ -4077,7 +4122,7 @@ adl_prio_error_skip1
 ; d0.l	Length of text
 ; Result
 	CNOP 0,4
-adl_prtext
+adl_print_text
 	move.l	adl_output_handle(a3),d1
 	move.l	a0,d2			; text
 	move.l	d0,d3			; number of characters to write
@@ -4098,7 +4143,7 @@ adl_remove_reset_program_skip1
 	beq.s	adl_remove_reset_program_skip2
 	lea	adl_message_text2(pc),a0
 	moveq	#adl_message_text2_end-adl_message_text2,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 adl_remove_reset_program_quit
 	rts
 	CNOP 0,4
@@ -4114,7 +4159,7 @@ adl_remove_reset_program_skip2
 	CALLEXEC FreeMem
 	lea	adl_message_text3(pc),a0
 	moveq	#adl_message_text3_end-adl_message_text3,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	bra.s	adl_remove_reset_program_quit
 
 
@@ -4198,10 +4243,6 @@ rd_start
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_timer_device
 
-	bsr	rd_get_active_screen
-	move.l	d0,rd_active_screen(a3)
-	bsr	rd_get_first_window
-	move.l	d0,rd_first_window(a3)
 	bsr	rd_check_screen_mode
 	move.l	d0,adl_dos_return_code(a3)
 	bne	rd_cleanup_pointer_data
@@ -4395,7 +4436,7 @@ rd_open_ciaa_resource
 	bne.s	rd_open_ciaa_resource_skip
 	lea	rd_error_text1(pc),a0
 	moveq	#rd_error_text1_end-rd_error_text1,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 rd_open_ciaa_resource_quit
 	rts
@@ -4421,7 +4462,7 @@ rd_open_ciab_resource
 	bne.s	rd_open_ciab_resource_skip
 	lea	rd_error_text2(pc),a0
 	moveq	#rd_error_text2_end-rd_error_text2,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 rd_open_ciab_resource_quit
 	rts
@@ -4445,7 +4486,7 @@ rd_create_serial_msg_port
 	bne.s	rd_create_serial_msg_port_ok
 	lea	rd_error_text3(pc),a0
 	moveq	#rd_error_text3_end-rd_error_text3,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 rd_create_serial_msg_port_quit
 	rts
@@ -4470,7 +4511,7 @@ rd_open_serial_device
 	beq.s	rd_open_serial_device_ok
 	lea	rd_error_text4(pc),a0
 	moveq	#rd_error_text4_end-rd_error_text4,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 rd_open_serial_device_quit
 	rts
@@ -4494,7 +4535,7 @@ rd_open_timer_device
 	beq.s	rd_open_timer_device_ok
 	lea	rd_error_text5(pc),a0
 	moveq	#rd_error_text5_end-rd_error_text5,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 rd_open_timer_device_quit
 	rts
@@ -4516,7 +4557,7 @@ rd_alloc_pointer_data
 	bne.s	rd_alloc_pointer_data_ok
 	lea	rd_error_text6(pc),a0
 	moveq	#rd_error_text6_end-rd_error_text6,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	moveq	#ERROR_NO_FREE_STORE,d0
 rd_alloc_pointer_data_quit
 	rts
@@ -4528,40 +4569,10 @@ rd_alloc_pointer_data_ok
 
 ; Input
 ; Result
-; d0.l	Screen structure active screen
-	CNOP 0,4
-rd_get_active_screen
-	moveq	#0,d0			; all locks
-	CALLINT LockIBase
-	move.l	d0,a0
-	move.l	ib_ActiveScreen(a6),a2
-	CALLLIBS UnlockIBase
-	move.l	a2,d0
-	rts
-
-
-; Input
-; Result
-; d0.l  Window structure first window
-		CNOP 0,4
-rd_get_first_window
-		move.l	rd_active_screen(a3),d0
-		bne.s	rd_get_first_window_skip
-rd_get_first_window_quit
-		rts
-		CNOP 0,4
-rd_get_first_window_skip
-		move.l	d0,a0
-		move.l	sc_FirstWindow(a0),d0
-		bra.s	rd_get_first_window_quit
-
-
-; Input
-; Result
 ; d0.l	Return code
 	CNOP 0,4
 rd_check_screen_mode
-	move.l	rd_active_screen(a3),d0
+	move.l	adl_active_screen(a3),d0
 	beq.s	rd_check_screen_mode_ok
 	move.l	d0,a0
 	ADDF.W	sc_ViewPort,a0
@@ -4570,7 +4581,7 @@ rd_check_screen_mode
 	bne.s	rd_check_screen_mode_skip
 	lea	rd_error_text7(pc),a0
 	moveq	#rd_error_text7_end-rd_error_text7,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 rd_check_screen_mode_quit
 	rts
@@ -4587,7 +4598,7 @@ rd_check_screen_mode_ok
 ; Result
 	CNOP 0,4
 rd_get_sprite_resolution
-	move.l	rd_active_screen(a3),d0
+	move.l	adl_active_screen(a3),d0
 	bne.s	rd_get_sprite_resolution_skip
 rd_get_sprite_resolution_quit
 	rts
@@ -4624,7 +4635,7 @@ rd_check_queue_loop
 	beq.s   rd_check_queue_skip
 	lea	rd_info_message_text1(pc),a0
 	moveq	#rd_info_message_text1_end-rd_info_message_text1,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	moveq	#RETURN_WARN,d0
 rd_check_queue_quit
 	rts
@@ -4746,13 +4757,13 @@ rd_get_demo_filename_skip3
 rd_prdemofile_start_message
 	lea	rd_demo_filename_header(pc),a0
 	moveq	#rd_demo_filename_header_end-rd_demo_filename_header,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	move.l	rd_demo_filename(a3),a0
 	move.l	rd_demo_filename_length(a3),d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	lea	rd_demo_filename_tail(pc),a0
 	moveq	#rd_demo_filename_tail_end-rd_demo_filename_tail,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	rts
 
 
@@ -5021,7 +5032,7 @@ rd_open_pal_screen
 	bne.s	rd_open_pal_screen_ok
 	lea	rd_error_text14(pc),a0
 	moveq	#rd_error_text14_end-rd_error_text14,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 rd_open_pal_screen_quit
 	rts
@@ -5062,7 +5073,7 @@ rd_check_pal_screen_mode
 	beq.s	rd_check_pal_screen_mode_ok
 	lea	rd_error_text15(pc),a0
 	moveq	#rd_error_text15_end-rd_error_text15,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 rd_check_pal_screen_mode_quit
 	rts
@@ -6117,7 +6128,7 @@ rd_close_pal_screen
 ; Result
 	CNOP 0,4
 rd_activate_first_window
-	move.l	rd_first_window(a3),d0
+	move.l	adl_first_window(a3),d0
 	bne.s	rd_activate_first_window_skip
 rd_activate_first_window_quit
 	rts
@@ -6151,7 +6162,7 @@ rd_check_user_break
 	beq.s	rd_check_user_break_ok
 	lea	rd_info_message_text3(pc),a0
 	moveq	#rd_info_message_text3_end-rd_info_message_text3,d0
-	bsr	adl_prtext
+	bsr	adl_print_text
 	moveq	#RETURN_FAIL,d0
 rd_check_user_break_quit
 	rts
@@ -7222,7 +7233,7 @@ adl_error_text2_end
 
 adl_error_text3
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't open graphics.library."
+	DC.B "1 MB chip memory required."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 adl_error_text3_end
@@ -7230,7 +7241,7 @@ adl_error_text3_end
 
 adl_error_text4
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't open intuition.library."
+	DC.B "Couldn't open graphics.library."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 adl_error_text4_end
@@ -7238,7 +7249,7 @@ adl_error_text4_end
 
 adl_error_text5
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't open gadtools.library."
+	DC.B "Couldn't open intuition.library."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 adl_error_text5_end
@@ -7246,7 +7257,7 @@ adl_error_text5_end
 
 adl_error_text6
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't open asl.library."
+	DC.B "Couldn't open gadtools.library."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 adl_error_text6_end
@@ -7254,10 +7265,18 @@ adl_error_text6_end
 
 adl_error_text7
 	DC.B ASCII_LINE_FEED
-	DC.B "Couldn't open icon.library."
+	DC.B "Couldn't open asl.library."
 	DC.B ASCII_LINE_FEED
 	DC.B ASCII_LINE_FEED
 adl_error_text7_end
+	EVEN
+
+adl_error_text8
+	DC.B ASCII_LINE_FEED
+	DC.B "Couldn't open icon.library."
+	DC.B ASCII_LINE_FEED
+	DC.B ASCII_LINE_FEED
+adl_error_text8_end
 	EVEN
 
 
