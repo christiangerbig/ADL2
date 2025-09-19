@@ -2391,9 +2391,9 @@ dc_check_demo_filepath_skip4
 	tst.b	(a1)
 	bne.s	dc_check_demo_filepath_loop2
 	clr.b	(a4)			; insert nullbyte
-	cmp.b	#":",-1(a1)
+	cmp.b	#":",-BYTE_SIZE(a1)
 	beq.s	dc_check_demo_filepath_loop3
-	cmp.b	#"/",-1(a1)
+	cmp.b	#"/",-BYTE_SIZE(a1)
 	beq.s	dc_check_demo_filepath_loop3
 	move.b	#"/",(a2)+
 dc_check_demo_filepath_loop3
