@@ -105,7 +105,8 @@ search_adl_id_skip2
 	bne.s	search_adl_id_skip1
 search_id_warn
 	moveq	#RETURN_WARN,d0
-	bra.s	search_adl_id_quit
+	bsr.s	search_adl_id_quit
+	rts
 
 
 	CNOP 0,4
