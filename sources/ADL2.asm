@@ -5,6 +5,9 @@
 ; 1 MB chip memory
 
 
+; Code optimized for O.M.A. 2.0 Assembler
+
+
 ; History/changes
 
 ; V.2.0

@@ -2,6 +2,10 @@
 ; 68000+
 ; 1.x+
 
+
+; Code optimized for O.M.A. 2.0 Assembler
+
+
 ; History
 
 ; V.1.0 beta
