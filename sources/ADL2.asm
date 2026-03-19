@@ -2059,18 +2059,18 @@ adl_check_arg_secs
 	CNOP 0,4
 adl_check_arg_mins
 	move.l	cra_MINS(a2),d1
-	beq.s	adl_calculate_playtime
+	beq.s	adl_calc_playtime
 	move.l	d1,a0
 	move.l	(a0),d1			; minutes value
 	moveq	#adl_minutes_max,d2
 	cmp.l	d2,d1
-	ble.s   adl_calculate_playtime
+	ble.s   adl_calc_playtime
 	bra	adl_check_cmd_line_fail
 
 ; Input
 ; Result
 	CNOP 0,4
-adl_calculate_playtime
+adl_calc_playtime
 	mulu.w	#adl_seconds_factor,d1	; conversion minutes to seconds
 	add.w	d0,d1			; total value in seconds
 	MULUF.W	rd_duration_shift,d1,d0
@@ -2870,18 +2870,18 @@ dc_check_arg_secs
 	CNOP 0,4
 dc_check_arg_mins
 	move.l	pra_MINS(a5),d1
-	beq.s	dc_calculate_playtime
+	beq.s	dc_calc_playtime
 	move.l	d1,a0
 	move.l	(a0),d1			; minutes value
 	moveq	#adl_minutes_max,d2
 	cmp.l	d2,d1
-	ble.s	dc_calculate_playtime
+	ble.s	dc_calc_playtime
 	move.l	d6,a0			; entry in playback queue
 	bsr	dc_parse_playlist_entry_error
 	bra	dc_free_custom_arguments
 
 	CNOP 0,4
-dc_calculate_playtime
+dc_calc_playtime
 	MULUF.W	adl_seconds_factor,d1,d2 ; conversion minutes to seconds
 	add.l	d0,d1			; total value in seconds
 	MULUF.W	rd_duration_shift,d1,d0
