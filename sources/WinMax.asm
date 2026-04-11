@@ -191,6 +191,7 @@ get_first_window_skip
 
 ; Input
 ; Result
+; no return value
 	CNOP 0,4
 change_window_size
 	move.l	first_window(a3),d0
@@ -210,6 +211,7 @@ change_window_size_quit
 
 ; Input
 ; Result
+; no return value
 	CNOP 0,4
 close_intuition_library
 	move.l	_IntuitionBase(pc),a1
@@ -219,6 +221,7 @@ close_intuition_library
 
 ; Input
 ; Result
+; no return value
 	CNOP 0,4
 close_dos_library
 	move.l	_DOSBase(pc),a1
@@ -230,6 +233,7 @@ close_dos_library
 ; a0.l	Error text
 ; d0.l	Error text length
 ; Result
+; no return value
 	CNOP 0,4
 print_text
 	move.l	output_handle(a3),d1
