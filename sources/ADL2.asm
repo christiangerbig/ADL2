@@ -463,7 +463,7 @@ command_string			RS.B 0
 cs_line_feed1			RS.B 1
 cs_line_feed2			RS.B 1
 cs_hash				RS.B 1
-cs_delay_counter		RS.B rd_nnnn_size ; decimal number
+cs_counter		RS.B rd_nnnn_size ; decimal number
 cs_parts			RS.B rd_r_size ; hexadecimal number
 cs_separator			RS.B 1
 cs_checksum			RS.B rd_cc_size ; hexadecimal number
@@ -6677,7 +6677,7 @@ rp_create_command_string
 	move.l	d1,-(a7)
 	lsr.w	#4,d1			; correction decimal number
 	moveq	#rd_nnnn_size,d7	; number of digits to convert
-	lea	cs_delay_counter(a2),a0	; string
+	lea	cs_counter(a2),a0	; string
 	bsr.s	rp_dec_to_ascii
 
 	moveq	#NIBBLE_MASK_LOW,d1
