@@ -126,7 +126,9 @@ do while g.MainSelExit == 0
 	g.ScriptCfg2Exit = 0
 
 	address command g.CmdRQC ' >ENV:_Main TITLE="Script Main Menu" BODY="This script serves as a companion to the Amiga Demo Launcher (ADL).*N*NIts main purpose is creating demo playlists for ADL,*Nand then transfer them to the ADL playback queue.*N*N*NCREA
+
 TE/APPEND: Create a new demo playlist/append more entries to an*Nexisting playlist.*N*N*NTRANSFER: Transfer an existing playlist to the ADL playback queue.*N*N*NSHOW: Display status of the ADL playback queue.*N*N*NCFG1/2: Edit script config." GADGETS=CRE
+
 ATE/APPEND TRANSFER SHOW CFG1 CFG2 QUIT '
 
 	if ~Open(h.Main,"ENV:_Main","r") then ScriptExit("File ENV:_Start could not be loaded!")
@@ -199,7 +201,9 @@ ATE/APPEND TRANSFER SHOW CFG1 CFG2 QUIT '
 			if g.CfgResetQueue == ON then g.CfgResetQueueTemp = "Top of playlist queue"
 
 			address command g.CmdRQC ' >ENV:_ScriptCfg1Sel TITLE="Script Configuration Menu 1" BODY="DCF: Save demo config files.*N!DCF Do not save demo config files.*N*NCurrent setting: 'g.CfgSaveDemoCfg'*N*N*NSave demo config files in:*N*NCFP: Single dir.*N!CFP
+
 : Demo home dirs.*N*NCurrent setting: 'g.CfgDemoCfgPathTrunc'*N*N*N*Always transfer new playlist entries to:*N*NRSQ: The top of the playlist queue (overwrite).*N!RSQ: The bottom of the playlist queue (append).*N*NCurrent setting: 'g.CfgResetQueueTemp'*N"
+
  GADGETS=DCF !DCF CFP !CFP RSQ !RSQ SAVE USE EXIT QUIT '
 
 			if ~Open(h.ScriptCfg1Sel,"ENV:_ScriptCfg1Sel","r") then ScriptExit("File ENV:_ScriptCfg1Sel could not be loaded!")
@@ -577,8 +581,10 @@ g.AllCFG = 0
 		g.Demo.i.RunMode = ""
 
 		if   g.Demo.i.RunModeCFG == "none" then address command g.CmdRQC ' >ENV:_RunMode TITLE="Select Demo RunMode' i '/' g.DemoCount '" BODY="Select appropriate run-mode for demo executable:*N*N'g.Demo.i.Filename '" GADGETS="'g.RunMode0R'" "'g.RunMode1R'" "'
+
 g.RunMode2R'" "QUIT"'
 		if ~(g.Demo.i.RunModeCFG == "none") & g.AllCFG == 0 then address command g.CmdRQC ' >ENV:_RunMode TITLE="Select Demo RunMode' i '/' g.DemoCount '" BODY="Select appropriate run-mode for demo executable:*N*N'g.Demo.i.Filename '*N*NSelect CFG / ALLCFG to 
+
 use existing config file*Nfor this / all demo files." GADGETS="'g.RunMode0R'" "'g.RunMode1R'" "'g.RunMode2R'" "CFG" "ALLCFG" "QUIT"'
 		if   g.Demo.i.RunModeCFG == "none" | g.AllCFG == 0 then
 
@@ -612,8 +618,10 @@ use existing config file*Nfor this / all demo files." GADGETS="'g.RunMode0R'" "'
 		g.Demo.i.PlayTime = ""
 
 		if  (g.Demo.i.PlayTimeCFG == "none") then address command g.CmdRQC ' >ENV:_PlayMode TITLE="Select Demo PlayMode' i '/' g.DemoCount '" BODY="Select PlayMode for demo executable:*N*N'g.Demo.i.Filename '*N*NSelect INFINITE for demos with exit, or DEFINED 
+
 for timed exit*N(requires reset device)." GADGETS=INFINITE DEFINED QUIT'
 		if ~(g.Demo.i.PlayTimeCFG == "none") & g.AllCFG == 0 then address command g.CmdRQC ' >ENV:_PlayMode TITLE="Select Demo PlayMode' i '/' g.DemoCount '" BODY="Select PlayMode for demo executable:*N*N'g.Demo.i.Filename '*N*NSelect INFINITE for demos with e
+
 xit, or DEFINED for timed exit*N(requires reset device).*N*NSelect CFG / ALLCFG to use existing config file*Nfor this / all demo files." GADGETS=INFINITE DEFINED CFG ALLCFG QUIT'
 		if   g.Demo.i.PlayTimeCFG == "none"  | g.AllCFG == 0 then
 	
@@ -638,6 +646,7 @@ xit, or DEFINED for timed exit*N(requires reset device).*N*NSelect CFG / ALLCFG 
 		
 					do
 						address command g.CmdRQC ' >ENV:_PlayTimeM_ TITLE="Select Demo PlayTime" BODY="Please set demo PlayTime in minutes (00 - 99) and seconds (00 - 59),*None digit at a time: 'g.PlayTimeM_||g.PlayTime_M':'g.PlayTimeS_||g.PlayTime_S'" GADGETS=0 1 2 3 4 5
+
  6 7 8 9 QUIT'
 						if ~Open(h.PlayTimeM_,"ENV:_PlayTimeM_","r") then ScriptExit("File ENV:_PlaytimeM_ could not be opened!")
 						g.PlayTimeM_ = Readln(h.PlayTimeM_)
@@ -650,6 +659,7 @@ xit, or DEFINED for timed exit*N(requires reset device).*N*NSelect CFG / ALLCFG 
 					end
 
 			   	address command g.CmdRQC ' >ENV:_PlayTime_M TITLE="Select Demo PlayTime" BODY="Please set demo PlayTime in minutes (00 - 99) and seconds (00 - 59),*None digit at a time: 'g.PlayTimeM_||g.PlayTime_M':'g.PlayTimeS_||g.PlayTime_S'" GADGETS=0 1 2 3 4 
+
 5 6 7 8 9 QUIT'
 	
 		  			if ~Open(h.PlayTime_M,"ENV:_PlayTime_M","r") then ScriptExit("File ENV:_Playtime_M could not be opened!")
@@ -662,6 +672,7 @@ xit, or DEFINED for timed exit*N(requires reset device).*N*NSelect CFG / ALLCFG 
 					g.PlayTime_M = g.PlayTime_M - 1
 
 			   	address command g.CmdRQC ' >ENV:_PlayTimeS_ TITLE="Select Demo PlayTime" BODY="Please set demo PlayTime in minutes (00 - 99) and seconds (00 - 59),*None digit at a time: 'g.PlayTimeM_||g.PlayTime_M':'g.PlayTimeS_||g.PlayTime_S'" GADGETS=0 1 2 3 4 
+
 5 QUIT'
 
 		  			if ~Open(h.PlayTimeS_,"ENV:_PlayTimeS_","r") then ScriptExit("File ENV:_PlaytimeS_ could not be opened!")
@@ -674,6 +685,7 @@ xit, or DEFINED for timed exit*N(requires reset device).*N*NSelect CFG / ALLCFG 
 					g.PlayTimeS_ = g.PlayTimeS_ - 1
 
 				 	address command g.CmdRQC ' >ENV:_PlayTime_S TITLE="Select Demo PlayTime" BODY="Please set demo PlayTime in minutes (00 - 99) and seconds (00 - 59),*None digit at a time: 'g.PlayTimeM_||g.PlayTime_M':'g.PlayTimeS_||g.PlayTime_S'" GADGETS=0 1 2 3 4 5
+
  6 7 8 9 QUIT'
 
 			   	if ~Open(h.Playtime_S,"ENV:_Playtime_S","r") then ScriptExit("File ENV:_Playtime_S could not be opened!")
@@ -686,6 +698,7 @@ xit, or DEFINED for timed exit*N(requires reset device).*N*NSelect CFG / ALLCFG 
 					g.PlayTime_S = g.PlayTime_S - 1
 
 					address command g.CmdRQC ' >ENV:_PlayTimeM_ TITLE="Select Demo PlayTime" BODY="Please set demo PlayTime in minutes (00 - 99) and seconds (00 - 59),*None digit at a time: 'g.PlayTimeM_||g.PlayTime_M':'g.PlayTimeS_||g.PlayTime_S'*N*NClick DONE to cont
+
 inue, or enter digits again." GADGETS=0 1 2 3 4 5 6 7 8 9 DONE QUIT'
 					if ~Open(h.PlayTimeM_,"ENV:_PlayTimeM_","r") then ScriptExit("File ENV:_PlaytimeM_ could not be opened!")
 					g.Char = Readln(h.PlayTimeM_)
@@ -726,8 +739,10 @@ inue, or enter digits again." GADGETS=0 1 2 3 4 5 6 7 8 9 DONE QUIT'
 		g.Demo.i.PRScript = ""
 
 		if   g.Demo.i.PRScriptCFG == "none" then address command g.CmdRQC ' >ENV:_PRMode TITLE="Select Demo Prerun Mode' i '/' g.DemoCount '" BODY="Select prerun mode for demo executable:*N*N'g.Demo.i.Filename '*N*NSelect NONE for no prerun script, or SCRIPT t
+
 o select a prerun script.*N*NPlease note a maximum script path+filename length*Nlimitation of 63 characters!" GADGETS=NONE SCRIPT QUIT'
 		if ~(g.Demo.i.PRScriptCFG == "none") & g.AllCFG == 0 then address command g.CmdRQC ' >ENV:_PRMode TITLE="Select Demo Prerun Mode' i '/' g.DemoCount '" BODY="Select prerun mode for demo executable:*N*N'g.Demo.i.Filename '*N*NSelect NONE for no prerun sc
+
 ript, or SCRIPT to select a prerun script.*N*NPlease note a maximum script path+filename length limitation of*N63 characters!" GADGETS=NONE SCRIPT CFG ALLCFG QUIT'
 		if   g.Demo.i.PRScriptCFG == "none"  | g.AllCFG == 0 then
 
@@ -869,6 +884,7 @@ if (p.ExitMessage == "" & g.PlaylistEntries > 0) then
 
 do
 	address command g.CmdRQC ' >ENV:_ScriptExit TITLE="Script Exit Mode" BODY="'g.PlaylistEntries' entries has been added to ENV:_TempPlaylist so far.*NSelect SAVE to save playlist to*N*N'g.PlaylistPath || g.PlaylistName '*N*Nor TRANSFER to add it to playba
+
 ck queue, or QUIT to leave*Nwith no further action." GADGETS=SAVE TRANSFER SAVE&TRANSFER QUIT'
 
 	if ~Open(hp.ScriptExit,"ENV:_ScriptExit","r") then 
