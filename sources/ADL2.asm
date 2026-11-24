@@ -2102,7 +2102,7 @@ adl_check_arg_mins
 adl_calc_playtime
 	mulu.w	#adl_seconds_factor,d1	; conversion minutes to seconds
 	add.w	d0,d1			; total value in seconds
-	MULUF.W	rd_duration_shift,d1,d0
+	MULUF.W	rd_duration_shift,d1
 	move.w	d1,rd_play_duration(a3)
 
 ; Run Demo argument MULTIPART
@@ -2343,7 +2343,7 @@ dc_get_demo_filepath_skip1
 	subq.w	#1,d6			; loopend at false
 dc_get_demo_filepath_loop
 	move.w	d5,d0
-	MULUF.W	8,d0,d1
+	MULUF.W	8,d0
 	move.l	wa_Name(a6,d0.w),a0	; pointer file name
 	move.l	fr_Drawer(a2),a1	; pointer directory name
 	move.l	a2,-(a7)
@@ -2919,7 +2919,7 @@ dc_check_arg_mins
 dc_calc_playtime
 	MULUF.W	adl_seconds_factor,d1,d2 ; conversion minutes to seconds
 	add.l	d0,d1			; total value in seconds
-	MULUF.W	rd_duration_shift,d1,d0
+	MULUF.W	rd_duration_shift,d1
 	move.w	d1,pqe_playtime(a1)
 
 ; Playlist argument MULTIPART
@@ -5307,7 +5307,7 @@ rd_load_demofile_ok
 	CNOP 0,4
 rd_check_whdloadfile
 	move.l	rd_demofile_seglist(a3),a0
-	MULUF.L	4,a0,a1			; convert BCPL pointer
+	MULUF.L	4,a0			; convert BCPL pointer
 	cmp.l	#"WHDL",8(a0)
 	beq.s	rd_check_whdloadfile_skip1
 rd_check_whdloadfile_ok
@@ -5812,7 +5812,7 @@ rd_run_dos_file_skip
 	lea	rd_shell_no_op_cmd_line(pc),a0
 	move.l	a3,-(a7)
 	move.l	rd_demofile_seglist(a3),a3
-	MULUF.L	4,a3,a4			; convert BCPL pointer
+	MULUF.L	4,a3			; convert BCPL pointer
 	jsr	FirstCode(a3)		; execute entry
 	move.l	(a7)+,a3
 	CALLGRAF WaitBlit
@@ -6732,7 +6732,7 @@ rp_dec_to_hex_loop
 rp_dec_to_ascii
 	lea	rp_dec_table(pc),a1
 	move.l	d7,d0
-	MULUF.L	4,d0,d2
+	MULUF.L	4,d0
 	lea	(a1,d0.l),a1		; digit value
 	subq.w	#1,d7			; loopend at false
 rp_dec_to_ascii_loop1
