@@ -6,7 +6,7 @@
 ; Code optimized for O.M.A. 2.0 Assembler
 
 
-; History
+; History / Changes
 
 ; V.1.0 beta
 ; - 1st release
